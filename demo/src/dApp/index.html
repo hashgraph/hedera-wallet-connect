@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>dApp</title>
+    <style>
+      .toggle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        justify-content: space-around;
+
+        /* nesting natively supported by some browsers */
+        & button {
+          margin: 1rem;
+        }
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>dApp</h1>
+      <div class="toggle">
+        <p>This demo dApp requires a a project id from WalletConnect.</p>
+
+        <p>
+          Please see
+          <a target="_blank" href="https://cloud.walletconnect.com">
+            https://cloud.walletconnect.com
+          </a>
+        </p>
+        <button onclick="initializeSession()">Initialize session</button>
+      </div>
+      <div class="toggle hidden">
+        <button id="open-modal">Connect via WalletConnect</button>
+        <button
+          id="sign-execute-transaction"
+          onclick="alert('Please initialize WalletConnect session first')"
+        >
+          hedera_signAndExecuteTransaction
+        </button>
+        <button onclick="sessionStorage.clear(); location.reload();">
+          Clear saved session
+        </button>
+      </div>
+    </main>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

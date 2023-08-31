@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cool dApp &amp; Slick Wallet</title>
+    <style>
+      main {
+        display: flex;
+      }
+      iframe {
+        width: 50vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <!-- need to be on different host / port combinations https://github.com/WalletConnect/walletconnect-monorepo/issues/2975 -->
+      <iframe src="http://localhost:8080/dApp/index.html"></iframe>
+      <iframe src="http://localhost:8081/wallet/index.html"></iframe>
+    </main>
+  </body>
+</html>

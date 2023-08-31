@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wallet</title>
+    <style>
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Wallet</h1>
+    <div class="toggle hidden">
+      <input type="text" name="uri" />
+      <button onclick="pair()">Pair</button>
+      <button onclick="sessionStorage.clear(); location.reload();">Clear saved session</button>
+    </div>
+    <div class="toggle">
+      <p>
+        This demo requires a Hedera testnet account as well as a project id from
+        WalletConnect.
+      </p>
+
+      <p>
+        Please see
+        <a target="_blank" href="https://portal.hedera.com"> https://portal.hedera.com </a> and
+        <a target="_blank" href="https://cloud.walletconnect.com">
+          https://cloud.walletconnect.com </a
+        >
+      </p>
+      <button onclick="initializeSession()">Initialize session</button>
+    </div>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
