@@ -1,0 +1,56 @@
+{
+  "response": {
+    "nodeId": "0.0.3",
+    "transactionHash": "12f9a8f447282e7d8bce586e0ad3f6ea7e30f8cd69ad9aef75e509b29dd54bcc119644a2af9adbe9ef3e32c05ae100ef",
+    "transactionId": "0.0.12345@1691699663.903961564"
+  },
+  "receipt": {
+    "status": {
+      "_code": 22
+    },
+    "accountId": null,
+    "fileId": null,
+    "contractId": null,
+    "topicId": {
+      "shard": {
+        "low": 0,
+        "high": 0,
+        "unsigned": false
+      },
+      "realm": {
+        "low": 0,
+        "high": 0,
+        "unsigned": false
+      },
+      "num": {
+        "low": 470170,
+        "high": 0,
+        "unsigned": false
+      },
+      "_checksum": null
+    },
+    "tokenId": null,
+    "scheduleId": null,
+    "exchangeRate": {
+      "hbars": 30000,
+      "cents": 174832,
+      "expirationTime": "2023-08-10T21:00:00.000Z",
+      "exchangeRateInCents": 5.827733333333334
+    },
+    "topicSequenceNumber": {
+      "low": 0,
+      "high": 0,
+      "unsigned": false
+    },
+    "topicRunningHash": {},
+    "totalSupply": {
+      "low": 0,
+      "high": 0,
+      "unsigned": false
+    },
+    "scheduledTransactionId": null,
+    "serials": [],
+    "duplicates": [],
+    "children": []
+  }
+}
