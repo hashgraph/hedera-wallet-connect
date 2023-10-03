@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="15eece98-62b4-42d3-a876-298ac95decbc" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/babel.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/babel.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jest.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/jest.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/constants.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/constants.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/dapp.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/dapp.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/utils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/utils.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/wallet.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/wallet.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/types/jsonRpcTypes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/jsonRpcTypes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/_helpers.ts" beforeDir="false" afterPath="$PROJECT_DIR$/test/_helpers.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/dapp/HederaSessionRequest.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/test/dapp/HederaSessionRequest.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/dapp/dapp-utils.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/test/dapp/dapp-utils.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/utils.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/test/utils.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/wallet/wallet-init.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/test/wallet/wallet-init.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/wallet/wallet-signAndExecuteTransaction.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/test/wallet/wallet-signAndExecuteTransaction.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/wallet/wallet-signAndReturnTransaction.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/test/wallet/wallet-signAndReturnTransaction.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/wallet/wallet-signMessage.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/test/wallet/wallet-signMessage.test.ts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="GOROOT" url="file:///usr/local/go" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="2V3vl4DATZyJhzwUAjrI6mzcawt" />
+  <component name="ProjectViewState">
+    <option name="flattenPackages" value="true" />
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.go.format.on.save.advertiser.fired": "true",
+    "RunOnceActivity.go.formatter.settings.were.checked": "true",
+    "RunOnceActivity.go.migrated.go.modules.settings": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "dart.analysis.tool.window.visible": "false",
+    "go.import.settings.migrated": "true",
+    "go.sdk.automatically.set": "true",
+    "last_opened_file_path": "/Users/gregscullard/Documents/Development/GitHub/hashgraph/hedera-wallet-connect",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.fileTypes",
+    "show.migrate.to.gradle.popup": "false",
+    "ts.external.directory.path": "/Applications/IntelliJ IDEA.app/Contents/plugins/JavaScriptLanguage/jsLanguageServicesImpl/external",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration default="true" type="GoApplicationRunConfiguration" factoryName="Go Application">
+      <module name="hedera-wallet-connect" />
+      <working_directory value="$PROJECT_DIR$" />
+      <kind value="FILE" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="GoTestRunConfiguration" factoryName="Go Test">
+      <module name="hedera-wallet-connect" />
+      <working_directory value="$PROJECT_DIR$" />
+      <kind value="DIRECTORY" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="hedera-wallet-connect" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="hedera-wallet-connect" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="15eece98-62b4-42d3-a876-298ac95decbc" name="Changes" comment="" />
+      <created>1694077725846</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1694077725846</updated>
+      <workItem from="1694077727210" duration="758000" />
+      <workItem from="1694078493615" duration="645000" />
+      <workItem from="1696311906212" duration="371000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VgoProject">
+    <settings-migrated>true</settings-migrated>
+  </component>
+</project>
