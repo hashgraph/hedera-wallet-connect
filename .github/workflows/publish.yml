@@ -1,0 +1,28 @@
+name: Publishing
+on:
+  release:
+    types:
+      - published
+jobs:
+  publish:
+    name: docker
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+
+      - name: Setup NodeJS Environment
+        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d
+        with:
+          node-version: 18.x
+
+      - name: Publish 
+        run: |
+          npm adduser --registry=https://registry.npmjs.org/
+          npm run publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
