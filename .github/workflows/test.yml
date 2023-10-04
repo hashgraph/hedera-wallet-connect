@@ -6,7 +6,7 @@ on:
 jobs:
   test-node:
     name: Unit Tests
-    runs-on: [ self-hosted, Linux, medium, ephemeral ]
+    runs-on: ubuntu-latest
     steps:
       - name: Use Node.js TLS 16.x
         uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3.8.1
