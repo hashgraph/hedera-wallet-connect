@@ -296,3 +296,7 @@ to [oss@hedera.com](mailto:oss@hedera.com).
 
 # License
 [Apache License 2.0](LICENSE)
+
+# 🔐 Security
+
+Please do not file a public ticket mentioning the vulnerability. Refer to the security policy defined in the [SECURITY.md](https://github.com/hashgraph/hedera-wallet-connect/blob/main/SECURITY.md).
