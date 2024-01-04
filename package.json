@@ -29,6 +29,6 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "@hashgraph/sdk": "^2.31.0"
+    "@hashgraph/sdk": "^2.39.0"
   }
 }
