@@ -137,7 +137,7 @@ The following instructions demonstrate implementation of the Sign API.
 First, make sure you've installed the necessary npm packages:
 
 ```bash
-npm install @walletconnect/sign-client @hashgraph/sdk @hashgraph/wallectconnect
+npm install @walletconnect/sign-client @hashgraph/sdk @hashgraph/hedera-wallet-connect
 ```
 
 #### 2. Initialize WalletConnect SignClient
@@ -243,7 +243,7 @@ requests a transaction to be signed:
 
 ```javascript
 // Using the @hashgraph/sdk library
-import { base64StringToTransaction, HederaWallet } from '@hashgraph/walletconnect'
+import { base64StringToTransaction, HederaWallet } from '@hashgraph/hedera-wallet-connect'
 
 const transaction = base64StringToTransaction(event.params.request.params)
 // show the transaction details and prompt the user for confirmation or rejection
