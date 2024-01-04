@@ -82,13 +82,13 @@ const transaction = new TopicMessageSubmitTransaction()
   .setMessage('Hello Future')
 ```
 
-3. **Build the Session Request Payload**: The `@hashgraph/wallectconnect` library provides a
+3. **Build the Session Request Payload**: The `@hashgraph/hedera-wallet-connect` library provides a
    seamless way to prepare the session request payload. Ensure that you set the `RequestType`
    accurately to match the type of Hedera transaction you've constructed.
 
 ```javascript
 import {..., RequestType } from '@hashgraph/sdk'
-import { HederaSessionRequest } from '@hashgraph/wallectconnect'
+import { HederaSessionRequest } from '@hashgraph/hedera-wallet-connect'
 
 const payload = HederaSessionRequest.create({
   chainId: 'hedera:testnet',
