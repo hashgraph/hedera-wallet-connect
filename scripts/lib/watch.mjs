@@ -18,16 +18,11 @@
  *
  */
 
-import type { Config } from 'jest'
+import * as context from './context.mjs'
 
-const config: Config = {
-  preset: 'ts-jest/presets/js-with-ts',
-  detectOpenHandles: true,
-  fakeTimers: {
-    enableGlobally: true,
-  },
-  testMatch: ['**/?(*.)+(spec|test).ts?(x)', '!**/DAppConnector.test.ts'],
-  transformIgnorePatterns: ['node_modules/(?!@walletconnect)'],
-}
-
-export default config
+await Promise.all([
+  context.nodeCjs.watch(),
+  context.nodeEsm.watch(),
+  context.browserEsm.watch(),
+  context.browserCjs.watch(),
+])

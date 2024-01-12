@@ -18,16 +18,10 @@
  *
  */
 
-import type { Config } from 'jest'
-
-const config: Config = {
-  preset: 'ts-jest/presets/js-with-ts',
-  detectOpenHandles: true,
-  fakeTimers: {
-    enableGlobally: true,
-  },
-  testMatch: ['**/?(*.)+(spec|test).ts?(x)', '!**/DAppConnector.test.ts'],
-  transformIgnorePatterns: ['node_modules/(?!@walletconnect)'],
+/**
+ * Represents different events related to a Hedera session.
+ */
+export enum HederaSessionEvent {
+  AccountsChanged = 'accountsChanged',
+  ChainChanged = 'chainChanged',
 }
-
-export default config

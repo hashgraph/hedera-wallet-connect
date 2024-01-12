@@ -18,16 +18,15 @@
  *
  */
 
-import type { Config } from 'jest'
-
-const config: Config = {
-  preset: 'ts-jest/presets/js-with-ts',
-  detectOpenHandles: true,
-  fakeTimers: {
-    enableGlobally: true,
-  },
-  testMatch: ['**/?(*.)+(spec|test).ts?(x)', '!**/DAppConnector.test.ts'],
-  transformIgnorePatterns: ['node_modules/(?!@walletconnect)'],
+/**
+ * Enum representing different JSON-RPC methods related to Hedera.
+ * The methods are ordered alphabetically for ease of use and readability.
+ */
+export enum HederaJsonRpcMethod {
+  GetNodeAddresses = 'hedera_getNodeAddresses', // 1
+  ExecuteTransaction = 'hedera_executeTransaction', // 2
+  SignMessage = 'hedera_signMessage', // 3
+  SignAndExecuteQuery = 'hedera_signAndExecuteQuery', // 4
+  SignAndExecuteTransaction = 'hedera_signAndExecuteTransaction', // 5
+  SignTransaction = 'hedera_signTransaction', // 6
 }
-
-export default config

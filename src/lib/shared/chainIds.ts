@@ -18,16 +18,15 @@
  *
  */
 
-import type { Config } from 'jest'
+/**
+ * Enum representing different Hedera network chain IDs.
+ *
+ * @see {@link https://github.com/hashgraph/hedera-improvement-proposal/blob/main/HIP/hip-820.md#specification | HIP-820 Specification}
+ */
 
-const config: Config = {
-  preset: 'ts-jest/presets/js-with-ts',
-  detectOpenHandles: true,
-  fakeTimers: {
-    enableGlobally: true,
-  },
-  testMatch: ['**/?(*.)+(spec|test).ts?(x)', '!**/DAppConnector.test.ts'],
-  transformIgnorePatterns: ['node_modules/(?!@walletconnect)'],
+export enum HederaChainId {
+  Mainnet = 'hedera:mainnet',
+  Testnet = 'hedera:testnet',
+  Previewnet = 'hedera:previewnet',
+  Devnet = 'hedera:devnet',
 }
-
-export default config

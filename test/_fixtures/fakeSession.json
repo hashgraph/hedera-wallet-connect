@@ -1,0 +1,58 @@
+{
+  "topic": "1102e4b221941797d905d2980577c473b1bf0c3a6e8e91f1e48209e4cadd47f9",
+  "relay": {
+    "protocol": "irn"
+  },
+  "expiry": 1702469603,
+  "namespaces": {
+    "hedera": {
+      "chains": ["hedera:testnet"],
+      "methods": [
+        "hedera_getNodeAddresses",
+        "hedera_executeTransaction",
+        "hedera_signMessage",
+        "hedera_signAndExecuteQuery",
+        "hedera_signAndExecuteTransaction",
+        "hedera_signTransaction"
+      ],
+      "events": ["accountsChanged", "chainChanged"],
+      "accounts": ["hedera:testnet:0.0.5841839"]
+    }
+  },
+  "acknowledged": true,
+  "pairingTopic": "6212d4d8be26a30a35415f9ccc7fe6ef6d71d7fe2ea8029d6bea4217a5cbefdd",
+  "requiredNamespaces": {
+    "hedera": {
+      "chains": ["hedera:testnet"],
+      "methods": [
+        "hedera_getNodeAddresses",
+        "hedera_executeTransaction",
+        "hedera_signMessage",
+        "hedera_signAndExecuteQuery",
+        "hedera_signAndExecuteTransaction",
+        "hedera_signTransaction"
+      ],
+      "events": ["chainChanged", "accountsChanged"]
+    }
+  },
+  "optionalNamespaces": {},
+  "controller": "470e8db6f10b6b1a56490faa40497f0a528f775d7328a819e872d4c62c57bd6c",
+  "self": {
+    "publicKey": "5fe7ad0791c7f363830acef4bfdc341c962dce99f8d91821d6e1e18f39bd8655",
+    "metadata": {
+      "name": "test",
+      "description": "test description",
+      "url": "https://esbuild.github.io/favicon.svg",
+      "icons": ["https://esbuild.github.io/favicon.svg"]
+    }
+  },
+  "peer": {
+    "publicKey": "470e8db6f10b6b1a56490faa40497f0a528f775d7328a819e872d4c62c57bd6c",
+    "metadata": {
+      "name": "test name",
+      "description": "test description",
+      "url": "https://google.com",
+      "icons": ["https://esbuild.github.io/favicon.svg"]
+    }
+  }
+}

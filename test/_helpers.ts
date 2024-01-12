@@ -22,6 +22,25 @@ import fs from 'fs'
 import path from 'path'
 import { AccountId, Transaction, TransactionId } from '@hashgraph/sdk'
 
+export const projectId = 'ce06497abf4102004138a10edd29c921'
+export const walletMetadata = {
+  name: 'Wallet Test',
+  url: 'https://dapp.hedera.app',
+  description: 'Hedera Hashgraph Wallet Example.',
+  icons: [
+    'https://cdn-assets-cloud.frontify.com/s3/frontify-cloud-files-us/eyJwYXRoIjoiZnJvbnRpZnlcL2FjY291bnRzXC8xNFwvMTQzMTI3XC9wcm9qZWN0c1wvMTgwMjE1XC9hc3NldHNcL2M3XC8zNDU0ODY3XC85ZjM1NDliYmE5MGQ2NDA0OGU0NzlhZTNiMzkyYzY4Yy0xNTY2NTkxOTQ4LmpwZyJ9:frontify:v_zJvQTCjtNploUvnSpk8S5NJB4R5eei6f7ERL2KSeQ?width=800',
+  ],
+}
+export const dAppMetadata = {
+  name: 'dApp Test',
+  url: 'https://dapp.hedera.app',
+  description: 'Hedera Hashgraph dApp Example.',
+  icons: [
+    'https://cdn-assets-cloud.frontify.com/s3/frontify-cloud-files-us/eyJwYXRoIjoiZnJvbnRpZnlcL2FjY291bnRzXC8xNFwvMTQzMTI3XC9wcm9qZWN0c1wvMTgwMjE1XC9hc3NldHNcL2M3XC8zNDU0ODY3XC85ZjM1NDliYmE5MGQ2NDA0OGU0NzlhZTNiMzkyYzY4Yy0xNTY2NTkxOTQ4LmpwZyJ9:frontify:v_zJvQTCjtNploUvnSpk8S5NJB4R5eei6f7ERL2KSeQ?width=800',
+  ],
+}
+export const requestId = 1
+export const requestTopic = 'test-topic'
 export const defaultAccountNumber = 12345
 export const defaultNodeId = 3
 export const testUserAccountId = new AccountId(defaultAccountNumber)
