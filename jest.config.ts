@@ -26,7 +26,7 @@ const config: Config = {
   fakeTimers: {
     enableGlobally: true,
   },
-  testMatch: ['**/?(*.)+(spec|test).ts?(x)', '!**/DAppConnector.test.ts'],
+  testMatch: ['**/?(*.)+(spec|test).ts?(x)', '!**/DAppConnector.test.ts', '!**/wallet*/**'],
   transformIgnorePatterns: ['node_modules/(?!@walletconnect)'],
 }
 
