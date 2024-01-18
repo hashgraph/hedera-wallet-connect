@@ -7,6 +7,8 @@ jobs:
   test-node:
     name: Unit Tests
     runs-on: [self-hosted, Linux, medium, ephemeral]
+    permissions: write-all
+
     steps:
       - name: Setup NodeJS Environment
         uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d
