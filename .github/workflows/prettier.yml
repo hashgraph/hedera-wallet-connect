@@ -9,8 +9,9 @@ on:
       - '*'
 
 jobs:
-  prettier-check:
-    runs-on: ubuntu-latest
+  formatting-check:
+    name: Formatting Check
+    runs-on: [self-hosted, Linux, medium, ephemeral]
 
     steps:
       - name: Checkout code
