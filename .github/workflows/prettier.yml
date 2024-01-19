@@ -2,11 +2,10 @@ name: Prettier
 
 on:
   push:
-    branches:
-      - '*'
   pull_request:
-    branches:
-      - '*'
+  
+permissions:
+  contents: read
 
 jobs:
   formatting-check:
