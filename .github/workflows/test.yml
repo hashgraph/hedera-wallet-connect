@@ -2,12 +2,13 @@ name: Test
 on:
   workflow_dispatch:
   pull_request:
+  push:
     branches: [main]
 jobs:
   test-node:
     name: Unit Tests
     runs-on: [self-hosted, Linux, medium, ephemeral]
-    permissions: 
+    permissions:
        checks: write
        pull-requests: write
        contents: read
