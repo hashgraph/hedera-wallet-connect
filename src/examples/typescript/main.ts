@@ -18,16 +18,9 @@
  *
  */
 
-import type { Config } from 'jest'
-
-const config: Config = {
-  preset: 'ts-jest/presets/js-with-ts',
-  detectOpenHandles: true,
-  fakeTimers: {
-    enableGlobally: true,
-  },
-  testMatch: ['**/?(*.)+(spec|test).ts?(x)', '!**/DAppConnector.test.ts', '!**/wallet*/**'],
-  transformIgnorePatterns: ['node_modules/(?!@walletconnect)'],
-}
-
-export default config
+// set iframe src
+const iframe = document.querySelectorAll('iframe')
+const dapp = iframe[0]
+const wallet = iframe[1]
+dapp.src = process.env.dappUrl!
+wallet.src = process.env.walletUrl!

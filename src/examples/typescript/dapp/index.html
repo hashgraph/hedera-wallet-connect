@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>dApp</title>
+    <link rel="stylesheet" href="/main.css" />
+  </head>
+  <body>
+    <main>
+      <h1>dApp</h1>
+      <p>
+        This demo dApp requires a project id from WalletConnect. Please see
+        <a target="_blank" href="https://cloud.walletconnect.com">
+          https://cloud.walletconnect.com
+        </a>
+      </p>
+      <section>
+        <form id="init">
+          <fieldset>
+            <legend>Step 1: Initialize WalletConnect</legend>
+            <label>
+              Project Id:
+              <input type="text" name="project-id" required />
+            </label>
+            <label>
+              Name:
+              <input type="text" name="name" required />
+            </label>
+            <label>
+              Description:
+              <input type="text" name="description" required />
+            </label>
+            <label>
+              Url:
+              <input type="text" name="url" required />
+            </label>
+            <label>
+              Icons:
+              <input type="text" name="icons" required />
+            </label>
+          </fieldset>
+          <button type="submit">Initialize WalletConnect</button>
+        </form>
+      </section>
+      <section>
+        <form id="connect" class="toggle">
+          <fieldset>
+            <legend>Step 2: Connect a wallet</legend>
+            <p>
+              <i
+                >WalletConnect saves pairing and session information in localStorage. If you
+                have previously paired with a wallet and the session has not expired, you do not
+                need to pair again.</i
+              >
+            </p>
+            <button type="submit">Open WalletConnect Modal</button>
+          </fieldset>
+        </form>
+      </section>
+      <hr />
+      <h2>Hedera &lt;&gt; WalletConnect methods:</h2>
+      <section>
+        <form id="hedera_getNodeAddresses" class="toggle">
+          <fieldset>
+            <legend>1. hedera_getNodeAddresses</legend>
+            <button type="submit">hedera_getNodeAddresses</button>
+          </fieldset>
+        </form>
+      </section>
+      <section>
+        <form id="hedera_executeTransaction" class="toggle">
+          <fieldset>
+            <legend>2. hedera_executeTransaction</legend>
+            <p>
+              These fields can be constructed by using the `hedera_signTransaction` method below
+            </p>
+            <label
+              >Base64 Encoded TransactionBody protobuf:
+              <input name="execute-transaction-body" required />
+            </label>
+            <label
+              >Base64 Encoded SignatureMap protobuf:
+              <input name="execute-transaction-signature-map" required />
+            </label>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+      </section>
+      <section>
+        <form id="hedera_signMessage" class="toggle">
+          <fieldset>
+            <legend>3. hedera_signMessage</legend>
+            <label
+              >Message:
+              <input name="sign-message" required />
+            </label>
+            <label
+              >Signer Account Id:
+              <input name="sign-message-from" required />
+            </label>
+            <label
+              >Hedera Testnet Public Key:
+              <input name="public-key" required />
+            </label>
+            <p>The public key for the account is used to verify the signed message</p>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+          <p id="sign-message-result"></p>
+        </form>
+      </section>
+      <section>
+        <form id="hedera_signAndExecuteQuery" class="toggle">
+          <fieldset>
+            <legend>4. hedera_signAndExecuteQuery</legend>
+            <label
+              >Query type:
+              <select name="query-type">
+                <option value="account-info">Account Info</option>
+              </select>
+            </label>
+            <label
+              >Account ID:
+              <input name="query-account-id" required />
+            </label>
+            <label
+              >Payment account id:
+              <input name="query-payment-account" required />
+            </label>
+          </fieldset>
+          <button type="submit">hedera_signAndExecuteQuery</button>
+        </form>
+      </section>
+      <section>
+        <form id="hedera_signAndExecuteTransaction" class="toggle">
+          <fieldset>
+            <legend>5. hedera_signAndExecuteTransaction</legend>
+            <label
+              >Transaction type:
+              <select name="sign-send-transaction-type">
+                <option value="hbar-transfer">Hbar Transfer</option>
+              </select>
+            </label>
+            <label
+              >Send to address:
+              <input name="sign-send-to" required />
+            </label>
+            <label
+              >Send from address:
+              <input name="sign-send-from" required />
+            </label>
+            <label
+              >Amount in Hbar:
+              <input name="sign-send-amount" required />
+            </label>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+      </section>
+      <section>
+        <form id="hedera_signTransaction" class="toggle">
+          <fieldset>
+            <legend>6. hedera_signTransaction</legend>
+            <label
+              >Transaction type:
+              <select name="sign-transaction-type">
+                <option value="hbar-transfer">Hbar Transfer</option>
+              </select>
+            </label>
+            <label
+              >Send to address:
+              <input name="sign-to" required />
+            </label>
+            <label
+              >Send from address:
+              <input name="sign-from" required />
+            </label>
+            <label
+              >Amount in Hbar:
+              <input name="sign-amount" required />
+            </label>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+        <pre id="sign-transaction-result"></pre>
+      </section>
+
+      <hr />
+      <h2>Error handling:</h2>
+      <section class="toggle">
+        <fieldset>
+          <legend>Common errors</legend>
+          <p>
+            <i
+              >There are a number of expected error conditions that should be handled. Some of
+              the conditions that should be accounted for include user initiated errors, such as
+              when a user rejects a session or a session request in their wallet or Hedera
+              network errors, such as when a transaction is submitted to the network, though has
+              expired. Additionally, there are errors generated by the WalletConnect sdks.</i
+            >
+          </p>
+
+          <p>
+            <i>
+              Call <b>hedera_executeTransaction</b> or
+              <b>hedera_signAndExecuteTransaction</b> above with valid addresses before using
+              simulating errors described below.</i
+            >
+          </p>
+          <p>
+            See
+            <a href="https://specs.walletconnect.com/2.0/specs/clients/sign/error-codes"
+              >https://specs.walletconnect.com/2.0/specs/clients/sign/error-codes</a
+            >
+            for more information on WalletConnect error codes.
+          </p>
+        </fieldset>
+      </section>
+      <section class="toggle">
+        <form id="error-gossip-node">
+          <fieldset>
+            <legend>INVALID_NODE_ACCOUNT</legend>
+            <p>
+              This Hedera error occurs when the target consensus node account doesn't match the
+              node account transaction was submitted to.
+            </p>
+            <button type="submit">Simulate error</button>
+          </fieldset>
+        </form>
+      </section>
+      <section class="toggle">
+        <form id="error-transaction-expired">
+          <fieldset>
+            <legend>TRANSACTION_EXPIRED</legend>
+            <p>
+              This Hedera error occurs when the transaction has a
+              <b>transactionValidStart + transactionValidDuration</b> less than current
+              <b>consensus timestamp</b>.
+            </p>
+            <button type="submit">Simulate error</button>
+          </fieldset>
+        </form>
+      </section>
+      <section class="toggle">
+        <fieldset>
+          <legend>USER_REJECTED_METHODS</legend>
+          <p>Send any transaction or query to the wallet, and decline it at a wallet side.</p>
+        </fieldset>
+      </section>
+      <hr />
+      <h2>Pairing and session management:</h2>
+      <section>
+        <form id="disconnect" class="toggle">
+          <button type="submit">Disconnect all sessions and pairings</button>
+          <button
+            type="button"
+            onclick="localStorage.clear(); sessionStorage.clear(); location.reload();"
+          >
+            Clear saved data
+          </button>
+        </form>
+      </section>
+    </main>
+    <script src="main.js" defer></script>
+  </body>
+</html>

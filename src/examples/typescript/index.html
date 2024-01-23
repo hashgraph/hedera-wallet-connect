@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hedera &lt;&gt; WalletConnect dApp &amp; Wallet</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+      }
+      main {
+        display: flex;
+      }
+      iframe,
+      .overlay > div {
+        position: relative;
+        width: 50vw;
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+      iframe:first-child {
+        border-right: 1px solid gray;
+      }
+      iframe:not(:first-child) {
+        border-left: 1px solid gray;
+      }
+      .overlay {
+        & > div {
+          position: absolute;
+          background-color: black;
+          display: none;
+          right: 0;
+          opacity: 0.95;
+          cursor: pointer;
+          &:first-child:after {
+            content: 'Switch to dApp';
+          }
+          &:not(:first-child):after {
+            content: 'Switch to wallet';
+          }
+          &:after {
+            position: absolute;
+            color: white;
+            left: 35%;
+            top: 40%;
+            padding: 1rem;
+            font-size: 1.5rem;
+          }
+        }
+        & :first-child {
+          left: 0;
+        }
+        & .active {
+          display: block;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <!-- need to be on different host / port combinations https://github.com/WalletConnect/walletconnect-monorepo/issues/2975 -->
+      <iframe src=""></iframe>
+      <iframe src=""></iframe>
+      <div class="overlay">
+        <div class="active"></div>
+        <div></div>
+      </div>
+    </main>
+    <script src="main.js"></script>
+  </body>
+  <script>
+    const overlay = document.querySelectorAll('.overlay div')
+    function clickHandler(e) {
+      overlay[0].classList.toggle('active')
+      overlay[1].classList.toggle('active')
+    }
+    overlay[0].onclick = clickHandler
+    overlay[1].onclick = clickHandler
+  </script>
+</html>

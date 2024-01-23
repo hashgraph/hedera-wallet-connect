@@ -1,0 +1,10 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPointStrategy": "expand",
+  "entryPoints": ["./src/lib"],
+  "plugin": ["typedoc-theme-hierarchy"],
+  "theme": "hierarchy",
+  "out": "dist/examples/typescript/docs",
+  "sourceLinkExternal": true,
+  "basePath": "./docs"
+}

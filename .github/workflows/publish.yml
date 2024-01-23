@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 18.x
 
-      - name: Publish 
+      - name: Publish
         run: |
           npm adduser --registry=https://registry.npmjs.org/
           npm run publish

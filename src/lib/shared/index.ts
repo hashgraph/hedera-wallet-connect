@@ -18,16 +18,9 @@
  *
  */
 
-import type { Config } from 'jest'
-
-const config: Config = {
-  preset: 'ts-jest/presets/js-with-ts',
-  detectOpenHandles: true,
-  fakeTimers: {
-    enableGlobally: true,
-  },
-  testMatch: ['**/?(*.)+(spec|test).ts?(x)', '!**/DAppConnector.test.ts', '!**/wallet*/**'],
-  transformIgnorePatterns: ['node_modules/(?!@walletconnect)'],
-}
-
-export default config
+export * from './chainIds'
+export * from './errors'
+export * from './events'
+export * from './methods'
+export * from './payloads'
+export * from './utils'

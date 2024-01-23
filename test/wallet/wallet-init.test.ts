@@ -18,53 +18,54 @@
  *
  */
 
-import { AccountId, Client, ClientNetworkName, PrivateKey } from '@hashgraph/sdk'
-import { HederaWallet } from '../../src'
-import { defaultAccountNumber } from '../_helpers'
+import { Wallet as HederaWallet, LedgerId } from '@hashgraph/sdk'
+import { HederaChainId, Wallet } from '../../src'
+import {
+  defaultAccountNumber,
+  projectId,
+  testPrivateKeyECDSA,
+  walletMetadata,
+} from '../_helpers'
 
-describe(HederaWallet.name, () => {
-  describe('init', () => {
-    // [networkName, accountId]
-    const testCases: [ClientNetworkName, string | number][] = [
-      ['mainnet', defaultAccountNumber],
-      ['previewnet', defaultAccountNumber],
-      ['testnet', defaultAccountNumber],
-      ['mainnet', `0.0.${defaultAccountNumber}`],
-      ['previewnet', `0.0.${defaultAccountNumber}`],
-      ['testnet', `0.0.${defaultAccountNumber}`],
-    ]
-    test.each(testCases)(
-      'it should initialize with a %p client and accountId %p',
-      (network, accountId) => {
-        const wallet = HederaWallet.init({
-          accountId,
-          privateKey: PrivateKey.generateED25519().toStringDer(),
-          network,
-        })
-        expect(wallet).toBeInstanceOf(HederaWallet)
-        expect(wallet.accountId.toString()).toBe(`0.0.${defaultAccountNumber}`)
-        expect(wallet.client).toBeInstanceOf(Client)
-      },
-    )
-  })
+describe(Wallet.name, () => {
+  describe('create', () => {
+    let wallet: Wallet
 
-  describe('constructor', () => {
-    // [AccountId, PrivateKey]
-    const testCases: [AccountId, PrivateKey][] = [
-      [new AccountId(defaultAccountNumber), PrivateKey.generateECDSA()],
-      [
-        AccountId.fromBytes(new Uint8Array([8, 0, 16, 0, 24, 185, 96])), // Array obtained from accountId.toBytes()
-        PrivateKey.generateED25519(),
-      ],
-    ]
-    test.each(testCases)(
-      'it should construct with various AccountId, PrivateKey values',
-      (accountId, privateKey) => {
-        const wallet = new HederaWallet({ accountId, privateKey, network: 'testnet' })
-        expect(wallet).toBeInstanceOf(HederaWallet)
-        expect(wallet.accountId.toString()).toBe(`0.0.${defaultAccountNumber}`)
-        expect(wallet.client).toBeInstanceOf(Client)
-      },
-    )
+    beforeAll(async () => {
+      wallet = await Wallet.create(projectId, walletMetadata)
+    })
+
+    it('should create Wallet instance with a projectId and walletMetadata', async () => {
+      expect(wallet).toBeInstanceOf(Wallet)
+      expect(wallet.metadata).toBe(walletMetadata)
+      expect(wallet.core.projectId).toBe(projectId)
+    })
+
+    describe('getHederaWallet', () => {
+      // [HederaChainId, accountId, LedgerId]
+      const testCases: [HederaChainId, string | number, LedgerId][] = [
+        [HederaChainId.Mainnet, defaultAccountNumber, LedgerId.MAINNET],
+        [HederaChainId.Previewnet, defaultAccountNumber, LedgerId.PREVIEWNET],
+        [HederaChainId.Testnet, defaultAccountNumber, LedgerId.TESTNET],
+        [HederaChainId.Mainnet, `0.0.${defaultAccountNumber}`, LedgerId.MAINNET],
+        [HederaChainId.Previewnet, `0.0.${defaultAccountNumber}`, LedgerId.PREVIEWNET],
+        [HederaChainId.Testnet, `0.0.${defaultAccountNumber}`, LedgerId.TESTNET],
+      ]
+      test.each(testCases)(
+        'it should initialize HederaWallet with %p chainId and %p accountId',
+        async (chainId, accountId, ledgerId) => {
+          const hederaWallet = wallet!.getHederaWallet(
+            chainId,
+            accountId.toString(),
+            testPrivateKeyECDSA,
+          )
+
+          expect(wallet).toBeInstanceOf(Wallet)
+          expect(hederaWallet).toBeInstanceOf(HederaWallet)
+          expect(hederaWallet.accountId.toString()).toBe(`0.0.${defaultAccountNumber}`)
+          expect(hederaWallet.provider!.getLedgerId()).toBe(ledgerId)
+        },
+      )
+    })
   })
 })

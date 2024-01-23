@@ -1,0 +1,28 @@
+name: Prettier
+
+on:
+  push:
+  pull_request:
+  
+permissions:
+  contents: read
+
+jobs:
+  formatting-check:
+    name: Formatting Check
+    runs-on: [self-hosted, Linux, medium, ephemeral]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Prettier Check
+        run: npm run prettier:check

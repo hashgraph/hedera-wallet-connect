@@ -1,0 +1,10 @@
+{
+  "topic": "test-topic",
+  "response": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "response": "SGVsbG8gV29ybGQh"
+    }
+  }
+}
