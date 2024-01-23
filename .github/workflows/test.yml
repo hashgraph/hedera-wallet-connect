@@ -25,7 +25,8 @@ jobs:
       - name: Run tests (Forked PR)
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && !cancelled() && !failure() }} 
         run: npm run test
-      # - name: Test
-      #   uses: ArtiomTr/jest-coverage-report-action@v2
-      #   with:
-      #    test-script: npm run test
+      - name: Test
+        uses: ArtiomTr/jest-coverage-report-action@v2
+        if: ${{ ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || github.event_name == 'push') && !cancelled() && !failure() }}
+        with:
+         test-script: npm run test
