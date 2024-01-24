@@ -1,6 +1,6 @@
 {
-  "name": "walletconnect-hedera",
-  "version": "1.0.0-rc-2",
+  "name": "hedera-wallet-connect",
+  "version": "1.0.0",
   "description": "A library to facilitate integrating Hedera with WalletConnect",
   "repository": {
     "type": "git",

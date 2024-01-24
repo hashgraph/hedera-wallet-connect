@@ -1,16 +1,13 @@
 # Overview
 
-## Community Beta: Open Access
-
 This library is the result of Hedera community collaboration to bring Hedera into the
-WalletConnect ecosystem and vice versa. The final destination for the community supported and
-governed repository will be made available under the `@hashgraph` organization on github.
+WalletConnect ecosystem and vice versa.
 
-The development branch of this repository is `release/hip-820`. The goal of this repository is
-to be a reference for wallets and dApps integrating the WalletConnect <> Hedera JSON-RPC
-reference. Additionally, this library is meant to be included in projects supporting
-WalletConnect and Hedera, providing utility functions useful to validating requests and resposes
-in both the WalletConnect JSON-RPC context as well as the Hedera context.
+The goal of this repository is to be a reference for wallets and dApps integrating the
+WalletConnect <> Hedera JSON-RPC reference. Additionally, this library is meant to be included
+in projects supporting WalletConnect and Hedera, providing utility functions useful to
+validating requests and resposes in both the WalletConnect JSON-RPC context as well as the
+Hedera context.
 
 A few useful resources include:
 
@@ -39,22 +36,12 @@ facilitate implementing the
 which has been defined through the collaborative HIP process in
 [HIP-820](https://hips.hedera.com/hip/hip-820).
 
-HIP-820 has a current status of "Last Call", signifying it is in a mature review stage, or in
-HIP lingo - "The authors wish to finalize the HIP and appreciate feedback."
-
 This library facilitates the implementation of the **WalletConnect <> Hedera Spec** which allows
 wallets and dApps to natively integrate with Hedera. It provides additional, out of network
 functionality with the `hedera_signMessage` function.
 
-In short, it uses the Hedera javascript SDK to build transactions, serialize them, send "them
-over the wire" to wallets for processing and return responses back to dApps.
-
-A message could be one of:
-
-- a Hedera network response
-- an error message
-- signed transaction bytes
-- signed arbitrary set of bytes
+In short, it uses the Hedera javascript SDK to build transactions, serialize them, send to
+wallets for processing and return responses back to dApps.
 
 _Please note, this is distinct from the
 [Implementation of Ethereum JSON-RPC APIs for Hedera](https://github.com/hashgraph/hedera-json-rpc-relay).
@@ -153,4 +140,5 @@ The demo source code lives in `./src/examples/typescript` and is available at
 <https://wc.hgraph.app>
 
 ## Passing tests
+
 - `git commit -Ss "the commit message"`
