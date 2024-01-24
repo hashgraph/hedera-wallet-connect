@@ -4,7 +4,7 @@
   "description": "A library to facilitate integrating Hedera with WalletConnect",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hgraph-io/hedera-walletconnect-utils.git"
+    "url": "git+https://github.com/@hashgraph/hedera-wallet-connect.git"
   },
   "main": "./dist/node-cjs.js",
   "module": "./dist/node-esm.js",

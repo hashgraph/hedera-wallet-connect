@@ -5,7 +5,7 @@ on:
       - published
 jobs:
   publish:
-    name: docker
+    name: npm
     runs-on: [self-hosted, Linux, medium, ephemeral]
 
     permissions:
@@ -21,8 +21,6 @@ jobs:
           node-version: 18.x
 
       - name: Publish
-        run: |
-          npm adduser --registry=https://registry.npmjs.org/
-          npm run publish
+        run: npm run publish --public
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
