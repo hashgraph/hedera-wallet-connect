@@ -48,7 +48,7 @@
     "@hashgraph/walletconnect": "file:./",
     "@walletconnect/qrcode-modal": "^1.8.0",
     "@walletconnect/types": "^2.11.0",
-    "@walletconnect/utils": "^2.10.0",
+    "@walletconnect/utils": "^2.11.0",
     "@walletconnect/web3wallet": "^1.9.3"
   },
   "scripts": {
