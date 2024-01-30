@@ -21,7 +21,7 @@
 // https://github.com/WalletConnect/walletconnect-monorepo/tree/v2.0/packages/web3wallet
 import type { Web3WalletTypes } from '@walletconnect/web3wallet'
 import { getSdkError } from '@walletconnect/utils'
-import { Wallet, HederaChainId } from '@hashgraph/walletconnect'
+import { Wallet, HederaChainId } from '@hashgraph/hedera-wallet-connect'
 import { loadState, saveState } from '../shared'
 
 // referenced in handlers

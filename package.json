@@ -21,6 +21,7 @@
   ],
   "license": "Apache-2.0",
   "devDependencies": {
+    "@hashgraph/hedera-wallet-connect": "file:./",
     "@types/jest": "^29.5.3",
     "@types/node": "^20.11.10",
     "@walletconnect/modal": "^2.6.2",
@@ -45,7 +46,6 @@
   },
   "dependencies": {
     "@hashgraph/sdk": "^2.40.0",
-    "@hashgraph/walletconnect": "file:./",
     "@walletconnect/qrcode-modal": "^1.8.0",
     "@walletconnect/types": "^2.11.0",
     "@walletconnect/utils": "^2.11.0",

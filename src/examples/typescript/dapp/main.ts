@@ -50,7 +50,7 @@ import {
   DAppConnector,
   HederaChainId,
   verifyMessageSignature,
-} from '@hashgraph/walletconnect'
+} from '@hashgraph/hedera-wallet-connect'
 
 import { saveState, loadState, getState } from '../shared'
 
