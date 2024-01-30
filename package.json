@@ -1,18 +1,14 @@
 {
   "name": "@hashgraph/hedera-wallet-connect",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A library to facilitate integrating Hedera with WalletConnect",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/hashgraph/hedera-wallet-connect.git"
-  },
   "main": "./dist/node-cjs.js",
   "module": "./dist/node-esm.js",
   "browser": {
     "./dist/node-cjs.js": "./dist/browser-cjs.js",
     "./dist/node-esm.js": "./dist/browser-esm.js"
   },
-  "types": "./dist/types/index.d.ts",
+  "types": "./dist/types/src/index.d.ts",
   "author": "Hgraph <support@hgraph.io>",
   "keywords": [
     "hedera",
@@ -21,7 +17,7 @@
   ],
   "license": "Apache-2.0",
   "devDependencies": {
-    "@hashgraph/hedera-wallet-connect": "file:./",
+    "@hashgraph/hedera-wallet-connect": "^1.0.5",
     "@types/jest": "^29.5.3",
     "@types/node": "^20.11.10",
     "@walletconnect/modal": "^2.6.2",
