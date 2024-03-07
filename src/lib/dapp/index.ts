@@ -18,7 +18,7 @@
  *
  */
 
-import { AccountId, LedgerId } from '@hashgraph/sdk'
+import { AccountId, LedgerId, Transaction } from '@hashgraph/sdk'
 import { EngineTypes, SessionTypes, SignClientTypes } from '@walletconnect/types'
 import QRCodeModal from '@walletconnect/qrcode-modal'
 import { WalletConnectModal } from '@walletconnect/modal'
@@ -46,6 +46,11 @@ import {
   SignTransactionParams,
   SignTransactionRequest,
   SignTransactionResult,
+  isExecuteTransactionParams,
+  isSignMessageParams,
+  isSignAndExecuteTransactionParams,
+  isSignTransactionParams,
+  isSignAndExecuteQueryParams,
 } from '../shared'
 import { DAppSigner } from './DAppSigner'
 import { JsonRpcResult } from '@walletconnect/jsonrpc-types'
@@ -63,6 +68,7 @@ export class DAppConnector {
   supportedChains: string[] = []
 
   walletConnectClient: SignClient | undefined
+  walletConnectModal: WalletConnectModal
   signers: DAppSigner[] = []
   isInitializing = false
 
@@ -89,6 +95,15 @@ export class DAppConnector {
     this.supportedMethods = methods ?? Object.values(HederaJsonRpcMethod)
     this.supportedEvents = events ?? []
     this.supportedChains = chains ?? []
+
+    this.walletConnectModal = new WalletConnectModal({
+      projectId: projectId,
+      chains: chains,
+    })
+  }
+
+  get accountIds(): AccountId[] {
+    return this.signers.map((signer) => signer.getAccountId())
   }
 
   /**
@@ -107,52 +122,30 @@ export class DAppConnector {
         projectId: this.projectId,
         metadata: this.dAppMetadata,
       })
-      const existingSessions = await this.checkPersistedState()
+      DAppSigner.initialize(this.walletConnectClient)
 
-      if (existingSessions.length) {
-        await this.onSessionConnected(existingSessions.pop()!)
+      const existingSessions = this.walletConnectClient.session.getAll()
 
-        while (existingSessions.length) {
-          this.disconnect(existingSessions.pop()!.topic)
-        }
-      }
-
-      this.walletConnectClient.on('session_event', (event) => {
-        // Handle session events, such as "chainChanged", "accountsChanged", etc.
-        alert('There has been a session event!')
-        console.log(event)
-      })
-
-      this.walletConnectClient.on('session_update', ({ topic, params }) => {
-        // Handle session update
-        alert('There has been a update to the session!')
-        const { namespaces } = params
-        const _session = this.walletConnectClient!.session.get(topic)
-        // Overwrite the `namespaces` of the existing session with the incoming one.
-        const updatedSession = { ..._session, namespaces }
-        // Integrate the updated session state into your dapp state.
-        console.log(updatedSession)
-      })
+      if (existingSessions) this.signers = existingSessions.flatMap(this.createSigners)
 
       this.walletConnectClient.on('session_delete', (pairing) => {
-        console.log(pairing)
         this.signers = this.signers.filter((signer) => signer.topic !== pairing.topic)
         this.disconnect(pairing.topic)
-        // Session was deleted -> reset the dapp state, clean up from user session, etc.
-        console.log('Dapp: Session deleted by wallet!')
       })
 
       this.walletConnectClient.core.pairing.events.on('pairing_delete', (pairing) => {
-        // Session was deleted
-        console.log(pairing)
         this.signers = this.signers.filter((signer) => signer.topic !== pairing.topic)
         this.disconnect(pairing.topic)
-        console.log(`Dapp: Pairing deleted by wallet!`)
-        // clean up after the pairing for `topic` was deleted.
       })
     } finally {
       this.isInitializing = false
     }
+  }
+
+  public getSigner(accountId: AccountId): DAppSigner {
+    const signer = this.signers.find((signer) => signer.getAccountId().equals(accountId))
+    if (!signer) throw new Error('Signer is not found for this accountId')
+    return signer
   }
 
   /**
@@ -180,16 +173,18 @@ export class DAppConnector {
    * @param pairingTopic - The pairing topic for the connection (optional).
    * @returns A Promise that resolves when the connection process is complete.
    */
-  public async openModal(pairingTopic?: string): Promise<void> {
-    const { uri, approval } = await this.connectURI(pairingTopic)
-    const walletConnectModal = new WalletConnectModal({
-      projectId: this.projectId,
-      chains: this.supportedChains,
-    })
-    walletConnectModal.openModal({ uri })
-    const session = await approval()
-    await this.onSessionConnected(session)
-    walletConnectModal.closeModal()
+  public async openModal(pairingTopic?: string): Promise<SessionTypes.Struct> {
+    try {
+      const { uri, approval } = await this.connectURI(pairingTopic)
+      this.walletConnectModal.openModal({ uri })
+      const session = await approval()
+      await this.onSessionConnected(session)
+      return session
+    } catch (error) {
+      throw error
+    } finally {
+      this.walletConnectModal.closeModal()
+    }
   }
 
   /**
@@ -280,93 +275,12 @@ export class DAppConnector {
     const allNamespaceAccounts = accountAndLedgerFromSession(session)
     return allNamespaceAccounts.map(
       ({ account, network }: { account: AccountId; network: LedgerId }) =>
-        new DAppSigner(account, this.walletConnectClient!, session.topic, network),
+        new DAppSigner(account, session.topic, network),
     )
   }
 
   private async onSessionConnected(session: SessionTypes.Struct) {
     this.signers.push(...this.createSigners(session))
-  }
-
-  private pingWithTimeout = async (
-    { topic }: EngineTypes.PingParams,
-    pingTimeoutMs: number = 1_000,
-  ) => {
-    return new Promise<void>(async (resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error(`Ping to ${topic} timed out after ${pingTimeoutMs}(ms)`))
-      }, pingTimeoutMs)
-
-      try {
-        resolve(await this.walletConnectClient?.ping({ topic }))
-      } catch (err) {
-        reject(err)
-      } finally {
-        clearTimeout(timeout)
-      }
-    })
-  }
-
-  private async pingWithRetry(topic: string, retries = 3): Promise<void> {
-    try {
-      await this.pingWithTimeout({ topic })
-    } catch (error) {
-      if (retries > 0) {
-        console.log(`Ping failed, ${retries} retries left. Retrying in 1 seconds...`)
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        await this.pingWithRetry(topic, retries - 1)
-      } else {
-        console.log(`Ping failed after ${retries} retries. Aborting...`)
-        throw error
-      }
-    }
-  }
-
-  private async checkPersistedState() {
-    if (!this.walletConnectClient) {
-      throw new Error('WalletConnect is not initialized')
-    }
-
-    if (this.walletConnectClient.session.length) {
-      const sessionCheckPromises: Promise<SessionTypes.Struct>[] =
-        this.walletConnectClient.session.getAll().map(
-          (session: SessionTypes.Struct) =>
-            new Promise(async (resolve, reject) => {
-              try {
-                await this.pingWithRetry(session.topic)
-                resolve(session)
-              } catch (error) {
-                try {
-                  await this.walletConnectClient!.disconnect({
-                    topic: session.topic,
-                    reason: getSdkError('SESSION_SETTLEMENT_FAILED'),
-                  })
-                  reject(`Ping failed, disconnecting from session. Topic: ${session.topic}`)
-                } catch (e) {
-                  console.log('Non existing session with topic:', session.topic)
-                  reject('Non existing session')
-                }
-              }
-            }),
-        )
-      const sessionCheckResults = (await Promise.allSettled(sessionCheckPromises)) as {
-        status: 'fulfilled' | 'rejected'
-        value: SessionTypes.Struct
-      }[]
-
-      const sessions = sessionCheckResults
-        .filter((result) => result.status === 'fulfilled')
-        .map((result) => result.value as SessionTypes.Struct)
-
-      const errors = sessionCheckResults.filter((result) => result.status === 'rejected')
-      if (errors.length) {
-        console.log('Errors while checking persisted state:', errors)
-      }
-
-      return sessions
-    }
-
-    return []
   }
 
   private async connectURI(
@@ -385,16 +299,16 @@ export class DAppConnector {
     })
   }
 
-  private async request<Req extends EngineTypes.RequestParams, Res extends JsonRpcResult>({
-    method,
-    params,
-  }: Req['request']): Promise<Res> {
+  private async request<
+    Req extends EngineTypes.RequestParams,
+    Res extends JsonRpcResult['result'],
+  >({ method, params }: Req['request']) {
     const signer = this.signers[this.signers.length - 1]
     if (!signer) {
       throw new Error('There is no active session. Connect to the wallet at first.')
     }
 
-    return await signer.request({
+    return await signer.request<Res>({
       method: method,
       params: params,
     })
@@ -429,11 +343,43 @@ export class DAppConnector {
    * const result = await dAppConnector.executeTransaction(params)
    * ```
    */
-  public async executeTransaction(params: ExecuteTransactionParams) {
-    return await this.request<ExecuteTransactionRequest, ExecuteTransactionResult>({
-      method: HederaJsonRpcMethod.ExecuteTransaction,
-      params,
-    })
+  public async executeTransaction(
+    params: ExecuteTransactionParams,
+  ): Promise<ExecuteTransactionResult['result']>
+
+  /**
+   * Executes a transaction on the Hedera networkw with a signer
+   *
+   * @param {AccountId} accountId - AccountId of the signer
+   * @param {Transaction} transaction - Transaction to be executed
+   * @returns {Promise<Transaction>}
+   *  * @example
+   * ```ts
+   * const params = {
+   *  signedTransaction: [transactionToBase64String(transaction)]
+   * }
+   *
+   * const result = await dAppConnector.executeTransaction(AccountId.fromString('0.0.12345), transaction)
+   * ```
+   */
+  public async executeTransaction(
+    accountId: AccountId,
+    transaction: Transaction,
+  ): Promise<ExecuteTransactionResult['result']>
+  public async executeTransaction(
+    paramsOrAccountId: ExecuteTransactionParams | AccountId,
+    transaction?: Transaction,
+  ) {
+    if (arguments.length === 1 && isExecuteTransactionParams(paramsOrAccountId)) {
+      return this.request<ExecuteTransactionRequest, ExecuteTransactionResult['result']>({
+        method: HederaJsonRpcMethod.ExecuteTransaction,
+        params: paramsOrAccountId,
+      })
+    } else {
+      if (!transaction) throw new Error('Transaction is not defined')
+      const signer = this.getSigner(paramsOrAccountId as AccountId)
+      return signer.executeTransaction(transaction)
+    }
   }
 
   /**
@@ -453,11 +399,23 @@ export class DAppConnector {
    * const result = await dAppConnector.signMessage(params)
    * ```
    */
-  public async signMessage(params: SignMessageParams) {
-    return await this.request<SignMessageRequest, SignMessageResult>({
-      method: HederaJsonRpcMethod.SignMessage,
-      params,
-    })
+
+  public async signMessage(params: SignMessageParams): Promise<SignMessageResult['result']>
+  public async signMessage(
+    accountId: AccountId,
+    message: string,
+  ): Promise<SignMessageResult['result']>
+  public async signMessage(paramsOrAccountId: SignMessageParams | AccountId, message?: string) {
+    if (arguments.length === 1 && isSignMessageParams(paramsOrAccountId)) {
+      return this.request<SignMessageRequest, SignMessageResult['result']>({
+        method: HederaJsonRpcMethod.SignMessage,
+        params: paramsOrAccountId,
+      })
+    } else {
+      if (!message) throw new Error('Message is not defined')
+      const signer = this.getSigner(paramsOrAccountId as AccountId)
+      return signer.signMessage(message)
+    }
   }
 
   /**
@@ -478,11 +436,30 @@ export class DAppConnector {
    * const result = await dAppConnector.signAndExecuteQuery(params)
    * ```
    */
-  public async signAndExecuteQuery(params: SignAndExecuteQueryParams) {
-    return await this.request<SignAndExecuteQueryRequest, SignAndExecuteQueryResult>({
-      method: HederaJsonRpcMethod.SignAndExecuteQuery,
-      params,
-    })
+  public async signAndExecuteQuery(
+    params: SignAndExecuteQueryParams,
+  ): Promise<SignAndExecuteQueryResult['result']>
+  public async signAndExecuteQuery(
+    accountId: AccountId,
+    query: string,
+  ): Promise<SignAndExecuteQueryResult['result']>
+  public async signAndExecuteQuery(
+    paramsOrAccountId: SignAndExecuteQueryParams | AccountId,
+    query?: string,
+  ) {
+    if (arguments.length === 1 && isSignAndExecuteQueryParams(paramsOrAccountId)) {
+      return await this.request<
+        SignAndExecuteQueryRequest,
+        SignAndExecuteQueryResult['result']
+      >({
+        method: HederaJsonRpcMethod.SignAndExecuteQuery,
+        params: paramsOrAccountId,
+      })
+    } else {
+      if (!query) throw new Error('Query is not defined')
+      const signer = this.getSigner(paramsOrAccountId as AccountId)
+      return signer.signAndExecuteQuery(query)
+    }
   }
 
   /**
@@ -503,14 +480,30 @@ export class DAppConnector {
    * const result = await dAppConnector.signAndExecuteTransaction(params)
    * ```
    */
-  public async signAndExecuteTransaction(params: SignAndExecuteTransactionParams) {
-    return await this.request<
-      SignAndExecuteTransactionRequest,
-      SignAndExecuteTransactionResult
-    >({
-      method: HederaJsonRpcMethod.SignAndExecuteTransaction,
-      params,
-    })
+  public async signAndExecuteTransaction(
+    params: SignAndExecuteTransactionParams,
+  ): Promise<SignAndExecuteTransactionResult['result']>
+  public async signAndExecuteTransaction(
+    accountId: AccountId,
+    transaction: Transaction,
+  ): Promise<SignAndExecuteTransactionResult['result']>
+  public async signAndExecuteTransaction(
+    paramsOrAccountId: SignAndExecuteTransactionParams | AccountId,
+    transaction?: Transaction,
+  ) {
+    if (arguments.length === 1 && isSignAndExecuteTransactionParams(paramsOrAccountId)) {
+      return this.request<
+        SignAndExecuteTransactionRequest,
+        SignAndExecuteTransactionResult['result']
+      >({
+        method: HederaJsonRpcMethod.SignAndExecuteTransaction,
+        params: paramsOrAccountId,
+      })
+    } else {
+      if (!transaction) throw new Error('Transaction is not defined')
+      const signer = this.getSigner(paramsOrAccountId as AccountId)
+      return signer.signAndExecuteTransaction(transaction)
+    }
   }
 
   /**
@@ -533,11 +526,27 @@ export class DAppConnector {
    * const result = await dAppConnector.signTransaction(params)
    * ```
    */
-  public async signTransaction(params: SignTransactionParams) {
-    return await this.request<SignTransactionRequest, SignTransactionResult>({
-      method: HederaJsonRpcMethod.SignTransaction,
-      params,
-    })
+  public async signTransaction(
+    params: SignTransactionParams,
+  ): Promise<SignTransactionResult['result']>
+  public async signTransaction(
+    accountId: AccountId,
+    transaction: Transaction,
+  ): Promise<Transaction>
+  public async signTransaction(
+    paramsOrAccountId: SignTransactionParams | AccountId,
+    transaction?: Transaction,
+  ) {
+    if (arguments.length === 1 && isSignTransactionParams(paramsOrAccountId)) {
+      return this.request<SignTransactionRequest, SignTransactionResult['result']>({
+        method: HederaJsonRpcMethod.SignTransaction,
+        params: paramsOrAccountId,
+      })
+    } else {
+      if (!transaction) throw new Error('Transaction is not defined')
+      const signer = this.getSigner(paramsOrAccountId as AccountId)
+      return signer.signTransaction(transaction)
+    }
   }
 }
 

@@ -57,6 +57,12 @@ export interface ExecuteTransactionParams {
    */
   transactionList: string
 }
+// type guard
+export function isExecuteTransactionParams(
+  params: ExecuteTransactionParams | any,
+): params is ExecuteTransactionParams {
+  return (params as ExecuteTransactionParams).transactionList !== undefined
+}
 // request
 export interface ExecuteTransactionRequest extends EngineTypes.RequestParams {
   request: {
@@ -85,6 +91,15 @@ export interface SignMessageParams {
    */
   message: string
 }
+// type guard
+export function isSignMessageParams(
+  params: SignMessageParams | any,
+): params is SignMessageParams {
+  return (
+    (params as SignMessageParams).signerAccountId !== undefined &&
+    (params as SignMessageParams).message !== undefined
+  )
+}
 // request
 export interface SignMessageRequest extends EngineTypes.RequestParams {
   request: {
@@ -106,6 +121,15 @@ export interface SignMessageResponse extends EngineTypes.RespondParams {
 export interface SignAndExecuteQueryParams {
   signerAccountId: string
   query: string
+}
+// type guard
+export function isSignAndExecuteQueryParams(
+  params: SignAndExecuteQueryParams | any,
+): params is SignAndExecuteQueryParams {
+  return (
+    (params as SignAndExecuteQueryParams).signerAccountId !== undefined &&
+    (params as SignAndExecuteQueryParams).query !== undefined
+  )
 }
 // request
 export interface SignAndExecuteQueryRequest extends EngineTypes.RequestParams {
@@ -129,6 +153,15 @@ export interface SignAndExecuteTransactionParams {
   signerAccountId: string
   transactionList: string
 }
+// type guard
+export function isSignAndExecuteTransactionParams(
+  params: SignAndExecuteTransactionParams | any,
+): params is SignAndExecuteTransactionParams {
+  return (
+    (params as SignAndExecuteTransactionParams).signerAccountId !== undefined &&
+    (params as SignAndExecuteTransactionParams).transactionList !== undefined
+  )
+}
 // request
 export interface SignAndExecuteTransactionRequest extends EngineTypes.RequestParams {
   request: {
@@ -145,6 +178,7 @@ export interface SignAndExecuteTransactionResult
 export interface SignAndExecuteTransactionResponse extends EngineTypes.RespondParams {
   response: SignAndExecuteTransactionResult
 }
+
 /*
  * 6. hedera_signTransaction
  */
@@ -154,7 +188,15 @@ export interface SignTransactionParams {
   signerAccountId: string
   transactionBody: string
 }
-
+// type guard
+export function isSignTransactionParams(
+  params: SignTransactionParams | any,
+): params is SignTransactionParams {
+  return (
+    (params as SignTransactionParams).signerAccountId !== undefined &&
+    (params as SignTransactionParams).transactionBody !== undefined
+  )
+}
 //request
 export interface SignTransactionRequest extends EngineTypes.RequestParams {
   request: {
