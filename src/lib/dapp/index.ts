@@ -124,7 +124,7 @@ export class DAppConnector {
       })
       DAppSigner.initialize(this.walletConnectClient)
 
-      const existingSessions = this.walletConnectClient.session.getAll()
+      const existingSessions = this.checkPersistedState()
 
       if (existingSessions) this.signers = existingSessions.flatMap(this.createSigners)
 
@@ -140,6 +140,13 @@ export class DAppConnector {
     } finally {
       this.isInitializing = false
     }
+  }
+
+  public checkPersistedState() {
+    if (!this.walletConnectClient) {
+      throw new Error('WalletConnect is not initialized')
+    }
+    return this.walletConnectClient.session.getAll()
   }
 
   public getSigner(accountId: AccountId): DAppSigner {
