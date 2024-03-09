@@ -128,6 +128,163 @@ to approve or reject the session:
 Upon receiving a `session_request` event, process the request. For instance, if the dApp
 requests a transaction to be signed:
 
+### DApp
+
+This library provides a simple interface to connect to a wallet and send requests using the
+DAppConnector class, which wraps the WalletConnect signClient and WalletConnectModal.
+
+#### Initialization
+
+```javascript
+import {
+  DAppConnector,
+  HederaSessionEvent,
+  HederaChainId,
+} from '@hashgraph/walletconnect-hedera'
+import { LedgerId } from '@hashgraph/sdk'
+
+const dAppMetadata = {
+  name: '<Your dapp name>',
+  description: '<Your dapp description>',
+  url: '<Dapp url>',
+  icons: ['<Image url>'],
+}
+
+const dAppConnector = new DAppConnector(
+  dAppMetadata,
+  LedgerId.TESTNET,
+  projectId,
+  Object.values(HederaJsonRpcMethod),
+  [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
+  [HederaChainId.Testnet],
+)
+await dAppConnector.init()
+```
+
+#### Pairing with Wallets
+
+Establish a connection between a dApp and a wallet by pairing them. Multiple accounts can be
+paired simultaneously.
+
+```javascript
+const session = await dAppConnector.openModal()
+```
+
+#### Sending Requests
+
+Once paired, the dApp can send requests to the wallet. For instance, if the dApp wants to
+request a transaction to be signed:
+
+```javascript
+
+const transaction = new TransferTransaction()
+      .addHbarTransfer(0.0.12345, -1)
+      .addHbarTransfer(receiver, 1)
+
+const accountId = AccountId.fromString('0.0.12345')
+const transactionSigned = await dAppConnector.signTransaction(
+  accountId
+  transaction,
+)
+```
+
+##### 1 - hedera_getNodeAddresses
+
+```javascript
+const nodeAddresses = await dAppConnector.getNodeAddresses()
+```
+
+##### 2- hedera_ExecuteTransaction
+
+```javascript
+const transactionSigned = await dAppConnector.executeTransaction(
+  accountId
+  transaction,
+)
+```
+
+##### 3- hedera_signMessage
+
+```javascript
+const response = await dAppConnector.signMessage(accountId, message)
+```
+
+##### 4- handleExecuteQuery
+
+```javascript
+const response = await dAppConnector.executeQuery(accountId, query)
+```
+
+##### 5- hedera_signAndExecuteTransaction
+
+```javascript
+const response = await dAppConnector.signAndExecuteTransaction(
+  accountId
+  transaction,
+)
+```
+
+##### 6- hedera_signTransaction
+
+```javascript
+const transaction = await dAppConnector.signTransaction(
+  accountId
+  transaction,
+)
+```
+
+#### Get a Signer
+
+Use the accountId of a paired account to retrieve a signer and simplify interactions with the
+Wallet and multiple accounts.
+
+```javascript
+const signer = dAppConnector.getSigner(AccountId.fromString('0.0.12345'))
+const response = await signer.signAndExecuteTransaction(transaction)
+```
+
+#### Events
+
+The events exposed by the DAppConnector can be accessed through the `walletConnectClient` prop.
+To learn more about these events, please refer to
+[WalletConnect Session Events](https://specs.walletconnect.com/2.0/specs/clients/sign/session-events).
+
+```javascript
+  dAppConnector.walletConnectClient.on('session_event', (event) => {
+    // Handle session events, such as "chainChanged", "accountsChanged", etc.
+    console.log(event)
+  })
+
+  dAppConnector.walletConnectClient.on('session_request_sent', (event) => {
+    // Handle session events, such as "chainChanged", "accountsChanged", etc.
+    console.log('session_request_sent: ', event)
+  })
+
+  dAppConnector.walletConnectClient.on('session_update', ({ topic, params }) => {
+    // Handle session update
+    const { namespaces } = params
+    const _session = dAppConnector.walletConnectClient!.session.get(topic)
+    // Overwrite the `namespaces` of the existing session with the incoming one.
+    const updatedSession = { ..._session, namespaces }
+    // Integrate the updated session state into your dapp state.
+    console.log(updatedSession)
+  })
+```
+
+#### Disconnecting
+
+##### Disconnect single session
+
+```javascript
+dAppConnector.disconnectSession(session.topic)
+```
+
+##### Disconnect all sessions
+
+```javascript
+dAppConnector.disconnectAllSessions()
+```
+
 ## Demo & docs
 
 This repository includes a vanilla html/css/javascript implementation with a dApp and wallet
