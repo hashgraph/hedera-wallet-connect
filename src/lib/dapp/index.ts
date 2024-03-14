@@ -46,6 +46,9 @@ import {
   SignTransactionParams,
   SignTransactionRequest,
   SignTransactionResult,
+  ExtensionData,
+  extensionConnect,
+  findExtensions,
 } from '../shared'
 import { DAppSigner } from './DAppSigner'
 import { JsonRpcResult } from '@walletconnect/jsonrpc-types'
@@ -62,6 +65,8 @@ export class DAppConnector {
   supportedEvents: string[] = []
   supportedChains: string[] = []
 
+  extensions: ExtensionData[] = []
+
   walletConnectClient: SignClient | undefined
   walletConnectModal: WalletConnectModal
   signers: DAppSigner[] = []
@@ -75,6 +80,7 @@ export class DAppConnector {
    * @param methods - Array of supported methods for the DApp (optional).
    * @param events - Array of supported events for the DApp (optional).
    * @param events - Array of supported chains for the DApp (optional).
+   * @param extensions - Array of Chrome extensions enabled to be popup when sending requests (optional).
    */
   constructor(
     metadata: SignClientTypes.Metadata,
@@ -83,6 +89,7 @@ export class DAppConnector {
     methods?: string[],
     events?: string[],
     chains?: string[],
+    extensionIds?: string[],
   ) {
     this.dAppMetadata = metadata
     this.network = network
@@ -95,6 +102,32 @@ export class DAppConnector {
       projectId: projectId,
       chains: chains,
     })
+
+    this.extensions =
+      extensionIds?.map((id) => ({
+        id,
+        available: false,
+      })) ?? []
+
+    if (extensionIds?.length) {
+      findExtensions(
+        this.extensions.map((ext) => ext.id),
+        (metadata) => {
+          this.extensions = this.extensions.map((ext) => {
+            if (metadata.id === ext.id) {
+              return {
+                ...ext,
+                available: true,
+                name: metadata.name,
+                url: metadata.url,
+                icon: metadata.icon,
+              }
+            }
+            return ext
+          })
+        },
+      )
+    }
   }
 
   /**
@@ -200,19 +233,53 @@ export class DAppConnector {
   /**
    * Initiates the WallecConnect connection flow using URI.
    * @param pairingTopic - The pairing topic for the connection (optional).
+   * @param extensionId - The id for the extension used to connect (optional).
    * @returns A Promise that resolves when the connection process is complete.
    */
   public async connect(
     launchCallback: (uri: string) => void,
     pairingTopic?: string,
-  ): Promise<void> {
+    extensionId?: string,
+  ): Promise<SessionTypes.Struct> {
     return this.abortableConnect(async () => {
       const { uri, approval } = await this.connectURI(pairingTopic)
       if (!uri) throw new Error('URI is not defined')
       launchCallback(uri)
       const session = await approval()
+      if (extensionId) {
+        const sessionProperties = {
+          ...session.sessionProperties,
+          extensionId,
+        }
+        session.sessionProperties = sessionProperties
+        await this.walletConnectClient?.session.update(session.topic, {
+          sessionProperties,
+        })
+      }
       await this.onSessionConnected(session)
+      return session
     })
+  }
+
+  /**
+   * Initiates the WallecConnect connection flow sending a message to the extension.
+   * @param extensionId - The id for the extension used to connect.
+   * @param pairingTopic - The pairing topic for the connection (optional).
+   * @returns A Promise that resolves when the connection process is complete.
+   */
+  public async connectExtension(
+    extensionId: string,
+    pairingTopic?: string,
+  ): Promise<SessionTypes.Struct> {
+    const extension = this.extensions.find((ext) => ext.id === extensionId)
+    if (!extension || !extension.available) throw new Error('Extension is not available')
+    return this.connect(
+      (uri) => {
+        extensionConnect(extension.id, uri)
+      },
+      pairingTopic,
+      extensionId,
+    )
   }
 
   private abortableConnect = async <T>(callback: () => Promise<T>): Promise<T> => {
@@ -225,6 +292,8 @@ export class DAppConnector {
 
       try {
         return resolve(await callback())
+      } catch (error) {
+        reject(error)
       } finally {
         clearTimeout(timeout)
       }
@@ -285,7 +354,13 @@ export class DAppConnector {
     const allNamespaceAccounts = accountAndLedgerFromSession(session)
     return allNamespaceAccounts.map(
       ({ account, network }: { account: AccountId; network: LedgerId }) =>
-        new DAppSigner(account, this.walletConnectClient!, session.topic, network),
+        new DAppSigner(
+          account,
+          this.walletConnectClient!,
+          session.topic,
+          network,
+          session.sessionProperties?.extensionId,
+        ),
     )
   }
 
