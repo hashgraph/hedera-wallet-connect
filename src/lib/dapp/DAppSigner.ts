@@ -45,6 +45,7 @@ import {
   transactionBodyToBase64String,
   transactionToBase64String,
   transactionToTransactionBody,
+  extensionOpen,
 } from '../shared'
 
 export class DAppSigner implements Signer {
@@ -60,6 +61,7 @@ export class DAppSigner implements Signer {
     private readonly accountId: AccountId,
     public readonly topic: string,
     private readonly ledgerId: LedgerId = LedgerId.MAINNET,
+    public readonly extensionId?: string,
   ) {
     this.signerAccountId = `${ledgerIdToCAIPChainId(ledgerId)}:${accountId.toString()}`
     this.nodesAccountIds = [AccountId.fromString('0.0.3')]
@@ -79,6 +81,8 @@ export class DAppSigner implements Signer {
   }
 
   request<T>(request: { method: string; params: any }): Promise<T> {
+    if (this.extensionId) extensionOpen(this.extensionId)
+
     return DAppSigner.signClient.request<T>({
       topic: this.topic,
       request,
