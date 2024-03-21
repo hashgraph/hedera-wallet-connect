@@ -128,6 +128,249 @@ to approve or reject the session:
 Upon receiving a `session_request` event, process the request. For instance, if the dApp
 requests a transaction to be signed:
 
+### DApp
+
+This library provides a simple interface to connect to a wallet and send requests using the
+DAppConnector class, which wraps the WalletConnect signClient and WalletConnectModal.
+
+#### Initialization
+
+```javascript
+import {
+  DAppConnector,
+  HederaSessionEvent,
+  HederaChainId,
+} from '@hashgraph/walletconnect-hedera'
+import { LedgerId } from '@hashgraph/sdk'
+
+const dAppMetadata = {
+  name: '<Your dapp name>',
+  description: '<Your dapp description>',
+  url: '<Dapp url>',
+  icons: ['<Image url>'],
+}
+
+const extensionIds = ['<Extension ID>']
+
+const dAppConnector = new DAppConnector(
+  dAppMetadata,
+  LedgerId.TESTNET,
+  projectId,
+  Object.values(HederaJsonRpcMethod),
+  [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
+  [HederaChainId.Testnet],
+  extensionIds,
+)
+await dAppConnector.init()
+```
+
+#### Pairing with Wallets
+
+Establish a connection between a dApp and a wallet by pairing them. Multiple accounts can be
+paired simultaneously.
+
+```javascript
+const session = await dAppConnector.openModal()
+```
+
+#### Sending Requests
+
+Once paired, the dApp can send requests to the wallet. For instance, if the dApp wants to
+request a transaction to be signed:
+
+```javascript
+
+const transaction = new TransferTransaction()
+      .addHbarTransfer(0.0.12345, -1)
+      .addHbarTransfer(receiver, 1)
+
+const accountId = AccountId.fromString('0.0.12345')
+const transactionSigned = await dAppConnector.signTransaction(
+  accountId
+  transaction,
+)
+```
+
+##### 1 - hedera_getNodeAddresses
+
+```javascript
+const nodeAddresses = await dAppConnector.getNodeAddresses()
+```
+
+##### 2- hedera_ExecuteTransaction
+
+```javascript
+const transactionSigned = await dAppConnector.executeTransaction(
+  accountId
+  transaction,
+)
+```
+
+##### 3- hedera_signMessage
+
+```javascript
+const response = await dAppConnector.signMessage(accountId, message)
+```
+
+##### 4- handleExecuteQuery
+
+```javascript
+const response = await dAppConnector.executeQuery(accountId, query)
+```
+
+##### 5- hedera_signAndExecuteTransaction
+
+```javascript
+const response = await dAppConnector.signAndExecuteTransaction(
+  accountId
+  transaction,
+)
+```
+
+##### 6- hedera_signTransaction
+
+```javascript
+const transaction = await dAppConnector.signTransaction(
+  accountId
+  transaction,
+)
+```
+
+#### Get a Signer
+
+Use the accountId of a paired account to retrieve a signer and simplify interactions with the
+Wallet and multiple accounts.
+
+```javascript
+const signer = dAppConnector.getSigner(AccountId.fromString('0.0.12345'))
+const response = await signer.signAndExecuteTransaction(transaction)
+```
+
+#### Events
+
+The events exposed by the DAppConnector can be accessed through the `walletConnectClient` prop.
+To learn more about these events, please refer to
+[WalletConnect Session Events](https://specs.walletconnect.com/2.0/specs/clients/sign/session-events).
+
+```javascript
+  dAppConnector.walletConnectClient.on('session_event', (event) => {
+    // Handle session events, such as "chainChanged", "accountsChanged", etc.
+    console.log(event)
+  })
+
+  dAppConnector.walletConnectClient.on('session_request_sent', (event) => {
+    // Handle session events, such as "chainChanged", "accountsChanged", etc.
+    console.log('session_request_sent: ', event)
+  })
+
+  dAppConnector.walletConnectClient.on('session_update', ({ topic, params }) => {
+    // Handle session update
+    const { namespaces } = params
+    const _session = dAppConnector.walletConnectClient!.session.get(topic)
+    // Overwrite the `namespaces` of the existing session with the incoming one.
+    const updatedSession = { ..._session, namespaces }
+    // Integrate the updated session state into your dapp state.
+    console.log(updatedSession)
+  })
+```
+
+#### Disconnecting
+
+##### Disconnect single session
+
+```javascript
+dAppConnector.disconnectSession(session.topic)
+```
+
+##### Disconnect all sessions
+
+```javascript
+dAppConnector.disconnectAllSessions()
+```
+
+#### Extension popup
+
+By default, it is not possible to directly pop up an extension with Wallet Connect. However, to
+allow this possibility, the dAppConnector accepts a list of extension IDs. If you create the
+AppConnector with an extension ID, it will automatically send a message to the extension to
+detect if it is installed. In case the extension is installed, it will be added to the available
+extensions and its data can be found at the extensions property of dAppConnector.
+
+To connect an available extension, use the method `connectExtension(<extensionId>)`. This will
+link the extension to the signer and session. Whenever you use the signer created for this
+session, the extension will automatically open. You can find out if the extension is available
+by checking the `extensions` property.
+
+```javascript
+const dAppConnector = new DAppConnector(
+  dAppMetadata,
+  LedgerId.TESTNET,
+  projectId,
+  Object.values(HederaJsonRpcMethod),
+  [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
+  [HederaChainId.Testnet],
+  ['<Extension ID 1>, <Extension ID 2>'],
+)
+
+[...]
+
+dAppConnector?.extensions?.forEach((extension) => {
+  console.log(extension)
+})
+
+const extension = dAppConnector?.extensions?.find((extension) => extension.name === '<Extension name>')
+if (extension.available) {
+  await dAppConnector!.connectExtension(extension.id);
+  const signer = dAppConnector.getSigner(AccountId.fromString('0.0.12345'))
+
+  // This request will open the extension
+  const response = await signer.signAndExecuteTransaction(transaction)
+}
+```
+
+Wallets that are compatible should be able to receive and respond to the following messages:
+
+- `"hedera-extension-query-<extesnionId>"`: The extension is required to respond with
+  `"hedera-extension-response"` and provide the next set of data in the metadata property.
+  ```javascript
+  let metadata = {
+    id: '<extesnionId>',
+    name: '<Wallet name>',
+    url: '<Wallet url>',
+    icon: '<Wallet con>',
+    description: '<Wallet url>',
+  }
+  ```
+- `"hedera-extension-open-<extensionId>"`: The extension needs to listen to this message and
+  automatically open.
+- `"hedera-extension-connect-<extensionId>"`: The extension must listen to this message and
+  utilize the `pairingString` property in order to establish a connection.
+
+This communication protocol between the wallet and web dApps requires an intermediate script to
+use the Chrome API. Refer to the
+[Chrome Extensions documentation](https://developer.chrome.com/docs/extensions/develop/concepts/messaging)
+
+To enable communication between the extension and a web dApp embedded in an iframe, the wallet
+must support the following messages:
+
+- `"hedera-iframe-query"`:The extension is required to respond with `"hedera-iframe-response"`
+  and provide the next set of data in the metadata property.
+  ```javascript
+  let metadata = {
+    id: '<extesnionId>',
+    name: '<Wallet name>',
+    url: '<Wallet url>',
+    icon: '<Wallet con>',
+    description: '<Wallet url>',
+  }
+  ```
+- `"hedera-iframe-connect"`: The extension must listen to this message and utilize the
+  `pairingString` property in order to establish a connection.
+
+The dAppConnector is designed to automatically initiate pairing without any need for user
+action, in case no sessions are noticed and an iframe extension is detected. To capture this
+event and the newly established session, you can utilize the `onSessionIframeCreated` function.
+
 ## Demo & docs
 
 This repository includes a vanilla html/css/javascript implementation with a dApp and wallet
