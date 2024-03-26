@@ -178,7 +178,7 @@ request a transaction to be signed:
 ```javascript
 
 const transaction = new TransferTransaction()
-      .addHbarTransfer(0.0.12345, -1)
+      .addHbarTransfer("0.0.12345", -1)
       .addHbarTransfer(receiver, 1)
 
 const accountId = AccountId.fromString('0.0.12345')
