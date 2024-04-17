@@ -355,7 +355,7 @@ export class DAppConnector {
   ): Promise<ExecuteTransactionResult['result']>
 
   /**
-   * Executes a transaction on the Hedera networkw with a signer
+   * Executes a transaction on the Hedera network with a signer
    *
    * @param {AccountId} accountId - AccountId of the signer
    * @param {Transaction} transaction - Transaction to be executed
