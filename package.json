@@ -49,7 +49,7 @@
     "@walletconnect/qrcode-modal": "^1.8.0",
     "@walletconnect/types": "^2.11.0",
     "@walletconnect/utils": "^2.11.0",
-    "@walletconnect/web3wallet": "^1.9.3"
+    "@walletconnect/web3wallet": "^1.10.3"
   },
   "scripts": {
     "build": "npm run build:types && node scripts/lib/build.mjs",
