@@ -65,6 +65,22 @@ reference the [WalletConnect documentation](https://docs.walletconnect.com/2.0/)
 Upon successfully configuring your dApp and/or wallet to manage WalletConnect sessions, you can
 use this library’s functions to easily create and handle requests for the Hedera network.
 
+### DApps
+
+#### Signer
+
+This library provides a `DAppSigner` class that implements the `@hashgraph/sdk`'s `Signer` interface. You may use the `DAppSigner` class to sign and execute transactions on the Hedera network.
+
+```javascript
+const transaction = new TransferTransaction()
+  .addHbarTransfer('0.0.100', new Hbar(-1))
+  .addHbarTransfer('0.0.101', new Hbar(1))
+
+const signer = dAppConnector.signers[0] // DAppSigner
+await transaction.freezeWithSigner(signer)
+const transactionResponse = await transaction.executeWithSigner(signer)
+```
+
 ### Wallet
 
 This library provides a Wallet class that extends the
