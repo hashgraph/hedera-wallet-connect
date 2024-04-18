@@ -34,6 +34,9 @@ import {
   TransactionId,
   TransactionResponse,
   Query,
+  AccountRecordsQuery,
+  AccountInfoQuery,
+  AccountBalanceQuery,
 } from '@hashgraph/sdk'
 import { proto } from '@hashgraph/proto'
 import type { ISignClient } from '@walletconnect/types'
@@ -44,6 +47,7 @@ import {
   SignAndExecuteTransactionResult,
   SignTransactionResult,
   base64StringToSignatureMap,
+  base64StringToUint8Array,
   ledgerIdToCAIPChainId,
   queryToBase64String,
   transactionBodyToBase64String,
@@ -117,15 +121,15 @@ export class DAppSigner implements Signer {
   }
 
   getAccountBalance(): Promise<AccountBalance> {
-    throw new Error('Method not implemented.')
+    return this.call(new AccountBalanceQuery().setAccountId(this.accountId))
   }
 
   getAccountInfo(): Promise<AccountInfo> {
-    throw new Error('Method not implemented.')
+    return this.call(new AccountInfoQuery().setAccountId(this.accountId))
   }
 
   getAccountRecords(): Promise<TransactionRecord[]> {
-    throw new Error('Method not implemented.')
+    return this.call(new AccountRecordsQuery().setAccountId(this.accountId))
   }
 
   async sign(
@@ -206,6 +210,22 @@ export class DAppSigner implements Signer {
     }
   }
 
+  private async _parseQueryResponse(
+    query: Query<any>,
+    base64EncodedQueryResponse: string,
+  ): Promise<any> {
+    const data = base64StringToUint8Array(base64EncodedQueryResponse)
+    if (query instanceof AccountBalanceQuery) {
+      return proto.CryptoGetAccountBalanceQuery.decode(data)
+    } else if (query instanceof AccountInfoQuery) {
+      return proto.CryptoGetInfoQuery.decode(data)
+    } else if (query instanceof AccountRecordsQuery) {
+      return proto.CryptoGetAccountRecordsResponse.decode(data)
+    } else {
+      throw new Error('Unsupported query type')
+    }
+  }
+
   private async _tryExecuteQueryRequest<RequestT, ResponseT, OutputT>(
     request: Executable<RequestT, ResponseT, OutputT>,
   ): Promise<{
@@ -223,9 +243,7 @@ export class DAppSigner implements Signer {
         },
       })
 
-      // TODO: Make result.response actually be the OutputT.
-      // Each query will have a different response type, so we may need to map the response parsing.
-      return { result: result.response as OutputT }
+      return { result: this._parseQueryResponse(query, result.response) as OutputT }
     } catch (error) {
       return { error }
     }

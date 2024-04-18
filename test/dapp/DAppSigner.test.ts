@@ -21,14 +21,16 @@
 import {
   AccountBalanceQuery,
   AccountCreateTransaction,
+  AccountInfoQuery,
+  AccountRecordsQuery,
   AccountUpdateTransaction,
-  FileContentsQuery,
   LedgerId,
   TokenAssociateTransaction,
   TokenCreateTransaction,
   TopicCreateTransaction,
   TransactionId,
 } from '@hashgraph/sdk'
+import { proto } from '@hashgraph/proto'
 import {
   DAppConnector,
   HederaJsonRpcMethod,
@@ -40,6 +42,7 @@ import {
   SignAndExecuteQueryResult,
   SignAndExecuteQueryParams,
   Uint8ArrayToBase64String,
+  base64StringToQuery,
 } from '../../src'
 import {
   projectId,
@@ -102,11 +105,41 @@ describe('DAppSigner', () => {
           }
           return Promise.resolve(response)
         } else if (method === HederaJsonRpcMethod.SignAndExecuteQuery) {
+          const query = base64StringToQuery(request.params.query)
+          let queryResponse = 'ERROR: Unsupported query type'
+          if (query instanceof AccountBalanceQuery) {
+            queryResponse = Uint8ArrayToBase64String(
+              proto.CryptoGetAccountBalanceResponse.encode({
+                balance: 0,
+              }).finish(),
+            )
+          } else if (query instanceof AccountInfoQuery) {
+            queryResponse = Uint8ArrayToBase64String(
+              proto.CryptoGetInfoQuery.encode({
+                accountID: {
+                  shardNum: 0,
+                  realmNum: 0,
+                  accountNum: 3,
+                },
+              }).finish(),
+            )
+          } else if (query instanceof AccountRecordsQuery) {
+            queryResponse = Uint8ArrayToBase64String(
+              proto.CryptoGetAccountRecordsResponse.encode({
+                accountID: {
+                  shardNum: 0,
+                  realmNum: 0,
+                  accountNum: 3,
+                },
+                records: [],
+              }).finish(),
+            )
+          }
           const response: SignAndExecuteQueryResult = {
             id: 1,
             jsonrpc: '2.0',
             result: {
-              response: 'TODO: Implement a real response here',
+              response: queryResponse,
             },
           }
           return Promise.resolve(response)
@@ -143,7 +176,8 @@ describe('DAppSigner', () => {
 
     it.each([
       { name: AccountBalanceQuery.name, ExecutableType: AccountBalanceQuery },
-      { name: FileContentsQuery.name, ExecutableType: FileContentsQuery },
+      { name: AccountInfoQuery.name, ExecutableType: AccountInfoQuery },
+      { name: AccountRecordsQuery.name, ExecutableType: AccountRecordsQuery },
     ])('can execute $name query', async ({ name, ExecutableType }) => {
       const query = prepareTestQuery<any, any>(new ExecutableType())
 
