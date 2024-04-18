@@ -83,25 +83,17 @@ describe('DAppSigner', () => {
       signerRequestSpy.mockImplementation((request: { method: string; params: any }) => {
         const { method } = request
         if (method === HederaJsonRpcMethod.SignAndExecuteTransaction) {
-          const response: SignAndExecuteTransactionResult = {
-            id: 1,
-            jsonrpc: '2.0',
-            result: {
-              transactionId: TransactionId.generate('0.0.999').toString(),
-              nodeId: '0.0.3',
-              transactionHash: '0x',
-            },
+          const response: SignAndExecuteTransactionResult['result'] = {
+            transactionId: TransactionId.generate('0.0.999').toString(),
+            nodeId: '0.0.3',
+            transactionHash: '0x',
           }
           return Promise.resolve(response)
         } else if (method === HederaJsonRpcMethod.ExecuteTransaction) {
-          const response: ExecuteTransactionResult = {
-            id: 1,
-            jsonrpc: '2.0',
-            result: {
-              transactionId: TransactionId.generate('0.0.999').toString(),
-              nodeId: '0.0.3',
-              transactionHash: '0x',
-            },
+          const response: ExecuteTransactionResult['result'] = {
+            transactionId: TransactionId.generate('0.0.999').toString(),
+            nodeId: '0.0.3',
+            transactionHash: '0x',
           }
           return Promise.resolve(response)
         } else if (method === HederaJsonRpcMethod.SignAndExecuteQuery) {
@@ -135,12 +127,8 @@ describe('DAppSigner', () => {
               }).finish(),
             )
           }
-          const response: SignAndExecuteQueryResult = {
-            id: 1,
-            jsonrpc: '2.0',
-            result: {
-              response: queryResponse,
-            },
+          const response: SignAndExecuteQueryResult['result'] = {
+            response: queryResponse,
           }
           return Promise.resolve(response)
         }

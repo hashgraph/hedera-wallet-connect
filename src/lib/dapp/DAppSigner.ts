@@ -136,7 +136,7 @@ export class DAppSigner implements Signer {
     data: Uint8Array[],
     signOptions?: Record<string, any>,
   ): Promise<SignerSignature[]> {
-    const response = await this.request<SignTransactionResult>({
+    const { signatureMap } = await this.request<SignTransactionResult['result']>({
       method: HederaJsonRpcMethod.SignMessage,
       params: {
         signerAccountId: this._signerAccountId,
@@ -144,7 +144,7 @@ export class DAppSigner implements Signer {
       },
     })
 
-    const sigmap = base64StringToSignatureMap(response.result.signatureMap)
+    const sigmap = base64StringToSignatureMap(signatureMap)
 
     const signerSignature = new SignerSignature({
       accountId: this.getAccountId(),
@@ -174,7 +174,7 @@ export class DAppSigner implements Signer {
     )
     const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
 
-    const { result } = await this.request<SignTransactionResult>({
+    const { signatureMap } = await this.request<SignTransactionResult['result']>({
       method: HederaJsonRpcMethod.SignTransaction,
       params: {
         signerAccountId: this._signerAccountId,
@@ -182,7 +182,7 @@ export class DAppSigner implements Signer {
       },
     })
 
-    const sigMap = base64StringToSignatureMap(result.signatureMap)
+    const sigMap = base64StringToSignatureMap(signatureMap)
     const bodyBytes = Buffer.from(transactionBody, 'base64')
     const bytes = proto.Transaction.encode({ bodyBytes, sigMap }).finish()
     return Transaction.fromBytes(bytes) as T
@@ -196,7 +196,7 @@ export class DAppSigner implements Signer {
   }> {
     try {
       const transaction = Transaction.fromBytes(request.toBytes())
-      const { result } = await this.request<SignAndExecuteTransactionResult>({
+      const result = await this.request<SignAndExecuteTransactionResult['result']>({
         method: HederaJsonRpcMethod.SignAndExecuteTransaction,
         params: {
           signerAccountId: this._signerAccountId,
@@ -235,7 +235,7 @@ export class DAppSigner implements Signer {
     try {
       const query = Query.fromBytes(request.toBytes())
 
-      const { result } = await this.request<SignAndExecuteQueryResult>({
+      const result = await this.request<SignAndExecuteQueryResult['result']>({
         method: HederaJsonRpcMethod.SignAndExecuteQuery,
         params: {
           signerAccountId: this._signerAccountId,
