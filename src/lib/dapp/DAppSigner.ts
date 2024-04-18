@@ -29,10 +29,29 @@ import {
   SignerSignature,
   Transaction,
   TransactionRecord,
+  Client,
+  PublicKey,
+  TransactionId,
+  TransactionResponse,
+  Query,
 } from '@hashgraph/sdk'
+import { proto } from '@hashgraph/proto'
 import type { ISignClient } from '@walletconnect/types'
 
-import { ledgerIdToCAIPChainId } from '../shared'
+import {
+  HederaJsonRpcMethod,
+  SignAndExecuteQueryResult,
+  SignAndExecuteTransactionResult,
+  SignTransactionResult,
+  base64StringToSignatureMap,
+  ledgerIdToCAIPChainId,
+  queryToBase64String,
+  transactionBodyToBase64String,
+  transactionToBase64String,
+  transactionToTransactionBody,
+} from '../shared'
+
+const clients: Record<string, Client | null> = {}
 
 export class DAppSigner implements Signer {
   constructor(
@@ -41,6 +60,33 @@ export class DAppSigner implements Signer {
     public readonly topic: string,
     private readonly ledgerId: LedgerId = LedgerId.MAINNET,
   ) {}
+
+  private _getHederaClient() {
+    const ledgerIdString = this.ledgerId.toString()
+    if (!clients[ledgerIdString]) {
+      clients[ledgerIdString] = Client.forName(ledgerIdString)
+    }
+
+    return clients[ledgerIdString]!
+  }
+
+  private get _signerAccountId() {
+    return `${ledgerIdToCAIPChainId(this.ledgerId)}:${this.accountId.toString()}`
+  }
+
+  private _getRandomNodes(numberOfNodes: number) {
+    const allNodes = Object.values(this._getHederaClient().network).map((o) =>
+      typeof o === 'string' ? AccountId.fromString(o) : o,
+    )
+
+    // shuffle nodes
+    for (let i = allNodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[allNodes[i], allNodes[j]] = [allNodes[j], allNodes[i]]
+    }
+
+    return allNodes.slice(0, numberOfNodes)
+  }
 
   request<T>(request: { method: string; params: any }): Promise<T> {
     return this.signClient.request<T>({
@@ -63,11 +109,11 @@ export class DAppSigner implements Signer {
   }
 
   getNetwork(): { [key: string]: string | AccountId } {
-    throw new Error('Method not implemented.')
+    return this._getHederaClient().network
   }
 
   getMirrorNetwork(): string[] {
-    throw new Error('Method not implemented.')
+    return this._getHederaClient().mirrorNetwork
   }
 
   getAccountBalance(): Promise<AccountBalance> {
@@ -86,7 +132,25 @@ export class DAppSigner implements Signer {
     data: Uint8Array[],
     signOptions?: Record<string, any>,
   ): Promise<SignerSignature[]> {
-    throw new Error('Method not implemented.')
+    const response = await this.request<SignTransactionResult>({
+      method: HederaJsonRpcMethod.SignMessage,
+      params: {
+        signerAccountId: this._signerAccountId,
+        message: Buffer.from(data[0]).toString(),
+      },
+    })
+
+    const sigmap = base64StringToSignatureMap(response.result.signatureMap)
+
+    const signerSignature = new SignerSignature({
+      accountId: this.getAccountId(),
+      publicKey: PublicKey.fromBytes(sigmap.sigPair[0].pubKeyPrefix as Uint8Array),
+      signature:
+        (sigmap.sigPair[0].ed25519 as Uint8Array) ||
+        (sigmap.sigPair[0].ECDSASecp256k1 as Uint8Array),
+    })
+
+    return [signerSignature]
   }
 
   async checkTransaction<T extends Transaction>(transaction: T): Promise<T> {
@@ -94,16 +158,111 @@ export class DAppSigner implements Signer {
   }
 
   async populateTransaction<T extends Transaction>(transaction: T): Promise<T> {
-    throw new Error('Method not implemented.')
+    return transaction
+      .setNodeAccountIds(this._getRandomNodes(10)) // allow retrying on up to 10 nodes
+      .setTransactionId(TransactionId.generate(this.getAccountId()))
   }
 
   async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
-    throw new Error('Method not implemented.')
+    const transactionBody = transactionToTransactionBody(
+      transaction,
+      this._getRandomNodes(1)[0],
+    )
+    const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
+
+    const { result } = await this.request<SignTransactionResult>({
+      method: HederaJsonRpcMethod.SignTransaction,
+      params: {
+        signerAccountId: this._signerAccountId,
+        transactionBody: transactionBodyBase64,
+      },
+    })
+
+    const sigMap = base64StringToSignatureMap(result.signatureMap)
+    const bodyBytes = Buffer.from(transactionBody, 'base64')
+    const bytes = proto.Transaction.encode({ bodyBytes, sigMap }).finish()
+    return Transaction.fromBytes(bytes) as T
+  }
+
+  private async _tryExecuteTransactionRequest<RequestT, ResponseT, OutputT>(
+    request: Executable<RequestT, ResponseT, OutputT>,
+  ): Promise<{
+    result?: OutputT
+    error?: any
+  }> {
+    try {
+      const transaction = Transaction.fromBytes(request.toBytes())
+      const { result } = await this.request<SignAndExecuteTransactionResult>({
+        method: HederaJsonRpcMethod.SignAndExecuteTransaction,
+        params: {
+          signerAccountId: this._signerAccountId,
+          transactionList: transactionToBase64String(transaction),
+        },
+      })
+
+      return { result: TransactionResponse.fromJSON(result) as OutputT }
+    } catch (error) {
+      return { error }
+    }
+  }
+
+  private async _tryExecuteQueryRequest<RequestT, ResponseT, OutputT>(
+    request: Executable<RequestT, ResponseT, OutputT>,
+  ): Promise<{
+    result?: OutputT
+    error?: any
+  }> {
+    try {
+      const query = Query.fromBytes(request.toBytes())
+
+      const { result } = await this.request<SignAndExecuteQueryResult>({
+        method: HederaJsonRpcMethod.SignAndExecuteQuery,
+        params: {
+          signerAccountId: this._signerAccountId,
+          query: queryToBase64String(query),
+        },
+      })
+
+      // TODO: Make result.response actually be the OutputT.
+      // Each query will have a different response type, so we may need to map the response parsing.
+      return { result: result.response as OutputT }
+    } catch (error) {
+      return { error }
+    }
   }
 
   async call<RequestT, ResponseT, OutputT>(
     request: Executable<RequestT, ResponseT, OutputT>,
   ): Promise<OutputT> {
-    throw new Error('Method not implemented.')
+    const txResult = await this._tryExecuteTransactionRequest(request)
+    if (txResult.result) {
+      return txResult.result
+    }
+
+    const queryResult = await this._tryExecuteQueryRequest(request)
+    if (queryResult.result) {
+      return queryResult.result
+    }
+
+    // TODO: make this error more usable
+    throw new Error(
+      'Error executing transaction or query: \n' +
+        JSON.stringify(
+          {
+            txError: {
+              name: txResult.error?.name,
+              message: txResult.error?.message,
+              stack: txResult.error?.stack,
+            },
+            queryError: {
+              name: queryResult.error?.name,
+              message: queryResult.error?.message,
+              stack: queryResult.error?.stack,
+            },
+          },
+          null,
+          2,
+        ),
+    )
   }
 }
