@@ -86,7 +86,7 @@ Or, if multiple signers are available, you can find the signer by account ID:
 
 ```javascript
 const signer = dAppConnector.signers.find(
-  (signer_) => signer_.getAccountId.toString() === '0.0.100',
+  (signer_) => signer_.getAccountId().toString() === '0.0.100',
 ) // DAppSigner
 ```
 
