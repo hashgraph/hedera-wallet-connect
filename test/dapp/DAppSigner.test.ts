@@ -21,10 +21,12 @@
 import {
   AccountBalanceQuery,
   AccountCreateTransaction,
+  AccountId,
   AccountInfoQuery,
   AccountRecordsQuery,
   AccountUpdateTransaction,
   LedgerId,
+  PrivateKey,
   TokenAssociateTransaction,
   TokenCreateTransaction,
   TopicCreateTransaction,
@@ -107,23 +109,45 @@ describe('DAppSigner', () => {
             )
           } else if (query instanceof AccountInfoQuery) {
             queryResponse = Uint8ArrayToBase64String(
-              proto.CryptoGetInfoQuery.encode({
+              proto.CryptoGetInfoResponse.AccountInfo.encode({
                 accountID: {
                   shardNum: 0,
                   realmNum: 0,
                   accountNum: 3,
                 },
+                contractAccountID: AccountId.fromString('0.0.3').toSolidityAddress(),
+                key: {
+                  ed25519: PrivateKey.generate().publicKey.toBytes(),
+                },
+                expirationTime: { seconds: 0, nanos: 0 },
               }).finish(),
             )
           } else if (query instanceof AccountRecordsQuery) {
             queryResponse = Uint8ArrayToBase64String(
-              proto.CryptoGetAccountRecordsResponse.encode({
-                accountID: {
-                  shardNum: 0,
-                  realmNum: 0,
-                  accountNum: 3,
+              proto.TransactionGetRecordResponse.encode({
+                transactionRecord: {
+                  alias: proto.Key.encode(
+                    PrivateKey.generate().publicKey._toProtobufKey(),
+                  ).finish(),
+                  receipt: {
+                    status: proto.ResponseCodeEnum.OK,
+                    accountID: {
+                      shardNum: 0,
+                      realmNum: 0,
+                      accountNum: 3,
+                    },
+                  },
+                  consensusTimestamp: { seconds: 0, nanos: 0 },
+                  transactionID: {
+                    accountID: {
+                      shardNum: 0,
+                      realmNum: 0,
+                      accountNum: 3,
+                    },
+                    transactionValidStart: { seconds: 0, nanos: 0 },
+                    nonce: 0,
+                  },
                 },
-                records: [],
               }).finish(),
             )
           }

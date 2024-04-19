@@ -41,6 +41,7 @@ import {
   transactionToTransactionBody,
   transactionBodyToBase64String,
   base64StringToSignatureMap,
+  base64StringToUint8Array,
   queryToBase64String,
   ExecuteTransactionParams,
   SignMessageParams,
@@ -50,6 +51,7 @@ import {
   DAppConnector,
   HederaChainId,
   verifyMessageSignature,
+  verifySignerSignature,
 } from '@hashgraph/hedera-wallet-connect'
 
 import { saveState, loadState, getState } from '../shared'
@@ -338,3 +340,59 @@ async function simulateTransactionExpiredError(_: Event) {
 
 document.getElementById('error-transaction-expired')!.onsubmit = (e: SubmitEvent) =>
   showErrorOrSuccess(simulateTransactionExpiredError, e)
+
+async function signer_signAndExecuteTransaction(_: Event) {
+  const transaction = new TransferTransaction()
+    .addHbarTransfer(getState('sign-send-from'), new Hbar(-getState('sign-send-amount')))
+    .addHbarTransfer(getState('sign-send-to'), new Hbar(+getState('sign-send-amount')))
+
+  const signer = dAppConnector!.signers[0]
+  await transaction.freezeWithSigner(signer)
+  return await transaction.executeWithSigner(signer)
+}
+document.getElementById('signer_signAndExecuteTransaction')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_signAndExecuteTransaction, e)
+
+async function signer_signTransaction(_: Event) {
+  const transaction = new TransferTransaction()
+    .addHbarTransfer(getState('sign-send-from'), new Hbar(-getState('sign-send-amount')))
+    .addHbarTransfer(getState('sign-send-to'), new Hbar(+getState('sign-send-amount')))
+
+  const signer = dAppConnector!.signers[0]
+  await transaction.freezeWithSigner(signer)
+  return await signer.signTransaction(transaction)
+}
+document.getElementById('signer_signTransaction')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_signTransaction, e)
+
+async function signer_sign(_: Event) {
+  const text = getState('sign-text')
+  const base64String = btoa(text)
+  const signer = dAppConnector!.signers[0]
+  const sigMaps = await signer.sign([base64StringToUint8Array(base64String)])
+  const verifiedResult = verifySignerSignature(base64String, sigMaps[0], sigMaps[0].publicKey)
+  return { verifiedResult, sigMaps }
+}
+document.getElementById('signer_sign')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_sign, e)
+
+async function signer_getAccountBalance(_: Event) {
+  const signer = dAppConnector!.signers[0]
+  return await signer.getAccountBalance()
+}
+document.getElementById('signer_getAccountBalance')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_getAccountBalance, e)
+
+async function signer_getAccountInfo(_: Event) {
+  const signer = dAppConnector!.signers[0]
+  return await signer.getAccountInfo()
+}
+document.getElementById('signer_getAccountInfo')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_getAccountInfo, e)
+
+async function signer_getAccountRecords(_: Event) {
+  const signer = dAppConnector!.signers[0]
+  return await signer.getAccountRecords()
+}
+document.getElementById('signer_getAccountRecords')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_getAccountRecords, e)

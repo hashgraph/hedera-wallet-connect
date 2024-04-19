@@ -46,6 +46,7 @@ import {
   SignAndExecuteQueryResult,
   SignAndExecuteTransactionResult,
   SignTransactionResult,
+  Uint8ArrayToBase64String,
   base64StringToSignatureMap,
   base64StringToUint8Array,
   ledgerIdToCAIPChainId,
@@ -140,7 +141,7 @@ export class DAppSigner implements Signer {
       method: HederaJsonRpcMethod.SignMessage,
       params: {
         signerAccountId: this._signerAccountId,
-        message: Buffer.from(data[0]).toString(),
+        message: Uint8ArrayToBase64String(data[0]),
       },
     })
 
@@ -168,7 +169,7 @@ export class DAppSigner implements Signer {
   }
 
   async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
-    const transactionBody = transactionToTransactionBody(
+    const transactionBody: proto.TransactionBody = transactionToTransactionBody(
       transaction,
       this._getRandomNodes(1)[0],
     )
@@ -183,7 +184,7 @@ export class DAppSigner implements Signer {
     })
 
     const sigMap = base64StringToSignatureMap(signatureMap)
-    const bodyBytes = Buffer.from(transactionBody, 'base64')
+    const bodyBytes = base64StringToUint8Array(transactionBodyBase64)
     const bytes = proto.Transaction.encode({ bodyBytes, sigMap }).finish()
     return Transaction.fromBytes(bytes) as T
   }
@@ -214,13 +215,17 @@ export class DAppSigner implements Signer {
     query: Query<any>,
     base64EncodedQueryResponse: string,
   ): Promise<any> {
+    if (query instanceof AccountRecordsQuery) {
+      const base64EncodedQueryResponseSplit = base64EncodedQueryResponse.split(',')
+      const data = base64EncodedQueryResponseSplit.map((o) => base64StringToUint8Array(o))
+      return data.map((o) => TransactionRecord.fromBytes(o))
+    }
+
     const data = base64StringToUint8Array(base64EncodedQueryResponse)
     if (query instanceof AccountBalanceQuery) {
-      return proto.CryptoGetAccountBalanceQuery.decode(data)
+      return AccountBalance.fromBytes(data)
     } else if (query instanceof AccountInfoQuery) {
-      return proto.CryptoGetInfoQuery.decode(data)
-    } else if (query instanceof AccountRecordsQuery) {
-      return proto.CryptoGetAccountRecordsResponse.decode(data)
+      return AccountInfo.fromBytes(data)
     } else {
       throw new Error('Unsupported query type')
     }
