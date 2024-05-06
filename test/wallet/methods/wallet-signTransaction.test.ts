@@ -18,7 +18,7 @@
  *
  */
 
-import { TransferTransaction, AccountId, Hbar } from '@hashgraph/sdk'
+import { TransferTransaction, Hbar } from '@hashgraph/sdk'
 import {
   HederaChainId,
   SignTransactionResponse,
