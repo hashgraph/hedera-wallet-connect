@@ -44,9 +44,11 @@ import { proto } from '@hashgraph/proto'
 import type { ISignClient } from '@walletconnect/types'
 
 import {
+  ExecuteTransactionResult,
   HederaJsonRpcMethod,
   SignAndExecuteQueryResult,
   SignAndExecuteTransactionResult,
+  SignMessageResult,
   SignTransactionResult,
   Uint8ArrayToBase64String,
   base64StringToSignatureMap,
@@ -291,5 +293,48 @@ export class DAppSigner implements Signer {
           2,
         ),
     )
+  }
+
+  /*
+   *  Extra methods
+   */
+
+  async executeTransaction<T extends Transaction>(transaction: T) {
+    return this.request<ExecuteTransactionResult['result']>({
+      method: HederaJsonRpcMethod.ExecuteTransaction,
+      params: { transactionList: transactionToBase64String(transaction) },
+    })
+  }
+
+  async signMessage(message: string) {
+    const params = {
+      signerAccountId: this._signerAccountId,
+      message,
+    }
+    return this.request<SignMessageResult['result']>({
+      method: HederaJsonRpcMethod.SignMessage,
+      params,
+    })
+  }
+
+  async signAndExecuteQuery(query: string) {
+    const params = {
+      signerAccountId: this._signerAccountId,
+      query,
+    }
+    return this.request<SignAndExecuteQueryResult['result']>({
+      method: HederaJsonRpcMethod.SignAndExecuteQuery,
+      params,
+    })
+  }
+
+  async signAndExecuteTransaction<T extends Transaction>(transaction: T) {
+    return this.request<SignAndExecuteTransactionResult['result']>({
+      method: HederaJsonRpcMethod.SignAndExecuteTransaction,
+      params: {
+        signerAccountId: this._signerAccountId,
+        transactionList: transactionToBase64String(transaction),
+      },
+    })
   }
 }
