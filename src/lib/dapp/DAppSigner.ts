@@ -17,7 +17,8 @@
  * limitations under the License.
  *
  */
-
+import { Buffer } from 'buffer'
+import { proto } from '@hashgraph/proto'
 import {
   Signer,
   AccountBalance,
@@ -32,18 +33,53 @@ import {
 } from '@hashgraph/sdk'
 import type { ISignClient } from '@walletconnect/types'
 
-import { ledgerIdToCAIPChainId } from '../shared'
+import {
+  ExecuteTransactionResult,
+  HederaJsonRpcMethod,
+  SignAndExecuteQueryResult,
+  SignAndExecuteTransactionResult,
+  SignMessageResult,
+  SignTransactionResult,
+  base64StringToSignatureMap,
+  ledgerIdToCAIPChainId,
+  transactionBodyToBase64String,
+  transactionToBase64String,
+  transactionToTransactionBody,
+} from '../shared'
 
 export class DAppSigner implements Signer {
+  static signClient: ISignClient
+  public signerAccountId: string
+
+  /**
+   * These are the node accounts that will be utilized for signing transactions.
+   */
+  public nodesAccountIds: AccountId[] = []
+
   constructor(
     private readonly accountId: AccountId,
-    private readonly signClient: ISignClient,
     public readonly topic: string,
     private readonly ledgerId: LedgerId = LedgerId.MAINNET,
-  ) {}
+  ) {
+    this.signerAccountId = `${ledgerIdToCAIPChainId(ledgerId)}:${accountId.toString()}`
+    this.nodesAccountIds = [AccountId.fromString('0.0.3')]
+  }
+
+  static initialize(signClient: ISignClient) {
+    this.signClient = signClient
+  }
+
+  /**
+   * Set the nodes to sign transactions that require a single signature.
+   *
+   * @param {AccountId[]} nodesAccountIds
+   */
+  setNodes(nodesAccountIds: AccountId[]): void {
+    this.nodesAccountIds = nodesAccountIds
+  }
 
   request<T>(request: { method: string; params: any }): Promise<T> {
-    return this.signClient.request<T>({
+    return DAppSigner.signClient.request<T>({
       topic: this.topic,
       request,
       chainId: ledgerIdToCAIPChainId(this.ledgerId),
@@ -89,6 +125,27 @@ export class DAppSigner implements Signer {
     throw new Error('Method not implemented.')
   }
 
+  async signTransaction<T extends Transaction>(transaction: T) {
+    const randomNode =
+      this.nodesAccountIds[Math.floor(Math.random() * this.nodesAccountIds.length)]
+    const transactionBody = transactionBodyToBase64String(
+      transactionToTransactionBody(transaction, randomNode),
+    )
+
+    const params = {
+      signerAccountId: this.signerAccountId,
+      transactionBody,
+    }
+    const result = await this.request<SignTransactionResult['result']>({
+      method: HederaJsonRpcMethod.SignTransaction,
+      params,
+    })
+    const sigMap = base64StringToSignatureMap(result.signatureMap)
+    const bodyBytes = Buffer.from(transactionBody, 'base64')
+    const bytes = proto.Transaction.encode({ bodyBytes, sigMap }).finish()
+    return Transaction.fromBytes(bytes) as T
+  }
+
   async checkTransaction<T extends Transaction>(transaction: T): Promise<T> {
     throw new Error('Method not implemented.')
   }
@@ -97,13 +154,52 @@ export class DAppSigner implements Signer {
     throw new Error('Method not implemented.')
   }
 
-  async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
-    throw new Error('Method not implemented.')
-  }
-
   async call<RequestT, ResponseT, OutputT>(
     request: Executable<RequestT, ResponseT, OutputT>,
   ): Promise<OutputT> {
     throw new Error('Method not implemented.')
+  }
+
+  /*
+   *  Extra methods
+   */
+
+  async executeTransaction<T extends Transaction>(transaction: T) {
+    return this.request<ExecuteTransactionResult['result']>({
+      method: HederaJsonRpcMethod.ExecuteTransaction,
+      params: { transactionList: transactionToBase64String(transaction) },
+    })
+  }
+
+  async signMessage(message: string) {
+    const params = {
+      signerAccountId: this.signerAccountId,
+      message,
+    }
+    return this.request<SignMessageResult['result']>({
+      method: HederaJsonRpcMethod.SignMessage,
+      params,
+    })
+  }
+
+  async signAndExecuteQuery(query: string) {
+    const params = {
+      signerAccountId: this.signerAccountId,
+      query,
+    }
+    return this.request<SignAndExecuteQueryResult['result']>({
+      method: HederaJsonRpcMethod.SignAndExecuteQuery,
+      params,
+    })
+  }
+
+  async signAndExecuteTransaction<T extends Transaction>(transaction: T) {
+    return this.request<SignAndExecuteTransactionResult['result']>({
+      method: HederaJsonRpcMethod.SignAndExecuteTransaction,
+      params: {
+        signerAccountId: this.signerAccountId,
+        transactionList: transactionToBase64String(transaction),
+      },
+    })
   }
 }
