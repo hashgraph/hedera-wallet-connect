@@ -63,6 +63,7 @@ export class DAppConnector {
   supportedChains: string[] = []
 
   walletConnectClient: SignClient | undefined
+  walletConnectModal: WalletConnectModal
   signers: DAppSigner[] = []
   isInitializing = false
 
@@ -89,6 +90,11 @@ export class DAppConnector {
     this.supportedMethods = methods ?? Object.values(HederaJsonRpcMethod)
     this.supportedEvents = events ?? []
     this.supportedChains = chains ?? []
+
+    this.walletConnectModal = new WalletConnectModal({
+      projectId: projectId,
+      chains: chains,
+    })
   }
 
   /**
@@ -107,25 +113,18 @@ export class DAppConnector {
         projectId: this.projectId,
         metadata: this.dAppMetadata,
       })
-      const existingSessions = await this.checkPersistedState()
+      const existingSessions = this.walletConnectClient.session.getAll()
 
-      if (existingSessions.length) {
-        await this.onSessionConnected(existingSessions.pop()!)
-
-        while (existingSessions.length) {
-          this.disconnect(existingSessions.pop()!.topic)
-        }
-      }
+      if (existingSessions)
+        this.signers = existingSessions.flatMap((session) => this.createSigners(session))
 
       this.walletConnectClient.on('session_event', (event) => {
         // Handle session events, such as "chainChanged", "accountsChanged", etc.
-        alert('There has been a session event!')
         console.log(event)
       })
 
       this.walletConnectClient.on('session_update', ({ topic, params }) => {
         // Handle session update
-        alert('There has been a update to the session!')
         const { namespaces } = params
         const _session = this.walletConnectClient!.session.get(topic)
         // Overwrite the `namespaces` of the existing session with the incoming one.
@@ -155,6 +154,12 @@ export class DAppConnector {
     }
   }
 
+  public getSigner(accountId: AccountId): DAppSigner {
+    const signer = this.signers.find((signer) => signer.getAccountId().equals(accountId))
+    if (!signer) throw new Error('Signer is not found for this accountId')
+    return signer
+  }
+
   /**
    * Initiates the WalletConnect connection flow using a QR code.
    * @param pairingTopic - The pairing topic for the connection (optional).
@@ -178,18 +183,18 @@ export class DAppConnector {
   /**
    * Initiates the WalletConnect connection flow using a QR code.
    * @param pairingTopic - The pairing topic for the connection (optional).
-   * @returns A Promise that resolves when the connection process is complete.
+   * @returns {Promise<SessionTypes.Struct>} - A Promise that resolves when the connection process is complete.
    */
-  public async openModal(pairingTopic?: string): Promise<void> {
-    const { uri, approval } = await this.connectURI(pairingTopic)
-    const walletConnectModal = new WalletConnectModal({
-      projectId: this.projectId,
-      chains: this.supportedChains,
-    })
-    walletConnectModal.openModal({ uri })
-    const session = await approval()
-    await this.onSessionConnected(session)
-    walletConnectModal.closeModal()
+  public async openModal(pairingTopic?: string): Promise<SessionTypes.Struct> {
+    try {
+      const { uri, approval } = await this.connectURI(pairingTopic)
+      this.walletConnectModal.openModal({ uri })
+      const session = await approval()
+      await this.onSessionConnected(session)
+      return session
+    } finally {
+      this.walletConnectModal.closeModal()
+    }
   }
 
   /**
@@ -286,87 +291,6 @@ export class DAppConnector {
 
   private async onSessionConnected(session: SessionTypes.Struct) {
     this.signers.push(...this.createSigners(session))
-  }
-
-  private pingWithTimeout = async (
-    { topic }: EngineTypes.PingParams,
-    pingTimeoutMs: number = 1_000,
-  ) => {
-    return new Promise<void>(async (resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error(`Ping to ${topic} timed out after ${pingTimeoutMs}(ms)`))
-      }, pingTimeoutMs)
-
-      try {
-        resolve(await this.walletConnectClient?.ping({ topic }))
-      } catch (err) {
-        reject(err)
-      } finally {
-        clearTimeout(timeout)
-      }
-    })
-  }
-
-  private async pingWithRetry(topic: string, retries = 3): Promise<void> {
-    try {
-      await this.pingWithTimeout({ topic })
-    } catch (error) {
-      if (retries > 0) {
-        console.log(`Ping failed, ${retries} retries left. Retrying in 1 seconds...`)
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        await this.pingWithRetry(topic, retries - 1)
-      } else {
-        console.log(`Ping failed after ${retries} retries. Aborting...`)
-        throw error
-      }
-    }
-  }
-
-  private async checkPersistedState() {
-    if (!this.walletConnectClient) {
-      throw new Error('WalletConnect is not initialized')
-    }
-
-    if (this.walletConnectClient.session.length) {
-      const sessionCheckPromises: Promise<SessionTypes.Struct>[] =
-        this.walletConnectClient.session.getAll().map(
-          (session: SessionTypes.Struct) =>
-            new Promise(async (resolve, reject) => {
-              try {
-                await this.pingWithRetry(session.topic)
-                resolve(session)
-              } catch (error) {
-                try {
-                  await this.walletConnectClient!.disconnect({
-                    topic: session.topic,
-                    reason: getSdkError('SESSION_SETTLEMENT_FAILED'),
-                  })
-                  reject(`Ping failed, disconnecting from session. Topic: ${session.topic}`)
-                } catch (e) {
-                  console.log('Non existing session with topic:', session.topic)
-                  reject('Non existing session')
-                }
-              }
-            }),
-        )
-      const sessionCheckResults = (await Promise.allSettled(sessionCheckPromises)) as {
-        status: 'fulfilled' | 'rejected'
-        value: SessionTypes.Struct
-      }[]
-
-      const sessions = sessionCheckResults
-        .filter((result) => result.status === 'fulfilled')
-        .map((result) => result.value as SessionTypes.Struct)
-
-      const errors = sessionCheckResults.filter((result) => result.status === 'rejected')
-      if (errors.length) {
-        console.log('Errors while checking persisted state:', errors)
-      }
-
-      return sessions
-    }
-
-    return []
   }
 
   private async connectURI(

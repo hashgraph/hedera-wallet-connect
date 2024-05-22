@@ -20,7 +20,7 @@
 
 import { Buffer } from 'buffer'
 // https://docs.walletconnect.com/2.0/api/sign/dapp-usage
-import { SignClientTypes } from '@walletconnect/types'
+import { SessionTypes, SignClientTypes } from '@walletconnect/types'
 import {
   Transaction,
   TransferTransaction,
@@ -71,6 +71,40 @@ async function showErrorOrSuccess<R>(method: (e: SubmitEvent) => Promise<R>, e: 
     alert(`Error: ${JSON.stringify(e)}`)
   }
 }
+
+/**
+ * Render connected accounts
+ */
+function renderConnectedAccounts(session: SessionTypes.Struct) {
+  const topic = session.topic
+  const accountIds = session.namespaces.hedera.accounts
+    .map((acc: string) => acc.split(':')[2])
+    .join(',')
+
+  const form = document.getElementById('connected-accounts')
+  const fieldset = document.createElement('fieldset')
+
+  const topicLabel = document.createElement('label')
+  topicLabel.textContent = 'Topic: ' + topic
+
+  const accountsLabel = document.createElement('label')
+  accountsLabel.textContent = 'AccountIds: ' + accountIds
+
+  const button = document.createElement('button')
+  button.textContent = 'Disconnect Account'
+  button.addEventListener('click', (event) => {
+    event.preventDefault()
+    dAppConnector.disconnect(topic)
+    form!.removeChild(fieldset)
+  })
+
+  fieldset.appendChild(topicLabel)
+  fieldset.appendChild(accountsLabel)
+  fieldset.appendChild(button)
+
+  form!.appendChild(fieldset)
+}
+
 /*
  * WalletConnect
  *  - signClient
@@ -102,6 +136,9 @@ async function init(e: Event) {
 
   await dAppConnector.init({ logger: 'error' })
 
+  const sessions = dAppConnector.walletConnectClient.session.getAll()
+  sessions.forEach((session: SessionTypes.Struct) => renderConnectedAccounts(session))
+
   const eventTarget = e.target as HTMLElement
   eventTarget
     .querySelectorAll('input,button')
@@ -117,7 +154,10 @@ document.getElementById('init')!.onsubmit = (e: SubmitEvent) => showErrorOrSucce
 
 // connect a new pairing string to a wallet via the WalletConnect modal
 async function connect(_: Event) {
-  await dAppConnector!.openModal()
+  const session = await dAppConnector!.openModal()
+  console.log({ session })
+
+  renderConnectedAccounts(session)
 
   return 'Connected to wallet!'
 }
