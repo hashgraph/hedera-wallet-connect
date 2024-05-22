@@ -1,0 +1,35 @@
+# Default code owners for entire repository
+*   @hashgraph/developer-advocates
+
+#########################
+#####  Core Files  ######
+#########################
+
+# NOTE: Must be placed last to ensure enforcement over all other rules
+
+# Protection Rules for Github Configuration Files and Actions Workflows
+/.github/                                       @hashgraph/release-engineering @hashgraph/release-engineering-managers
+/.github/workflows/                             @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+
+# NPM and typescript protections
+**/.npmignore                                   @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+**/package.json                                 @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+**/package-lock.json                            @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+**/tsconfig.json                                @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+**/typedoc.json                                 @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+**/jest.config.ts                               @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+
+# Rules for prettier
+**/.prettierignore                              @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+**/.prettierrc                                  @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+
+# Self-protection for root CODEOWNERS files (this file should not exist and should definitely require approval)
+/CODEOWNERS                                     @hashgraph/release-engineering @hashgraph/release-engineering-managers
+
+# Protect the repository root files
+/README.md                                      @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+**/LICENSE                                      @hashgraph/release-engineering @hashgraph/release-engineering-managers
+
+# Git Ignore definitions
+**/.gitignore                                   @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+**/.gitignore.*                                 @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
