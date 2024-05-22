@@ -14,17 +14,26 @@ jobs:
        contents: read
 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          egress-policy: audit
+
       - name: Setup NodeJS Environment
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: 18.x
+
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+
       - name: Install dependencies
         run: npm install
+
       - name: Run tests (Forked PR)
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && !cancelled() && !failure() }} 
         run: npm run test
+
       - name: Test
         uses: ArtiomTr/jest-coverage-report-action@v2
         if: ${{ ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || github.event_name == 'push') && !cancelled() && !failure() }}
