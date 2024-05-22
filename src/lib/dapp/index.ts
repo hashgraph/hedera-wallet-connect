@@ -118,14 +118,36 @@ export class DAppConnector {
       if (existingSessions)
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
 
+      this.walletConnectClient.on('session_event', (event) => {
+        // Handle session events, such as "chainChanged", "accountsChanged", etc.
+        console.log(event)
+      })
+
+      this.walletConnectClient.on('session_update', ({ topic, params }) => {
+        // Handle session update
+        const { namespaces } = params
+        const _session = this.walletConnectClient!.session.get(topic)
+        // Overwrite the `namespaces` of the existing session with the incoming one.
+        const updatedSession = { ..._session, namespaces }
+        // Integrate the updated session state into your dapp state.
+        console.log(updatedSession)
+      })
+
       this.walletConnectClient.on('session_delete', (pairing) => {
+        console.log(pairing)
         this.signers = this.signers.filter((signer) => signer.topic !== pairing.topic)
         this.disconnect(pairing.topic)
+        // Session was deleted -> reset the dapp state, clean up from user session, etc.
+        console.log('Dapp: Session deleted by wallet!')
       })
 
       this.walletConnectClient.core.pairing.events.on('pairing_delete', (pairing) => {
+        // Session was deleted
+        console.log(pairing)
         this.signers = this.signers.filter((signer) => signer.topic !== pairing.topic)
         this.disconnect(pairing.topic)
+        console.log(`Dapp: Pairing deleted by wallet!`)
+        // clean up after the pairing for `topic` was deleted.
       })
     } finally {
       this.isInitializing = false
@@ -161,7 +183,7 @@ export class DAppConnector {
   /**
    * Initiates the WalletConnect connection flow using a QR code.
    * @param pairingTopic - The pairing topic for the connection (optional).
-   * @returns A Promise that resolves when the connection process is complete.
+   * @returns {Promise<SessionTypes.Struct>} - A Promise that resolves when the connection process is complete.
    */
   public async openModal(pairingTopic?: string): Promise<SessionTypes.Struct> {
     try {
@@ -170,8 +192,6 @@ export class DAppConnector {
       const session = await approval()
       await this.onSessionConnected(session)
       return session
-    } catch (error) {
-      throw error
     } finally {
       this.walletConnectModal.closeModal()
     }
