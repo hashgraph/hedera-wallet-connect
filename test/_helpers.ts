@@ -20,7 +20,7 @@
 
 import fs from 'fs'
 import path from 'path'
-import { AccountId, Transaction, TransactionId } from '@hashgraph/sdk'
+import { AccountId, Query, Transaction, TransactionId } from '@hashgraph/sdk'
 
 export const projectId = 'ce06497abf4102004138a10edd29c921'
 export const walletMetadata = {
@@ -50,7 +50,7 @@ export const testTransactionId = TransactionId.fromString(
   `0.0.${defaultAccountNumber}@1691705630.325343432`,
 )
 
-type Options = {
+type TransactionOptions = {
   setNodeAccountIds?: boolean
   setTransactionId?: boolean
   freeze?: boolean
@@ -58,9 +58,9 @@ type Options = {
 }
 export function prepareTestTransaction<T extends Transaction = Transaction>(
   transaction: T,
-  options?: Options,
+  options?: TransactionOptions,
 ): T {
-  const selectedOptions: Options = {
+  const selectedOptions: TransactionOptions = {
     // defaults
     freeze: false,
     setNodeAccountIds: true,
@@ -86,6 +86,25 @@ export function prepareTestTransaction<T extends Transaction = Transaction>(
     transaction.freeze()
   }
   return transaction
+}
+
+type QueryOptions = {
+  setNodeAccountIds?: boolean
+}
+export function prepareTestQuery<Q extends Query<OutputT>, OutputT>(
+  query: Q,
+  options?: QueryOptions,
+): Q {
+  const selectedOptions: QueryOptions = {
+    // defaults
+    setNodeAccountIds: true,
+    // overrides
+    ...options,
+  }
+  if (selectedOptions.setNodeAccountIds) {
+    query.setNodeAccountIds([testNodeAccountId])
+  }
+  return query
 }
 
 // from PrivateKey.generateECDSA().toStringDer()

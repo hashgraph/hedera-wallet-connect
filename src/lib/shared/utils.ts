@@ -229,6 +229,7 @@ export function stringToSignerMessage(message: string): Uint8Array[] {
  *
  * @param message -  A plain text string
  * @param base64SignatureMap -  A base64 encoded proto.SignatureMap object
+ * @param publicKey -  A PublicKey object use to verify the signature
  * @returns boolean - whether or not the first signature in the sigPair is valid for the message and public key
  */
 export function verifyMessageSignature(
@@ -238,6 +239,28 @@ export function verifyMessageSignature(
 ): boolean {
   const signatureMap = base64StringToSignatureMap(base64SignatureMap)
   const signature = signatureMap.sigPair[0].ed25519 || signatureMap.sigPair[0].ECDSASecp256k1
+
+  if (!signature) throw new Error('Signature not found in signature map')
+
+  return publicKey.verify(Buffer.from(prefixMessageToSign(message)), signature)
+}
+
+/**
+ * This implementation expects a plain text string, which is prefixed and then signed by a wallet.
+ * Because the spec calls for 1 message to be signed and 1 signer, this function expects a single
+ * signature and used the first item in the sigPair array.
+ *
+ * @param message -  A plain text string
+ * @param signerSignature -  A SignerSignature object
+ * @param publicKey -  A PublicKey object use to verify the signature
+ * @returns boolean - whether or not the first signature in the sigPair is valid for the message and public key
+ */
+export function verifySignerSignature(
+  message: string,
+  signerSignature: SignerSignature,
+  publicKey: PublicKey,
+): boolean {
+  const signature = signerSignature.signature
 
   if (!signature) throw new Error('Signature not found in signature map')
 

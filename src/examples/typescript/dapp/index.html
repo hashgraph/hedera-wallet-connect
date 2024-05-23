@@ -189,6 +189,112 @@
       </section>
 
       <hr />
+      <h2>Hedera &lt;&gt; WalletConnect - Signer methods:</h2>
+
+      <section>
+        <form id="signer_signAndExecuteTransaction" class="toggle">
+          <fieldset>
+            <legend>transaction.executeWithSigner(signer)</legend>
+            <label
+              >Transaction type:
+              <select name="sign-send-transaction-type">
+                <option value="hbar-transfer">Hbar Transfer</option>
+              </select>
+            </label>
+            <label
+              >Send to address:
+              <input name="sign-send-to" required />
+            </label>
+            <label
+              >Send from address:
+              <input name="sign-send-from" required />
+            </label>
+            <label
+              >Amount in Hbar:
+              <input name="sign-send-amount" required />
+            </label>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+      </section>
+
+      <section>
+        <form id="signer_signTransaction" class="toggle">
+          <fieldset>
+            <legend>signer.signTransaction(transaction)</legend>
+            <label
+              >Transaction type:
+              <select name="sign-send-transaction-type">
+                <option value="hbar-transfer">Hbar Transfer</option>
+              </select>
+            </label>
+            <label
+              >Send to address:
+              <input name="sign-send-to" required />
+            </label>
+            <label
+              >Send from address:
+              <input name="sign-send-from" required />
+            </label>
+            <label
+              >Amount in Hbar:
+              <input name="sign-send-amount" required />
+            </label>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+      </section>
+
+      <section>
+        <form id="signer_sign" class="toggle">
+          <fieldset>
+            <legend>signer.sign(bytesArray)</legend>
+            <p>
+              Uses the signer sign an array of bytes. Although currently, only the first element
+              will be signed and returned.
+            </p>
+            <label
+              >Sign text:
+              <input name="sign-text" required />
+            </label>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+      </section>
+
+      <section>
+        <form id="signer_getAccountBalance" class="toggle">
+          <fieldset>
+            <legend>signer.getAccountBalance()</legend>
+            <p>
+              <i>Uses the signer to call AccountBalanceQuery</i>
+            </p>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+      </section>
+
+      <section>
+        <form id="signer_getAccountInfo" class="toggle">
+          <fieldset>
+            <legend>signer.getAccountInfo()</legend>
+            <p>Uses the signer to call AccountInfoQuery</p>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+      </section>
+
+      <section>
+        <form id="signer_getAccountRecords" class="toggle">
+          <fieldset>
+            <legend>signer.getAccountRecords()</legend>
+            <p>Uses the signer to call AccountRecordsQuery</p>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+      </section>
+
+      <hr />
       <h2>Error handling:</h2>
       <section class="toggle">
         <fieldset>

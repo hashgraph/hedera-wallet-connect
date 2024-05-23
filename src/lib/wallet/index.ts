@@ -355,8 +355,13 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
      * For example:
      * https://github.com/hashgraph/hedera-sdk-js/blob/c4438cbaa38074d8bfc934dba84e3b430344ed89/src/account/AccountInfo.js#L402
      */
-    const queryResult = (await body.executeWithSigner(signer)) as { toBytes: () => Uint8Array }
-    const queryResponse = Uint8ArrayToBase64String(queryResult.toBytes())
+    const queryResult = await body.executeWithSigner(signer)
+    let queryResponse = ''
+    if (Array.isArray(queryResult)) {
+      queryResponse = queryResult.map((qr) => Uint8ArrayToBase64String(qr.toBytes())).join(',')
+    } else {
+      queryResponse = Uint8ArrayToBase64String(queryResult.toBytes())
+    }
 
     const response: SignAndExecuteQueryResponse = {
       topic,

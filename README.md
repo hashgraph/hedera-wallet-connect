@@ -65,6 +65,65 @@ reference the [WalletConnect documentation](https://docs.walletconnect.com/2.0/)
 Upon successfully configuring your dApp and/or wallet to manage WalletConnect sessions, you can
 use this library’s functions to easily create and handle requests for the Hedera network.
 
+### DApps
+
+#### Signer
+
+This library provides a `DAppSigner` class that implements the `@hashgraph/sdk`'s `Signer`
+interface. You may use the `DAppSigner` class to sign and execute transactions on the Hedera
+network.
+
+##### Get Signer
+
+After you have paired your wallet with your dApp, you can get the signer from the
+`DAppConnector` instance:
+
+```javascript
+const signer = dAppConnector.signers[0] // DAppSigner
+```
+
+Or, if multiple signers are available, you can find the signer by account ID:
+
+```javascript
+const signer = dAppConnector.signers.find(
+  (signer_) => signer_.getAccountId().toString() === '0.0.100',
+) // DAppSigner
+```
+
+##### Sign Transactions
+
+```javascript
+const transaction = new TransferTransaction()
+  .addHbarTransfer('0.0.100', new Hbar(-1))
+  .addHbarTransfer('0.0.101', new Hbar(1))
+
+await transaction.freezeWithSigner(signer)
+const signedTransaction = await signer.signTransaction(transaction)
+```
+
+##### Sign and Execute Transactions
+
+```javascript
+const transaction = new TransferTransaction()
+  .addHbarTransfer('0.0.100', new Hbar(-1))
+  .addHbarTransfer('0.0.101', new Hbar(1))
+
+await transaction.freezeWithSigner(signer)
+const transactionResponse = await transaction.executeWithSigner(signer)
+```
+
+##### Sign and verify messages
+
+```javascript
+const text = 'Example message to sign'
+const base64String = btoa(text)
+
+const sigMaps = await signer.sign([base64StringToUint8Array(base64String)]) // import { base64StringToUint8Array } from '@hashgraph/hedera-wallet-connect'
+
+// sigMaps[0].publicKey also contains the public key of the signer, but you should obtain a PublicKey you can trust from a mirror node.
+const verifiedResult = verifySignerSignature(base64String, sigMaps[0], publicKey) // import { verifySignerSignature } from '@hashgraph/hedera-wallet-connect'
+```
+
 ### Wallet
 
 This library provides a Wallet class that extends the
