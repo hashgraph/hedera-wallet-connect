@@ -60,6 +60,7 @@
     "dev": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/examples/dev.mjs\"",
     "test": "jest",
     "test:connect": "jest --testMatch '**/DAppConnector.test.ts' --verbose",
+    "test:signer": "jest --testMatch '**/DAppSigner.test.ts' --verbose",
     "prepublishOnly": "rm -Rf dist && npm run build",
     "prepare": "husky install",
     "prettier:check": "prettier --check ./src/",
