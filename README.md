@@ -187,6 +187,68 @@ to approve or reject the session:
 Upon receiving a `session_request` event, process the request. For instance, if the dApp
 requests a transaction to be signed:
 
+#### Extension popup
+
+By default, it is not possible to directly pop up an extension with Wallet Connect. However, to
+allow this possibility, the dAppConnector accepts a list of extension IDs. If you create the
+AppConnector with an extension ID, it will automatically send a message to the extension to
+detect if it is installed. In case the extension is installed, it will be added to the available
+extensions and its data can be found at the extensions property of dAppConnector.
+
+To connect an available extension, use the method `connectExtension(<extensionId>)`. This will
+link the extension to the signer and session. Whenever you use the signer created for this
+session, the extension will automatically open. You can find out if the extension is available
+by checking the `extensions` property.
+
+```javascript
+const dAppConnector = new DAppConnector(
+  dAppMetadata,
+  LedgerId.TESTNET,
+  projectId,
+  Object.values(HederaJsonRpcMethod),
+  [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
+  [HederaChainId.Testnet],
+  ['<Extension ID 1>, <Extension ID 2>'],
+)
+
+[...]
+
+dAppConnector?.extensions?.forEach((extension) => {
+  console.log(extension)
+})
+
+const extension = dAppConnector?.extensions?.find((extension) => extension.name === '<Extension name>')
+if (extension.available) {
+  await dAppConnector!.connectExtension(extension.id);
+  const signer = dAppConnector.getSigner(AccountId.fromString('0.0.12345'))
+
+  // This request will open the extension
+  const response = await signer.signAndExecuteTransaction(transaction)
+}
+```
+
+Wallets that are compatible should be able to receive and respond to the following messages:
+
+- `"hedera-extension-query-<extesnionId>"`: The extension is required to respond with
+  `"hedera-extension-response"` and provide the next set of data in the metadata property.
+  ```javascript
+  let metadata = {
+    id: '<extesnionId>',
+    name: '<Wallet name>',
+    url: '<Wallet url>',
+    icon: '<Wallet con>',
+    description: '<Wallet url>',
+  }
+  ```
+- `"hedera-extension-open-<extensionId>"`: The extension needs to listen to this message and
+  automatically open.
+- `"hedera-extension-connect-<extensionId>"`: The extension must listen to this message and
+  utilize the `pairingString` property in order to establish a connection.
+
+This communication protocol between the wallet and web dApps requires an intermediate script to
+use the Chrome API. Refer to the
+[Chrome Extensions documentation](https://developer.chrome.com/docs/extensions/develop/concepts/messaging)
+
 ## Demo & docs
 
 This repository includes a vanilla html/css/javascript implementation with a dApp and wallet
