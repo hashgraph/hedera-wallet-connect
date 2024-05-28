@@ -20,7 +20,7 @@
 
 import { Buffer } from 'buffer'
 // https://docs.walletconnect.com/2.0/api/sign/dapp-usage
-import { SignClientTypes } from '@walletconnect/types'
+import { SessionTypes, SignClientTypes } from '@walletconnect/types'
 import {
   Transaction,
   TransferTransaction,
@@ -41,6 +41,7 @@ import {
   transactionToTransactionBody,
   transactionBodyToBase64String,
   base64StringToSignatureMap,
+  base64StringToUint8Array,
   queryToBase64String,
   ExecuteTransactionParams,
   SignMessageParams,
@@ -50,6 +51,7 @@ import {
   DAppConnector,
   HederaChainId,
   verifyMessageSignature,
+  verifySignerSignature,
 } from '@hashgraph/hedera-wallet-connect'
 
 import { saveState, loadState, getState } from '../shared'
@@ -71,6 +73,40 @@ async function showErrorOrSuccess<R>(method: (e: SubmitEvent) => Promise<R>, e: 
     alert(`Error: ${JSON.stringify(e)}`)
   }
 }
+
+/**
+ * Render connected accounts
+ */
+function renderConnectedAccounts(session: SessionTypes.Struct) {
+  const topic = session.topic
+  const accountIds = session.namespaces.hedera.accounts
+    .map((acc: string) => acc.split(':')[2])
+    .join(',')
+
+  const form = document.getElementById('connected-accounts')
+  const fieldset = document.createElement('fieldset')
+
+  const topicLabel = document.createElement('label')
+  topicLabel.textContent = 'Topic: ' + topic
+
+  const accountsLabel = document.createElement('label')
+  accountsLabel.textContent = 'AccountIds: ' + accountIds
+
+  const button = document.createElement('button')
+  button.textContent = 'Disconnect Account'
+  button.addEventListener('click', (event) => {
+    event.preventDefault()
+    dAppConnector.disconnect(topic)
+    form!.removeChild(fieldset)
+  })
+
+  fieldset.appendChild(topicLabel)
+  fieldset.appendChild(accountsLabel)
+  fieldset.appendChild(button)
+
+  form!.appendChild(fieldset)
+}
+
 /*
  * WalletConnect
  *  - signClient
@@ -102,6 +138,9 @@ async function init(e: Event) {
 
   await dAppConnector.init({ logger: 'error' })
 
+  const sessions = dAppConnector.walletConnectClient.session.getAll()
+  sessions.forEach((session: SessionTypes.Struct) => renderConnectedAccounts(session))
+
   const eventTarget = e.target as HTMLElement
   eventTarget
     .querySelectorAll('input,button')
@@ -117,7 +156,10 @@ document.getElementById('init')!.onsubmit = (e: SubmitEvent) => showErrorOrSucce
 
 // connect a new pairing string to a wallet via the WalletConnect modal
 async function connect(_: Event) {
-  await dAppConnector!.openModal()
+  const session = await dAppConnector!.openModal()
+  console.log({ session })
+
+  renderConnectedAccounts(session)
 
   return 'Connected to wallet!'
 }
@@ -298,3 +340,59 @@ async function simulateTransactionExpiredError(_: Event) {
 
 document.getElementById('error-transaction-expired')!.onsubmit = (e: SubmitEvent) =>
   showErrorOrSuccess(simulateTransactionExpiredError, e)
+
+async function signer_signAndExecuteTransaction(_: Event) {
+  const transaction = new TransferTransaction()
+    .addHbarTransfer(getState('sign-send-from'), new Hbar(-getState('sign-send-amount')))
+    .addHbarTransfer(getState('sign-send-to'), new Hbar(+getState('sign-send-amount')))
+
+  const signer = dAppConnector!.signers[0]
+  await transaction.freezeWithSigner(signer)
+  return await transaction.executeWithSigner(signer)
+}
+document.getElementById('signer_signAndExecuteTransaction')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_signAndExecuteTransaction, e)
+
+async function signer_signTransaction(_: Event) {
+  const transaction = new TransferTransaction()
+    .addHbarTransfer(getState('sign-send-from'), new Hbar(-getState('sign-send-amount')))
+    .addHbarTransfer(getState('sign-send-to'), new Hbar(+getState('sign-send-amount')))
+
+  const signer = dAppConnector!.signers[0]
+  await transaction.freezeWithSigner(signer)
+  return await signer.signTransaction(transaction)
+}
+document.getElementById('signer_signTransaction')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_signTransaction, e)
+
+async function signer_sign(_: Event) {
+  const text = getState('sign-text')
+  const base64String = btoa(text)
+  const signer = dAppConnector!.signers[0]
+  const sigMaps = await signer.sign([base64StringToUint8Array(base64String)])
+  const verifiedResult = verifySignerSignature(base64String, sigMaps[0], sigMaps[0].publicKey)
+  return { verifiedResult, sigMaps }
+}
+document.getElementById('signer_sign')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_sign, e)
+
+async function signer_getAccountBalance(_: Event) {
+  const signer = dAppConnector!.signers[0]
+  return await signer.getAccountBalance()
+}
+document.getElementById('signer_getAccountBalance')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_getAccountBalance, e)
+
+async function signer_getAccountInfo(_: Event) {
+  const signer = dAppConnector!.signers[0]
+  return await signer.getAccountInfo()
+}
+document.getElementById('signer_getAccountInfo')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_getAccountInfo, e)
+
+async function signer_getAccountRecords(_: Event) {
+  const signer = dAppConnector!.signers[0]
+  return await signer.getAccountRecords()
+}
+document.getElementById('signer_getAccountRecords')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_getAccountRecords, e)
