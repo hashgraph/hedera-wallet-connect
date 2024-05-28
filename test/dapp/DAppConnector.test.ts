@@ -294,7 +294,6 @@ describe('DAppConnector', () => {
       const params: SignTransactionParams = {
         signerAccountId: testUserAccountId.toString(),
         transactionBody: transactionBodyToBase64String(
-          // must specify a node account id for the transaction body
           transactionToTransactionBody(transaction),
         ),
       }
