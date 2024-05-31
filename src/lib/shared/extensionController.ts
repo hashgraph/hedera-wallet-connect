@@ -22,18 +22,14 @@ export const findExtensions = (
 ): void => {
   if (typeof window === 'undefined') return
 
-  window.addEventListener(
-    'message',
-    (event): void => {
-      if (event?.data?.type == EVENTS.extensionResponse && event.data.metadata) {
-        onFound(event.data.metadata, false)
-      }
-      if (event?.data?.type == EVENTS.iframeQueryResponse && event.data.metadata) {
-        onFound(event.data.metadata, true)
-      }
-    },
-    false,
-  )
+  window.addEventListener('message', (event): void => {
+    if (event?.data?.type == EVENTS.extensionResponse && event.data.metadata) {
+      onFound(event.data.metadata, false)
+    }
+    if (event?.data?.type == EVENTS.iframeQueryResponse && event.data.metadata) {
+      onFound(event.data.metadata, true)
+    }
+  })
 
   setTimeout(() => {
     extensionQuery()
