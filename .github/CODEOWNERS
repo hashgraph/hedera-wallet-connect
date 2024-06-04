@@ -9,27 +9,27 @@
 
 # Protection Rules for Github Configuration Files and Actions Workflows
 /.github/                                       @hashgraph/release-engineering @hashgraph/release-engineering-managers
-/.github/workflows/                             @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+/.github/workflows/                             @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
 
 # NPM and typescript protections
-**/.npmignore                                   @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
-**/package.json                                 @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
-**/package-lock.json                            @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
-**/tsconfig.json                                @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
-**/typedoc.json                                 @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
-**/jest.config.ts                               @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+**/.npmignore                                   @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
+**/package.json                                 @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
+**/package-lock.json                            @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
+**/tsconfig.json                                @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
+**/typedoc.json                                 @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
+**/jest.config.ts                               @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
 
 # Rules for prettier
-**/.prettierignore                              @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
-**/.prettierrc                                  @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+**/.prettierignore                              @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
+**/.prettierrc                                  @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
 
 # Self-protection for root CODEOWNERS files (this file should not exist and should definitely require approval)
 /CODEOWNERS                                     @hashgraph/release-engineering @hashgraph/release-engineering-managers
 
 # Protect the repository root files
-/README.md                                      @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+/README.md                                      @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
 **/LICENSE                                      @hashgraph/release-engineering @hashgraph/release-engineering-managers
 
 # Git Ignore definitions
-**/.gitignore                                   @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
-**/.gitignore.*                                 @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates
+**/.gitignore                                   @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
+**/.gitignore.*                                 @hashgraph/release-engineering @hashgraph/release-engineering-managers @hashgraph/developer-advocates @hgraph.io/hedera-wallet-connect-maintainers
