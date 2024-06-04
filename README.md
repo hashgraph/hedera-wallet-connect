@@ -190,10 +190,10 @@ requests a transaction to be signed:
 #### Extension popup
 
 By default, it is not possible to directly pop up an extension with Wallet Connect. However, to
-allow this possibility, the dAppConnector accepts a list of extension IDs. If you create the
-AppConnector with an extension ID, it will automatically send a message to the extension to
-detect if it is installed. In case the extension is installed, it will be added to the available
-extensions and its data can be found at the extensions property of dAppConnector.
+allow this possibility, the dAppConnector look for extensions. If you create the AppConnector,
+it will automatically send a message to the extension to detect if it is installed. In case the
+extension is installed, it will be added to the available extensions and its data can be found
+at the extensions property of dAppConnector.
 
 To connect an available extension, use the method `connectExtension(<extensionId>)`. This will
 link the extension to the signer and session. Whenever you use the signer created for this
@@ -207,8 +207,7 @@ const dAppConnector = new DAppConnector(
   projectId,
   Object.values(HederaJsonRpcMethod),
   [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
-  [HederaChainId.Testnet],
-  ['<Extension ID 1>, <Extension ID 2>'],
+  [HederaChainId.Testnet]
 )
 
 [...]
@@ -229,7 +228,7 @@ if (extension.available) {
 
 Wallets that are compatible should be able to receive and respond to the following messages:
 
-- `"hedera-extension-query-<extesnionId>"`: The extension is required to respond with
+- `"hedera-extension-query"`: The extension is required to respond with
   `"hedera-extension-response"` and provide the next set of data in the metadata property.
   ```javascript
   let metadata = {

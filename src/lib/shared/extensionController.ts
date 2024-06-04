@@ -1,5 +1,5 @@
 export enum EVENTS {
-  extensionQuery = 'hedera-extension-query-',
+  extensionQuery = 'hedera-extension-query',
   extensionConnect = 'hedera-extension-connect-',
   extensionOpen = 'hedera-extension-open-',
   extensionResponse = 'hedera-extension-response',
@@ -13,10 +13,7 @@ export type ExtensionData = {
   available: boolean
 }
 
-export const findExtensions = (
-  ids: string[],
-  onFound: (_metadata: ExtensionData) => void,
-): void => {
+export const findExtensions = (onFound: (_metadata: ExtensionData) => void): void => {
   if (typeof window === 'undefined') return
 
   window.addEventListener(
@@ -30,14 +27,12 @@ export const findExtensions = (
   )
 
   setTimeout(() => {
-    ids.forEach((id) => {
-      extensionQuery(id)
-    })
+    extensionQuery()
   }, 200)
 }
 
-export const extensionQuery = (id: string) => {
-  window.postMessage({ type: EVENTS.extensionQuery + id }, '*')
+export const extensionQuery = () => {
+  window.postMessage({ type: EVENTS.extensionQuery }, '*')
 }
 
 export const extensionConnect = (id: string, pairingString: string) => {

@@ -80,7 +80,6 @@ export class DAppConnector {
    * @param methods - Array of supported methods for the DApp (optional).
    * @param events - Array of supported events for the DApp (optional).
    * @param events - Array of supported chains for the DApp (optional).
-   * @param extensions - Array of Chrome extensions enabled to be popup when sending requests (optional).
    */
   constructor(
     metadata: SignClientTypes.Metadata,
@@ -89,7 +88,6 @@ export class DAppConnector {
     methods?: string[],
     events?: string[],
     chains?: string[],
-    extensionIds?: string[],
   ) {
     this.dAppMetadata = metadata
     this.network = network
@@ -97,37 +95,19 @@ export class DAppConnector {
     this.supportedMethods = methods ?? Object.values(HederaJsonRpcMethod)
     this.supportedEvents = events ?? []
     this.supportedChains = chains ?? []
+    this.extensions = []
 
     this.walletConnectModal = new WalletConnectModal({
       projectId: projectId,
       chains: chains,
     })
 
-    this.extensions =
-      extensionIds?.map((id) => ({
-        id,
-        available: false,
-      })) ?? []
-
-    if (extensionIds?.length) {
-      findExtensions(
-        this.extensions.map((ext) => ext.id),
-        (metadata) => {
-          this.extensions = this.extensions.map((ext) => {
-            if (metadata.id === ext.id) {
-              return {
-                ...ext,
-                available: true,
-                name: metadata.name,
-                url: metadata.url,
-                icon: metadata.icon,
-              }
-            }
-            return ext
-          })
-        },
-      )
-    }
+    findExtensions((metadata) => {
+      this.extensions.push({
+        ...metadata,
+        available: true,
+      })
+    })
   }
 
   /**
