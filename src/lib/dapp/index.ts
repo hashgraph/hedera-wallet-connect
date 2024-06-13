@@ -46,6 +46,9 @@ import {
   SignTransactionParams,
   SignTransactionRequest,
   SignTransactionResult,
+  ExtensionData,
+  extensionConnect,
+  findExtensions,
 } from '../shared'
 import { DAppSigner } from './DAppSigner'
 import { JsonRpcResult } from '@walletconnect/jsonrpc-types'
@@ -61,6 +64,8 @@ export class DAppConnector {
   supportedMethods: string[] = []
   supportedEvents: string[] = []
   supportedChains: string[] = []
+
+  extensions: ExtensionData[] = []
 
   walletConnectClient: SignClient | undefined
   walletConnectModal: WalletConnectModal
@@ -90,10 +95,18 @@ export class DAppConnector {
     this.supportedMethods = methods ?? Object.values(HederaJsonRpcMethod)
     this.supportedEvents = events ?? []
     this.supportedChains = chains ?? []
+    this.extensions = []
 
     this.walletConnectModal = new WalletConnectModal({
       projectId: projectId,
       chains: chains,
+    })
+
+    findExtensions((metadata) => {
+      this.extensions.push({
+        ...metadata,
+        available: true,
+      })
     })
   }
 
@@ -200,19 +213,53 @@ export class DAppConnector {
   /**
    * Initiates the WallecConnect connection flow using URI.
    * @param pairingTopic - The pairing topic for the connection (optional).
+   * @param extensionId - The id for the extension used to connect (optional).
    * @returns A Promise that resolves when the connection process is complete.
    */
   public async connect(
     launchCallback: (uri: string) => void,
     pairingTopic?: string,
-  ): Promise<void> {
+    extensionId?: string,
+  ): Promise<SessionTypes.Struct> {
     return this.abortableConnect(async () => {
       const { uri, approval } = await this.connectURI(pairingTopic)
       if (!uri) throw new Error('URI is not defined')
       launchCallback(uri)
       const session = await approval()
+      if (extensionId) {
+        const sessionProperties = {
+          ...session.sessionProperties,
+          extensionId,
+        }
+        session.sessionProperties = sessionProperties
+        await this.walletConnectClient?.session.update(session.topic, {
+          sessionProperties,
+        })
+      }
       await this.onSessionConnected(session)
+      return session
     })
+  }
+
+  /**
+   * Initiates the WallecConnect connection flow sending a message to the extension.
+   * @param extensionId - The id for the extension used to connect.
+   * @param pairingTopic - The pairing topic for the connection (optional).
+   * @returns A Promise that resolves when the connection process is complete.
+   */
+  public async connectExtension(
+    extensionId: string,
+    pairingTopic?: string,
+  ): Promise<SessionTypes.Struct> {
+    const extension = this.extensions.find((ext) => ext.id === extensionId)
+    if (!extension || !extension.available) throw new Error('Extension is not available')
+    return this.connect(
+      (uri) => {
+        extensionConnect(extension.id, uri)
+      },
+      pairingTopic,
+      extensionId,
+    )
   }
 
   private abortableConnect = async <T>(callback: () => Promise<T>): Promise<T> => {
@@ -225,6 +272,8 @@ export class DAppConnector {
 
       try {
         return resolve(await callback())
+      } catch (error) {
+        reject(error)
       } finally {
         clearTimeout(timeout)
       }
@@ -285,7 +334,13 @@ export class DAppConnector {
     const allNamespaceAccounts = accountAndLedgerFromSession(session)
     return allNamespaceAccounts.map(
       ({ account, network }: { account: AccountId; network: LedgerId }) =>
-        new DAppSigner(account, this.walletConnectClient!, session.topic, network),
+        new DAppSigner(
+          account,
+          this.walletConnectClient!,
+          session.topic,
+          network,
+          session.sessionProperties?.extensionId,
+        ),
     )
   }
 

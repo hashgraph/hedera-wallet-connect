@@ -56,6 +56,7 @@ import {
   transactionBodyToBase64String,
   transactionToBase64String,
   transactionToTransactionBody,
+  extensionOpen,
 } from '../shared'
 
 const clients: Record<string, Client | null> = {}
@@ -66,6 +67,7 @@ export class DAppSigner implements Signer {
     private readonly signClient: ISignClient,
     public readonly topic: string,
     private readonly ledgerId: LedgerId = LedgerId.MAINNET,
+    public readonly extensionId?: string,
   ) {}
 
   private _getHederaClient() {
@@ -96,6 +98,7 @@ export class DAppSigner implements Signer {
   }
 
   request<T>(request: { method: string; params: any }): Promise<T> {
+    if (this.extensionId) extensionOpen(this.extensionId)
     return this.signClient.request<T>({
       topic: this.topic,
       request,

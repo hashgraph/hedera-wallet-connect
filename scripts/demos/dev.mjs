@@ -18,10 +18,30 @@
  *
  */
 
-export * from './chainIds'
-export * from './errors'
-export * from './events'
-export * from './methods'
-export * from './payloads'
-export * from './utils'
-export * from './extensionController'
+import * as esbuild from 'esbuild'
+import { config } from './build.mjs'
+
+const devConfig = {
+  ...config,
+  define: {
+    'process.env.dappUrl': '"http://localhost:8080/dapp/index.html"',
+    'process.env.walletUrl': '"http://localhost:8081/wallet/index.html"',
+  },
+}
+
+let ctx8080 = await esbuild.context(devConfig)
+
+/*
+ * watches for file changes and serves most recent files
+ */
+async function main() {
+  const server1 = await ctx8080.serve({
+    servedir: 'dist/demos/react-dapp',
+    host: 'localhost',
+    port: 3000,
+  })
+
+  console.log(`Server running ${server1.host}:${server1.port}`)
+}
+
+await main()
