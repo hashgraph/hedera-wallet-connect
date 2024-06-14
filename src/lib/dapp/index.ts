@@ -80,7 +80,7 @@ export class DAppConnector {
    * @param projectId - Project ID for the WalletConnect client.
    * @param methods - Array of supported methods for the DApp (optional).
    * @param events - Array of supported events for the DApp (optional).
-   * @param events - Array of supported chains for the DApp (optional).
+   * @param chains - Array of supported chains for the DApp (optional).
    */
   constructor(
     metadata: SignClientTypes.Metadata,
@@ -130,7 +130,7 @@ export class DAppConnector {
       })
       const existingSessions = this.walletConnectClient.session.getAll()
 
-      if (existingSessions)
+      if (existingSessions.length > 0)
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
       else this.checkIframeConnect()
 

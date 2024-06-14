@@ -261,6 +261,10 @@ const App: React.FC = () => {
     )
     await _dAppConnector.init({ logger: 'error' })
 
+    _dAppConnector.onSessionIframeCreated = (session) => {
+      setNewSession(session)
+    }
+
     _dAppConnector?.extensions?.forEach((extension) => {
       console.log('extension: ', extension)
     })
@@ -290,13 +294,7 @@ const App: React.FC = () => {
       if (extensionId) session = await dAppConnector.connectExtension(extensionId)
       else session = await dAppConnector.openModal()
 
-      setSessions((prev) => [...prev, session])
-      const sessionAccount = session.namespaces?.hedera?.accounts?.[0]
-      const accountId = sessionAccount?.split(':').pop()
-      if (!accountId) console.error('No account id found in the session')
-      else setSelectedSigner(dAppConnector?.getSigner(AccountId.fromString(accountId))!)
-      console.log('New connected session: ', session)
-      console.log('New connected accounts: ', session.namespaces?.hedera?.accounts)
+      setNewSession(session)
     } finally {
       setIsLoading(false)
     }
@@ -310,6 +308,16 @@ const App: React.FC = () => {
       setSelectedSigner(null)
       setModalData({ status: 'Success', message: 'Session disconnected' })
     })
+  }
+
+  const setNewSession = (session: SessionTypes.Struct) => {
+    setSessions((prev) => [...prev, session])
+    const sessionAccount = session.namespaces?.hedera?.accounts?.[0]
+    const accountId = sessionAccount?.split(':').pop()
+    if (!accountId) console.error('No account id found in the session')
+    else setSelectedSigner(dAppConnector?.getSigner(AccountId.fromString(accountId))!)
+    console.log('New connected session: ', session)
+    console.log('New connected accounts: ', session.namespaces?.hedera?.accounts)
   }
 
   const handleClearData = () => {
