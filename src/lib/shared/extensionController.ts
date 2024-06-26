@@ -18,7 +18,7 @@ export type ExtensionData = {
 }
 
 export const findExtensions = (
-  onFound: (_metadata: ExtensionData, isFrame: boolean) => void,
+  onFound: (_metadata: ExtensionData, isIframe: boolean) => void,
 ): void => {
   if (typeof window === 'undefined') return
 
