@@ -259,7 +259,7 @@ must support the following messages:
     name: '<Wallet name>',
     url: '<Wallet url>',
     icon: '<Wallet icon>',
-    description: '<Wallet url>',
+    description: '<Wallet description>',
   }
   ```
 - `"hedera-iframe-connect"`: The extension must listen to this message and utilize the
