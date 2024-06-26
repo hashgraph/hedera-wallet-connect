@@ -258,7 +258,7 @@ must support the following messages:
     id: '<extesnionId>',
     name: '<Wallet name>',
     url: '<Wallet url>',
-    icon: '<Wallet con>',
+    icon: '<Wallet icon>',
     description: '<Wallet url>',
   }
   ```
