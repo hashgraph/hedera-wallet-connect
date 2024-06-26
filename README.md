@@ -255,7 +255,7 @@ must support the following messages:
   and provide the next set of data in the metadata property.
   ```javascript
   let metadata = {
-    id: '<extesnionId>',
+    id: '<Wallet extension id>',
     name: '<Wallet name>',
     url: '<Wallet url>',
     icon: '<Wallet icon>',
