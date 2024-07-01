@@ -18,7 +18,7 @@
  *
  */
 
-import { TransferTransaction, AccountId, Hbar } from '@hashgraph/sdk'
+import { TransferTransaction, Hbar } from '@hashgraph/sdk'
 import {
   HederaChainId,
   SignTransactionResponse,
@@ -49,10 +49,7 @@ describe(Wallet.name, () => {
           .setMaxTransactionFee(new Hbar(1))
           .addHbarTransfer('0.0.123', new Hbar(10))
           .addHbarTransfer('0.0.321', new Hbar(-10))
-        const transactionBody = transactionToTransactionBody(
-          transaction,
-          AccountId.fromString('0.0.3'),
-        )
+        const transactionBody = transactionToTransactionBody(transaction)
         const respondSessionRequestSpy = jest.spyOn(wallet, 'respondSessionRequest')
 
         const response = await wallet.hedera_signTransaction(

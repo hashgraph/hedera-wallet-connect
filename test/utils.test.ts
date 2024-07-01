@@ -125,7 +125,6 @@ describe(`Uint8Array helpers`, () => {
       const base64String = btoa('Hello World!')
       uInt8Array = base64StringToUint8Array(base64String)
 
-      console.log(Array.from(uInt8Array))
       expect(uInt8Array).toBeInstanceOf(Uint8Array)
       expect(Array.from(uInt8Array)).toEqual([
         72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33,

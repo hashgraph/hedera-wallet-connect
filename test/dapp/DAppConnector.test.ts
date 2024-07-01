@@ -18,7 +18,7 @@
  *
  */
 
-import { AccountId, AccountInfoQuery, LedgerId, TopicCreateTransaction } from '@hashgraph/sdk'
+import { AccountInfoQuery, LedgerId, TopicCreateTransaction } from '@hashgraph/sdk'
 import {
   DAppConnector,
   ExecuteTransactionParams,
@@ -294,8 +294,7 @@ describe('DAppConnector', () => {
       const params: SignTransactionParams = {
         signerAccountId: testUserAccountId.toString(),
         transactionBody: transactionBodyToBase64String(
-          // must specify a node account id for the transaction body
-          transactionToTransactionBody(transaction, AccountId.fromString('0.0.3')),
+          transactionToTransactionBody(transaction),
         ),
       }
 
