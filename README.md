@@ -248,6 +248,27 @@ This communication protocol between the wallet and web dApps requires an interme
 use the Chrome API. Refer to the
 [Chrome Extensions documentation](https://developer.chrome.com/docs/extensions/develop/concepts/messaging)
 
+To enable communication between the extension and a web dApp embedded in an iframe, the wallet
+must support the following messages:
+
+- `"hedera-iframe-query"`:The extension is required to respond with `"hedera-iframe-response"`
+  and provide the next set of data in the metadata property.
+  ```javascript
+  let metadata = {
+    id: '<Wallet extension id>',
+    name: '<Wallet name>',
+    url: '<Wallet url>',
+    icon: '<Wallet icon>',
+    description: '<Wallet description>',
+  }
+  ```
+- `"hedera-iframe-connect"`: The extension must listen to this message and utilize the
+  `pairingString` property in order to establish a connection.
+
+The dAppConnector is designed to automatically initiate pairing without any need for user
+action, in case no sessions are noticed and an iframe extension is detected. To capture this
+event and the newly established session, you can utilize the `onSessionIframeCreated` function.
+
 ## Demo & docs
 
 This repository includes a vanilla html/css/javascript implementation with a dApp and wallet
