@@ -66,6 +66,7 @@ export class DAppConnector {
   supportedChains: string[] = []
 
   extensions: ExtensionData[] = []
+  public onSessionIframeCreated: ((session: SessionTypes.Struct) => void) | null = null
 
   walletConnectClient: SignClient | undefined
   walletConnectModal: WalletConnectModal
@@ -79,7 +80,7 @@ export class DAppConnector {
    * @param projectId - Project ID for the WalletConnect client.
    * @param methods - Array of supported methods for the DApp (optional).
    * @param events - Array of supported events for the DApp (optional).
-   * @param events - Array of supported chains for the DApp (optional).
+   * @param chains - Array of supported chains for the DApp (optional).
    */
   constructor(
     metadata: SignClientTypes.Metadata,
@@ -102,10 +103,11 @@ export class DAppConnector {
       chains: chains,
     })
 
-    findExtensions((metadata) => {
+    findExtensions((metadata, isIframe) => {
       this.extensions.push({
         ...metadata,
         available: true,
+        availableInIframe: isIframe,
       })
     })
   }
@@ -128,8 +130,9 @@ export class DAppConnector {
       })
       const existingSessions = this.walletConnectClient.session.getAll()
 
-      if (existingSessions)
+      if (existingSessions.length > 0)
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
+      else this.checkIframeConnect()
 
       this.walletConnectClient.on('session_event', (event) => {
         // Handle session events, such as "chainChanged", "accountsChanged", etc.
@@ -255,11 +258,22 @@ export class DAppConnector {
     if (!extension || !extension.available) throw new Error('Extension is not available')
     return this.connect(
       (uri) => {
-        extensionConnect(extension.id, uri)
+        extensionConnect(extension.id, extension.availableInIframe, uri)
       },
       pairingTopic,
-      extensionId,
+      extension.availableInIframe ? undefined : extensionId,
     )
+  }
+
+  /**
+   *  Initiates the WallecConnect connection if the wallet in iframe mode is detected.
+   */
+  private async checkIframeConnect() {
+    const extension = this.extensions.find((ext) => ext.availableInIframe)
+    if (extension) {
+      const session = await this.connectExtension(extension.id)
+      if (this.onSessionIframeCreated) this.onSessionIframeCreated(session)
+    }
   }
 
   private abortableConnect = async <T>(callback: () => Promise<T>): Promise<T> => {
