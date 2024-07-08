@@ -174,6 +174,9 @@ export class DAppSigner implements Signer {
   }
 
   async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
+    if (!transaction?.nodeAccountIds?.length)
+      throw new Error('Transaction nodeAccountIds must be set')
+
     const transactionBody: proto.TransactionBody = transactionToTransactionBody(
       transaction,
       transaction.nodeAccountIds[0],
