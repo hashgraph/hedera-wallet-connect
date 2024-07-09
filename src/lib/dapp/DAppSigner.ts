@@ -174,9 +174,13 @@ export class DAppSigner implements Signer {
   }
 
   async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
+    let nodeAccountId: AccountId
+    if (!transaction.nodeAccountIds || transaction.nodeAccountIds.length === 0)
+      nodeAccountId = this._getRandomNodes(1)[0]
+    else nodeAccountId = transaction.nodeAccountIds[0]
     const transactionBody: proto.TransactionBody = transactionToTransactionBody(
       transaction,
-      transaction.nodeAccountIds[0],
+      nodeAccountId,
     )
     const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
 
