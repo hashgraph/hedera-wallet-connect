@@ -48,7 +48,6 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@hashgraph/sdk": "^2.40.0",
     "@walletconnect/qrcode-modal": "^1.8.0",
     "@walletconnect/types": "^2.11.0",
     "@walletconnect/utils": "^2.11.0",
@@ -71,5 +70,8 @@
     "prettier:check": "prettier --check ./src/",
     "prettier:fix": "prettier --write ./src/",
     "test:sigMap": "jest --testMatch '**/SignatureMapHelpers.test.ts' --verbose"
+  },
+  "peerDependencies": {
+    "@hashgraph/sdk": "^2.40.0"
   }
 }
