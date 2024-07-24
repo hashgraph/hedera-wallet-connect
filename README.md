@@ -65,6 +65,17 @@ reference the [WalletConnect documentation](https://docs.walletconnect.com/2.0/)
 Upon successfully configuring your dApp and/or wallet to manage WalletConnect sessions, you can
 use this library’s functions to easily create and handle requests for the Hedera network.
 
+### Installation
+
+`npm i --save @hashgraph/hedera-wallet-connect @hashgraph/sdk`
+
+### Example code
+
+There is a working example written in vanilla html css and typescript.
+
+- [dApp example code](src/examples/typescript/dapp/main.ts)
+- [Wallet example code](src/examples/typescript/wallet/main.ts)
+
 ### DApps
 
 #### Signer
