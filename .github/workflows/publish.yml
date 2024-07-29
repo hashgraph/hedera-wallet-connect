@@ -5,7 +5,7 @@ on:
       - published
 jobs:
   publish:
-    name: docker
+    name: publish
     runs-on: [self-hosted, Linux, medium, ephemeral]
 
     permissions:
