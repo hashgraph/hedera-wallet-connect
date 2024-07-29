@@ -46,6 +46,9 @@ import {
   SignTransactionParams,
   SignTransactionRequest,
   SignTransactionResult,
+  ExtensionData,
+  extensionConnect,
+  findExtensions,
 } from '../shared'
 import { DAppSigner } from './DAppSigner'
 import { JsonRpcResult } from '@walletconnect/jsonrpc-types'
@@ -62,6 +65,9 @@ export class DAppConnector {
   supportedEvents: string[] = []
   supportedChains: string[] = []
 
+  extensions: ExtensionData[] = []
+  public onSessionIframeCreated: ((session: SessionTypes.Struct) => void) | null = null
+
   walletConnectClient: SignClient | undefined
   walletConnectModal: WalletConnectModal
   signers: DAppSigner[] = []
@@ -74,7 +80,7 @@ export class DAppConnector {
    * @param projectId - Project ID for the WalletConnect client.
    * @param methods - Array of supported methods for the DApp (optional).
    * @param events - Array of supported events for the DApp (optional).
-   * @param events - Array of supported chains for the DApp (optional).
+   * @param chains - Array of supported chains for the DApp (optional).
    */
   constructor(
     metadata: SignClientTypes.Metadata,
@@ -90,10 +96,19 @@ export class DAppConnector {
     this.supportedMethods = methods ?? Object.values(HederaJsonRpcMethod)
     this.supportedEvents = events ?? []
     this.supportedChains = chains ?? []
+    this.extensions = []
 
     this.walletConnectModal = new WalletConnectModal({
       projectId: projectId,
       chains: chains,
+    })
+
+    findExtensions((metadata, isIframe) => {
+      this.extensions.push({
+        ...metadata,
+        available: true,
+        availableInIframe: isIframe,
+      })
     })
   }
 
@@ -115,8 +130,9 @@ export class DAppConnector {
       })
       const existingSessions = this.walletConnectClient.session.getAll()
 
-      if (existingSessions)
+      if (existingSessions.length > 0)
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
+      else this.checkIframeConnect()
 
       this.walletConnectClient.on('session_event', (event) => {
         // Handle session events, such as "chainChanged", "accountsChanged", etc.
@@ -200,19 +216,64 @@ export class DAppConnector {
   /**
    * Initiates the WallecConnect connection flow using URI.
    * @param pairingTopic - The pairing topic for the connection (optional).
+   * @param extensionId - The id for the extension used to connect (optional).
    * @returns A Promise that resolves when the connection process is complete.
    */
   public async connect(
     launchCallback: (uri: string) => void,
     pairingTopic?: string,
-  ): Promise<void> {
+    extensionId?: string,
+  ): Promise<SessionTypes.Struct> {
     return this.abortableConnect(async () => {
       const { uri, approval } = await this.connectURI(pairingTopic)
       if (!uri) throw new Error('URI is not defined')
       launchCallback(uri)
       const session = await approval()
+      if (extensionId) {
+        const sessionProperties = {
+          ...session.sessionProperties,
+          extensionId,
+        }
+        session.sessionProperties = sessionProperties
+        await this.walletConnectClient?.session.update(session.topic, {
+          sessionProperties,
+        })
+      }
       await this.onSessionConnected(session)
+      return session
     })
+  }
+
+  /**
+   * Initiates the WallecConnect connection flow sending a message to the extension.
+   * @param extensionId - The id for the extension used to connect.
+   * @param pairingTopic - The pairing topic for the connection (optional).
+   * @returns A Promise that resolves when the connection process is complete.
+   */
+  public async connectExtension(
+    extensionId: string,
+    pairingTopic?: string,
+  ): Promise<SessionTypes.Struct> {
+    const extension = this.extensions.find((ext) => ext.id === extensionId)
+    if (!extension || !extension.available) throw new Error('Extension is not available')
+    return this.connect(
+      (uri) => {
+        extensionConnect(extension.id, extension.availableInIframe, uri)
+      },
+      pairingTopic,
+      extension.availableInIframe ? undefined : extensionId,
+    )
+  }
+
+  /**
+   *  Initiates the WallecConnect connection if the wallet in iframe mode is detected.
+   */
+  private async checkIframeConnect() {
+    const extension = this.extensions.find((ext) => ext.availableInIframe)
+    if (extension) {
+      const session = await this.connectExtension(extension.id)
+      if (this.onSessionIframeCreated) this.onSessionIframeCreated(session)
+    }
   }
 
   private abortableConnect = async <T>(callback: () => Promise<T>): Promise<T> => {
@@ -225,6 +286,8 @@ export class DAppConnector {
 
       try {
         return resolve(await callback())
+      } catch (error) {
+        reject(error)
       } finally {
         clearTimeout(timeout)
       }
@@ -285,7 +348,13 @@ export class DAppConnector {
     const allNamespaceAccounts = accountAndLedgerFromSession(session)
     return allNamespaceAccounts.map(
       ({ account, network }: { account: AccountId; network: LedgerId }) =>
-        new DAppSigner(account, this.walletConnectClient!, session.topic, network),
+        new DAppSigner(
+          account,
+          this.walletConnectClient!,
+          session.topic,
+          network,
+          session.sessionProperties?.extensionId,
+        ),
     )
   }
 

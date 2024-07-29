@@ -56,6 +56,7 @@ import {
   transactionBodyToBase64String,
   transactionToBase64String,
   transactionToTransactionBody,
+  extensionOpen,
 } from '../shared'
 
 const clients: Record<string, Client | null> = {}
@@ -66,6 +67,7 @@ export class DAppSigner implements Signer {
     private readonly signClient: ISignClient,
     public readonly topic: string,
     private readonly ledgerId: LedgerId = LedgerId.MAINNET,
+    public readonly extensionId?: string,
   ) {}
 
   private _getHederaClient() {
@@ -96,6 +98,7 @@ export class DAppSigner implements Signer {
   }
 
   request<T>(request: { method: string; params: any }): Promise<T> {
+    if (this.extensionId) extensionOpen(this.extensionId)
     return this.signClient.request<T>({
       topic: this.topic,
       request,
@@ -170,8 +173,23 @@ export class DAppSigner implements Signer {
       .setTransactionId(TransactionId.generate(this.getAccountId()))
   }
 
+  /**
+   * Prepares a transaction object for signing using a single node account id.
+   * If the transaction object does not already have a node account id,
+   * generate a random node account id using the Hedera SDK client
+   *
+   * @param transaction - Any instance of a class that extends `Transaction`
+   * @returns transaction - `Transaction` object with signature
+   */
   async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
-    const transactionBody = transactionToTransactionBody(transaction)
+    let nodeAccountId: AccountId
+    if (!transaction.nodeAccountIds || transaction.nodeAccountIds.length === 0)
+      nodeAccountId = this._getRandomNodes(1)[0]
+    else nodeAccountId = transaction.nodeAccountIds[0]
+    const transactionBody: proto.TransactionBody = transactionToTransactionBody(
+      transaction,
+      nodeAccountId,
+    )
     const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
 
     const { signatureMap } = await this.request<SignTransactionResult['result']>({
