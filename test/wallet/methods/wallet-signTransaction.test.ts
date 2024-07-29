@@ -18,7 +18,7 @@
  *
  */
 
-import { TransferTransaction, AccountId, Hbar } from '@hashgraph/sdk'
+import { TransferTransaction, Hbar, AccountId } from '@hashgraph/sdk'
 import {
   HederaChainId,
   SignTransactionResponse,
@@ -53,6 +53,7 @@ describe(Wallet.name, () => {
           transaction,
           AccountId.fromString('0.0.3'),
         )
+        if (!transactionBody) throw new Error('Failed to create transaction body')
         const respondSessionRequestSpy = jest.spyOn(wallet, 'respondSessionRequest')
 
         const response = await wallet.hedera_signTransaction(
