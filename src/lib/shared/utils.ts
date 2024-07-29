@@ -98,10 +98,13 @@ export function base64StringToTransaction<T extends Transaction>(transactionByte
  * @param transaction - a base64 encoded string of proto.TransactionBody.encode().finish()
  * @returns `string`
  * */
-export function transactionToTransactionBody<T extends Transaction>(transaction: T) {
+export function transactionToTransactionBody<T extends Transaction>(
+  transaction: T,
+  nodeAccountId: AccountId, // To mantain compatibility
+) {
   // This is a private function, though provides the capabilities to construct a proto.TransactionBody
   //@ts-ignore
-  return transaction._signedTransactions.get(0)!.bodyBytes!
+  return transaction._signedTransactions.current.bodyBytes
 }
 
 export function transactionBodyToBase64String(transactionBody: Uint8Array) {
