@@ -173,10 +173,22 @@ export class DAppSigner implements Signer {
       .setTransactionId(TransactionId.generate(this.getAccountId()))
   }
 
+  /**
+   * Prepares a transaction object for signing using a single node account id.
+   * If the transaction object does not already have a node account id,
+   * generate a random node account id using the Hedera SDK client
+   *
+   * @param transaction - Any instance of a class that extends `Transaction`
+   * @returns transaction - `Transaction` object with signature
+   */
   async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
+    let nodeAccountId: AccountId
+    if (!transaction.nodeAccountIds || transaction.nodeAccountIds.length === 0)
+      nodeAccountId = this._getRandomNodes(1)[0]
+    else nodeAccountId = transaction.nodeAccountIds[0]
     const transactionBody: proto.TransactionBody = transactionToTransactionBody(
       transaction,
-      this._getRandomNodes(1)[0],
+      nodeAccountId,
     )
     const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
 
