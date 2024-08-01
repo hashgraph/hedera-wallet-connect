@@ -141,6 +141,77 @@ This library provides a Wallet class that extends the
 [ Web3Wallet ](https://github.com/WalletConnect/walletconnect-monorepo/tree/v2.0/packages/web3wallet)
 class provided by WalletConnect class
 
+#### Configuration
+
+There are some required preparations for a wallet to be accessible from the WalletConnect modal.
+
+##### Mobile
+
+1. [Support](https://docs.walletconnect.com/web3wallet/mobileLinking) deep links or universal links in the app.
+2. Add appropriate deep or universal link to the WalletConnect project (as `Deep link` or `Universal link` respectively).
+
+##### Chrome extension
+
+1. Create a separate `/wc` page on a wallet web site (e.g. `https://mycoolwallet.com/wc`).
+2. Add a URL handler to the extension content scripts. The handler should detect if the page is correct and parse the `uri` query parameter. That parameter contains the WalletConnect pairing URI.
+3. Send the URI to the extension itself and initiate the pairing.
+4. Add the wallet web site address to the WalletConnect project (as `Web wallet link`).
+
+###### Content script code example
+
+```javascript
+const MessageType = {
+  PAIR_WC = 0,
+  CLOSE_CURRENT_TAB = 1
+};
+
+class Content {
+  #port;
+
+  constructor() {
+    this.#port = chrome.runtime.connect({name: "TestContentPort"});
+
+    this.checkURL()
+  }
+
+  async #checkURL() {
+    const urlToCheck = "https://mycoolwallet.com/"; // this URL may be injected at runtime
+    const uri = new URL(location.href);
+
+    // content scripts are injected into every tab and frame,
+    // we need to make sure, that the code below will be executed on the correct page only
+    if (!urlToCheck.startsWith(uri.origin)) {
+      return;
+    }
+
+    const wcUri = uri.searchParams.get("uri");
+
+    // check if route is correct and URI param is present
+    if (uri.pathname !== "/wc" || !wcUri) {
+      return;
+    }
+
+    // pass the pairing URI to the extension
+    this.sendMessage(MessageType.PAIR_WC, wcUri);
+
+    // this.sendMessage(MessageType.CLOSE_CURRENT_TAB); optionally you can close the current tab
+  }
+
+  #sendMessage(type, payload) {
+    // a background script should listen to the same port to get messages
+    this.#port.postMessage({
+      type,
+      payload
+    });
+  }
+}
+```
+
+##### Desktop app 
+
+1. Support deep links in the app.
+2. Add appropriate deep link to the WalletConnect project (as `Deep link`).
+
 #### Event Listeners
 
 WalletConnect emits various events during a session. Listen to these events to synchronize the
