@@ -293,6 +293,77 @@
           <button type="submit">Submit to wallet</button>
         </form>
       </section>
+      <hr />
+      <h2>Signer with Transactions:</h2>
+      <section>
+        <form id="signer_hedera_executeTransaction" class="toggle">
+          <fieldset>
+            <legend>2.(Signer) hedera_executeTransaction</legend>
+            <p>These fields can be constructed by using the `hedera_signTransaction` method</p>
+            <label
+              >Signer Account Id:
+              <input name="signer-execute" required />
+            </label>
+            <label
+              >Base64 Encoded TransactionBody protobuf:
+              <input name="signer-execute-transaction-body" required />
+            </label>
+            <label
+              >Base64 Encoded SignatureMap protobuf:
+              <input name="signer-execute-transaction-signature-map" required />
+            </label>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+      </section>
+      <section>
+        <form id="signer_hedera_signMessage" class="toggle">
+          <fieldset>
+            <legend>3.(Signer) hedera_signMessage</legend>
+            <label
+              >Message:
+              <input name="signer-sign-message" required />
+            </label>
+            <label
+              >Signer Account Id:
+              <input name="signer-message-from" required />
+            </label>
+            <label
+              >Hedera Testnet Public Key:
+              <input name="signer-public-key" required />
+            </label>
+            <p>The public key for the account is used to verify the signed message</p>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+          <p id="signer-sign-message-result"></p>
+        </form>
+      </section>
+      <section>
+        <form id="signer_hedera_signAndExecuteTransaction" class="toggle">
+          <fieldset>
+            <legend>5.(Signer) hedera_signAndExecuteTransaction</legend>
+            <label
+              >Transaction type:
+              <select name="signer-sign-send-transaction-type">
+                <option value="signer-hbar-transfer">Hbar Transfer</option>
+              </select>
+            </label>
+            <label
+              >Send to address:
+              <input name="signer-sign-send-to" required />
+            </label>
+            <label
+              >Send from address:
+              <input name="signer-sign-send-from" required />
+            </label>
+            <label
+              >Amount in Hbar:
+              <input name="signer-sign-send-amount" required />
+            </label>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+      </section>
 
       <hr />
       <h2>Error handling:</h2>
