@@ -178,6 +178,7 @@ export class DAppConnector {
 
   /**
    * Initiates the WalletConnect connection flow using a QR code.
+   * @deprecated Use `openModal` instead.
    * @param pairingTopic - The pairing topic for the connection (optional).
    * @returns A Promise that resolves when the connection process is complete.
    */
