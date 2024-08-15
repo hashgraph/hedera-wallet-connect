@@ -7,7 +7,7 @@ on:
 jobs:
   test-node:
     name: Unit Tests
-    runs-on: [self-hosted, Linux, medium, ephemeral]
+    runs-on: wallet-tools-linux-medium
     permissions:
        checks: write
        pull-requests: write
