@@ -10,7 +10,7 @@ permissions:
 jobs:
   formatting-check:
     name: Formatting Check
-    runs-on: [self-hosted, Linux, medium, ephemeral]
+    runs-on: wallet-tools-linux-medium
 
     steps:
       - name: Harden Runner

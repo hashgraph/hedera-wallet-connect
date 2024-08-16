@@ -6,7 +6,7 @@ on:
 jobs:
   publish:
     name: publish
-    runs-on: [self-hosted, Linux, medium, ephemeral]
+    runs-on: wallet-tools-linux-medium
 
     permissions:
       contents: read
