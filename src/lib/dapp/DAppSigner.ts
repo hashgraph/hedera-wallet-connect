@@ -56,8 +56,8 @@ import {
   queryToBase64String,
   transactionBodyToBase64String,
   transactionToBase64String,
-  transactionToTransactionBody,
   extensionOpen,
+  transactionToSignedTransactionBody,
 } from '../shared'
 
 const clients: Record<string, Client | null> = {}
@@ -187,7 +187,7 @@ export class DAppSigner implements Signer {
     if (!transaction.nodeAccountIds || transaction.nodeAccountIds.length === 0)
       nodeAccountId = this._getRandomNodes(1)[0]
     else nodeAccountId = transaction.nodeAccountIds[0]
-    const transactionBody = transactionToTransactionBody(transaction, nodeAccountId)
+    const transactionBody = transactionToSignedTransactionBody(transaction, nodeAccountId)
     if (!transactionBody) throw new Error('Failed to serialize transaction body')
     const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
 
