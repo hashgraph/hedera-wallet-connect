@@ -39,6 +39,7 @@ import {
   AccountBalanceQuery,
   TransactionReceiptQuery,
   TransactionReceipt,
+  TransactionRecordQuery,
 } from '@hashgraph/sdk'
 import { proto } from '@hashgraph/proto'
 import type { ISignClient } from '@walletconnect/types'
@@ -243,6 +244,8 @@ export class DAppSigner implements Signer {
       return AccountInfo.fromBytes(data)
     } else if (query instanceof TransactionReceiptQuery) {
       return TransactionReceipt.fromBytes(data)
+    } else if (query instanceof TransactionRecordQuery) {
+      return TransactionRecord.fromBytes(data)
     } else {
       throw new Error('Unsupported query type')
     }
