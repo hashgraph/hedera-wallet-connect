@@ -24,7 +24,7 @@
     "@walletconnect/sign-client": "^2.14.0",
     "@walletconnect/types": "^2.14.0",
     "concurrently": "^8.2.2",
-    "esbuild": "^0.23.0",
+    "esbuild": "^0.24.0",
     "esbuild-plugin-copy": "^2.1.1",
     "eslint-plugin-tsdoc": "^0.3.0",
     "husky": "^9.0.6",
