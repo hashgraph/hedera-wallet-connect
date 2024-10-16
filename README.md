@@ -71,8 +71,8 @@ use this library’s functions to easily create and handle requests for the Hede
 
 ### Example code
 
-- [Typescript dApp example code](src/examples/typescript/dapp/main.ts)
-- [Typescript Wallet example code](src/examples/typescript/wallet/main.ts)
+- [Typescript dApp example code](demos/typescript/dapp/main.ts)
+- [Typescript Wallet example code](demos/typescript/wallet/main.ts)
 - [React dApp example code](demos/react-dapp)
 
 
@@ -288,7 +288,7 @@ example useful for testing and development while integrating WalletConnect and H
 The docs site utilizes [Typedoc](https://typedoc.org) to generate a library documentation site
 at <https://wc.hgraph.app/docs/>
 
-The demo source code lives in `./src/examples/typescript` and is available at
+The demo source code lives in `./demos/typescript` and is available at
 <https://wc.hgraph.app>
 
 ## Passing tests
