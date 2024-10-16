@@ -289,6 +289,66 @@ async function hedera_signTransaction(_: Event) {
 document.getElementById('hedera_signTransaction')!.onsubmit = (e: SubmitEvent) =>
   showErrorOrSuccess(hedera_signTransaction, e)
 
+/**
+ * Methods used through DappSigner managing Transaction objects directly
+ */
+
+// 2. hedera_executeTransaction
+async function signer_hedera_executeTransaction(_: Event) {
+  const accountId = getState('signer-execute')
+
+  const bodyBytes = Buffer.from(getState('signer-execute-transaction-body'), 'base64')
+  const sigMap = base64StringToSignatureMap(
+    getState('signer-execute-transaction-signature-map'),
+  )
+
+  const bytes = proto.Transaction.encode({ bodyBytes, sigMap }).finish()
+  const transaction = Transaction.fromBytes(bytes)
+
+  const signer = dAppConnector.getSigner(AccountId.fromString(accountId))
+  return await signer.executeTransaction(transaction)
+}
+document.getElementById('signer_hedera_executeTransaction')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_hedera_executeTransaction, e)
+
+// 3. hedera_signMessage
+async function signer_hedera_signMessage(_: Event) {
+  const message = getState('signer-sign-message')
+  const accountId = getState('signer-message-from')
+
+  const signer = dAppConnector.getSigner(AccountId.fromString(accountId))
+  const { signatureMap } = await signer.signMessage(message)
+
+  const accountPublicKey = PublicKey.fromString(getState('signer-public-key'))
+  const verified = verifyMessageSignature(message, signatureMap, accountPublicKey)
+
+  document.getElementById('signer-sign-message-result')!.innerHTML =
+    `Message signed - ${verified}: ${message}`
+  return signatureMap
+}
+
+document.getElementById('signer_hedera_signMessage')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(signer_hedera_signMessage, e)
+
+// 5. hedera_signAndExecuteTransaction
+async function signer_hedera_signAndExecuteTransaction(_: Event) {
+  const accountId = getState('signer-sign-send-from')
+
+  const transaction = new TransferTransaction()
+    .setTransactionId(TransactionId.generate(getState('signer-sign-send-from')))
+    .addHbarTransfer(accountId, new Hbar(-getState('signer-sign-send-amount')))
+    .addHbarTransfer(
+      getState('signer-sign-send-to'),
+      new Hbar(+getState('signer-sign-send-amount')),
+    )
+
+  const signer = dAppConnector.getSigner(AccountId.fromString(accountId))
+  return signer.signAndExecuteTransaction(transaction)
+}
+document.getElementById('signer_hedera_signAndExecuteTransaction')!.onsubmit = (
+  e: SubmitEvent,
+) => showErrorOrSuccess(signer_hedera_signAndExecuteTransaction, e)
+
 /*
  * Error handling simulation
  */
