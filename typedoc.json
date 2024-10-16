@@ -4,7 +4,7 @@
   "entryPoints": ["./src/lib"],
   "plugin": ["typedoc-theme-hierarchy"],
   "theme": "hierarchy",
-  "out": "dist/examples/typescript/docs",
+  "out": "dist/demos/typescript/docs",
   "sourceLinkExternal": true,
   "basePath": "./docs"
 }
