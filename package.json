@@ -20,10 +20,10 @@
     "@types/jest": "^29.5.3",
     "@types/node": "^22.5.0",
     "@types/react-dom": "^18.2.21",
-    "@walletconnect/modal": "^2.6.2",
-    "@walletconnect/sign-client": "^2.11.0",
-    "@walletconnect/types": "^2.11.0",
-    "concurrently": "^8.2.2",
+    "@walletconnect/modal": "^2.7.0",
+    "@walletconnect/sign-client": "^2.17.0",
+    "@walletconnect/types": "^2.17.0",
+    "concurrently": "^9.0.1",
     "esbuild": "^0.24.0",
     "esbuild-plugin-copy": "^2.1.1",
     "eslint-plugin-tsdoc": "^0.3.0",
@@ -44,12 +44,13 @@
   },
   "scripts": {
     "build": "rimraf dist && tsc",
-    "build:example": "node scripts/examples/build.mjs",
-    "build:demos": "node scripts/demos/build.mjs",
+    "build:ts-demo": "node scripts/demos/typescript/build.mjs",
+    "build:react-demo": "node scripts/demos/react/build.mjs",
     "build:docs": "typedoc --options typedoc.json",
     "watch": "nodemon --watch src/lib/ --ext ts --exec \"npm run build\"",
-    "dev": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/examples/dev.mjs\"",
-    "dev:demos": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/demos/dev.mjs\"",
+    "dev": "npm run dev:ts-demo",
+    "dev:ts-demo": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/demos/typescript/dev.mjs\"",
+    "dev:react-demo": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/demos/react/dev.mjs\"",
     "test": "jest",
     "test:connect": "jest --testMatch '**/DAppConnector.test.ts' --verbose",
     "test:signer": "jest --testMatch '**/DAppSigner.test.ts' --verbose",
@@ -62,8 +63,8 @@
   "peerDependencies": {
     "@hashgraph/sdk": "^2.40.0",
     "@walletconnect/qrcode-modal": "^1.8.0",
-    "@walletconnect/types": "^2.11.0",
-    "@walletconnect/utils": "^2.11.0",
-    "@walletconnect/web3wallet": "^1.9.3"
+    "@walletconnect/types": "^2.17.0",
+    "@walletconnect/utils": "^2.17.0",
+    "@walletconnect/web3wallet": "^1.16.0"
   }
 }
