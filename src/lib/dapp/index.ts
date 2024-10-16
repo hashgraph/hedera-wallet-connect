@@ -152,16 +152,13 @@ export class DAppConnector {
       this.walletConnectClient.on('session_delete', (pairing) => {
         console.log(pairing)
         this.signers = this.signers.filter((signer) => signer.topic !== pairing.topic)
-        this.disconnect(pairing.topic)
         // Session was deleted -> reset the dapp state, clean up from user session, etc.
         console.log('Dapp: Session deleted by wallet!')
       })
 
       this.walletConnectClient.core.pairing.events.on('pairing_delete', (pairing) => {
-        // Session was deleted
         console.log(pairing)
         this.signers = this.signers.filter((signer) => signer.topic !== pairing.topic)
-        this.disconnect(pairing.topic)
         console.log(`Dapp: Pairing deleted by wallet!`)
         // clean up after the pairing for `topic` was deleted.
       })
