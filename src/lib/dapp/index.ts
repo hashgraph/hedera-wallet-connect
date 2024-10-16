@@ -170,6 +170,13 @@ export class DAppConnector {
     }
   }
 
+  /**
+   * Retrieves a DAppSigner for the specified Hedera Account ID.
+   *
+   * @param {AccountId} accountId - The Hedera Account ID to find the associated signer.
+   * @returns {DAppSigner} - The signer object of type {@link DAppSigner} corresponding to the provided account ID.
+   * @throws {Error} - If no signer is found for the provided account ID.
+   */
   public getSigner(accountId: AccountId): DAppSigner {
     const signer = this.signers.find((signer) => signer.getAccountId().equals(accountId))
     if (!signer) throw new Error('Signer is not found for this accountId')

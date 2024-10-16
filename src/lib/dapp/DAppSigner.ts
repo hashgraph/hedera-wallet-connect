@@ -187,10 +187,8 @@ export class DAppSigner implements Signer {
     if (!transaction.nodeAccountIds || transaction.nodeAccountIds.length === 0)
       nodeAccountId = this._getRandomNodes(1)[0]
     else nodeAccountId = transaction.nodeAccountIds[0]
-    const transactionBody: proto.TransactionBody = transactionToTransactionBody(
-      transaction,
-      nodeAccountId,
-    )
+    const transactionBody = transactionToTransactionBody(transaction, nodeAccountId)
+    if (!transactionBody) throw new Error('Failed to serialize transaction body')
     const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
 
     const { signatureMap } = await this.request<SignTransactionResult['result']>({
