@@ -28,6 +28,17 @@ const config: Config = {
     enableGlobally: true,
   },
   testMatch: ['**/?(*.)+(spec|test).ts?(x)', '!**/DAppConnector.test.ts', '!**/wallet*/**'],
+  transform: {
+    '\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          outDir: './.ts-jest',
+        },
+      },
+    ],
+    '\\.jsx?$': ['babel-jest', { plugins: ['@babel/plugin-transform-modules-commonjs'] }],
+  },
   transformIgnorePatterns: ['node_modules/(?!@walletconnect)'],
 }
 
