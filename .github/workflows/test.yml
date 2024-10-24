@@ -36,7 +36,7 @@ jobs:
         run: npm run test
 
       - name: Test
-        uses: step-security/jest-coverage-report-action/@76665bcd3c049b52fbec7285d3ab218cd8dcf261 # v2.3.1
+        uses: step-security/jest-coverage-report-action@76665bcd3c049b52fbec7285d3ab218cd8dcf261 # v2.3.1
         if: ${{ ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || github.event_name == 'push') && !cancelled() && !failure() }}
         with:
          test-script: npm run test
