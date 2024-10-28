@@ -43,11 +43,11 @@ Install the Hedera Wallet Connect package using npm or yarn. Note, you will also
 ### Using npm
 
 ```bash
-npm install @hashgraph/hedera-wallet-connect @hashgraph/sdk @hashgraph/proto @hashgraph/hedera-wallet-connect @walletconnect/modal @walletconnect/qrcode-modal @walletconnect/utils @walletconnect/types @walletconnect/modal-core
+npm install @hashgraph/hedera-wallet-connect @hashgraph/sdk @hashgraph/proto @hashgraph/hedera-wallet-connect @walletconnect/modal @walletconnect/qrcode-modal @walletconnect/utils  @walletconnect/modal-core
 ```
 
 ### Using yarn
 
 ```bash
-yarn add @hashgraph/hedera-wallet-connect @hashgraph/sdk @hashgraph/proto @hashgraph/hedera-wallet-connect @walletconnect/modal @walletconnect/qrcode-modal @walletconnect/utils @walletconnect/types @walletconnect/modal-core
+yarn add @hashgraph/hedera-wallet-connect @hashgraph/sdk @hashgraph/proto @hashgraph/hedera-wallet-connect @walletconnect/modal @walletconnect/qrcode-modal @walletconnect/utils  @walletconnect/modal-core
 ```
