@@ -21,7 +21,6 @@
 import type { Config } from 'jest'
 
 const config: Config = {
-  preset: 'ts-jest/presets/js-with-ts',
   detectOpenHandles: true,
   forceExit: true,
   fakeTimers: {
