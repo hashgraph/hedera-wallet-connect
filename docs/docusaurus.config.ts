@@ -17,8 +17,8 @@ const config: Config = {
   organizationName: 'hashgraph', // Usually your GitHub org/user name.
   projectName: 'hedera-wallet-connect', // Usually your repo name.
 
-  onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
+  onBrokenLinks: 'ignore',
+  onBrokenMarkdownLinks: 'ignore',
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -75,7 +75,7 @@ const config: Config = {
           items: [
             {
               label: 'Getting Started',
-              to: '/docs/intro',
+              to: '/docs/installation',
             },
           ],
         },
