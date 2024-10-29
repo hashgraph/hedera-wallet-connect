@@ -54,7 +54,7 @@ those more familiar with the Ethereum ecosystem._
 
 # Documentation
 
-WalletConnect <> Hedera docs are fully hosted on [https://hwc-docs.hedera.com](https://hwc-docs.hedera.com)
+WalletConnect <> Hedera docs are fully hosted on [https://hwc-docs.hgraph.app/](https://hwc-docs.hgraph.app/)
 
 - [Installation](/docs/docs/installation.md)
 - [dApp Guide](/docs/docs/dapp-guide.md)

@@ -7,7 +7,7 @@ const config: Config = {
   favicon: 'img/favicon.png',
 
   // Set the production url of your site here
-  url: 'https://hwc-docs.hgraph.com',
+  url: 'https://hwc-docs.hgraph.app',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
@@ -75,7 +75,7 @@ const config: Config = {
           items: [
             {
               label: 'Getting Started',
-              to: '/docs/installation',
+              to: '/',
             },
           ],
         },
