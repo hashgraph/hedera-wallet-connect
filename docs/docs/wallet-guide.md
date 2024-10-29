@@ -3,7 +3,7 @@ sidebar_position: 3
 ---
 
 # Wallet Guide
-This guide provides step-by-step instructions to integrate and use **Hedera Wallet Connect** within your wallet. Ensure you have followed the [installation](/docs/installation) instructions before proceeding.
+This guide provides step-by-step instructions to integrate and use **Hedera Wallet Connect** within your wallet. Ensure you have followed the [installation](./installation.md) instructions before proceeding.
 ### Required Dependencies
 
 Additionally, in this guide we will use the `@walletconnect/web3wallet` package. Install it using npm or yarn:
