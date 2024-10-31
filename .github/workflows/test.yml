@@ -74,15 +74,15 @@ jobs:
 
       - name: Create .npmrc
         run: |
-          touch .npmrc
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Set canary version
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          npm version --no-git-tag-version "${CURRENT_VERSION}-pr.${GITHUB_EVENT_NUMBER}.$(date +%Y%m%d.%H%M%S)"
-        env:
-          GITHUB_EVENT_NUMBER: ${{ github.event.pull_request.number }}
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          npm version --no-git-tag-version "${CURRENT_VERSION}-canary.${COMMIT_HASH}"
 
       - name: Publish canary
         run: npm publish --tag canary --access public
