@@ -1,6 +1,6 @@
 {
   "name": "@hashgraph/hedera-wallet-connect",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "A library to facilitate integrating Hedera with WalletConnect",
   "repository": {
     "type": "git",
@@ -16,7 +16,9 @@
   ],
   "license": "Apache-2.0",
   "devDependencies": {
-    "@hashgraph/hedera-wallet-connect": "^1.3.1",
+    "@hashgraph/hedera-wallet-connect": "^1.3.4",
+    "@swc/core": "^1.7.40",
+    "@swc/jest": "^0.2.36",
     "@types/jest": "^29.5.3",
     "@types/node": "^22.5.0",
     "@types/react-dom": "^18.2.21",
@@ -36,7 +38,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "rimraf": "^5.0.5",
-    "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "typedoc": "^0.26.3",
     "typedoc-theme-hierarchy": "^4.1.2",
@@ -49,6 +50,7 @@
     "build:docs": "typedoc --options typedoc.json",
     "watch": "nodemon --watch src/lib/ --ext ts --exec \"npm run build\"",
     "dev": "npm run dev:ts-demo",
+    "dev:docs": "cd docs && npm run start",
     "dev:ts-demo": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/demos/typescript/dev.mjs\"",
     "dev:react-demo": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/demos/react/dev.mjs\"",
     "test": "jest",
@@ -58,6 +60,7 @@
     "prepare": "husky install",
     "prettier:check": "prettier --check ./src/",
     "prettier:fix": "prettier --write ./src/",
+    "prod:docs-docker": "sh docker-run.sh",
     "test:sigMap": "jest --testMatch '**/SignatureMapHelpers.test.ts' --verbose"
   },
   "peerDependencies": {

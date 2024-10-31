@@ -21,13 +21,15 @@
 import type { Config } from 'jest'
 
 const config: Config = {
-  preset: 'ts-jest/presets/js-with-ts',
   detectOpenHandles: true,
   forceExit: true,
   fakeTimers: {
     enableGlobally: true,
   },
   testMatch: ['**/?(*.)+(spec|test).ts?(x)', '!**/DAppConnector.test.ts', '!**/wallet*/**'],
+  transform: {
+    '^.+\\.(t|j)sx?$': '@swc/jest',
+  },
   transformIgnorePatterns: ['node_modules/(?!@walletconnect)'],
 }
 
