@@ -26,7 +26,7 @@ import {
   transactionToBase64String,
   SignAndExecuteQueryParams,
   ExecuteTransactionParams,
-} from '@hashgraph/hedera-wallet-connect'
+} from '../../../dist/src/index'
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Modal from './components/Modal'
@@ -263,6 +263,7 @@ const App: React.FC = () => {
 
     _dAppConnector.onSessionIframeCreated = (session) => {
       setNewSession(session)
+      setSessions((prev) => [...prev, session])
     }
 
     _dAppConnector?.extensions?.forEach((extension) => {
