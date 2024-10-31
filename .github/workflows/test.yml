@@ -79,7 +79,10 @@ jobs:
 
       - name: Set canary version
         run: |
-          npm version --no-git-tag-version $(npm version --json | jq -r '."package-name"')-canary.$(date +%Y%m%d.%H%M%S)
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          npm version --no-git-tag-version "${CURRENT_VERSION}-pr.${GITHUB_EVENT_NUMBER}.$(date +%Y%m%d.%H%M%S)"
+        env:
+          GITHUB_EVENT_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Publish canary
         run: npm publish --tag canary --access public
