@@ -74,9 +74,8 @@ jobs:
 
       - name: Create .npmrc
         run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+            touch .npmrc
+            echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
 
       - name: Set canary version
         run: |
@@ -84,7 +83,7 @@ jobs:
           COMMIT_HASH=$(git rev-parse --short HEAD)
           npm version --no-git-tag-version "${CURRENT_VERSION}-canary.${COMMIT_HASH}"
 
-      - name: Publish canary
-        run: npm publish --tag canary --access public
+      - name: Publish
+        run: npm publish --tag canary --public
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
