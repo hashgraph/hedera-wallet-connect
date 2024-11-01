@@ -496,10 +496,15 @@ export class DAppConnector {
     this.logger.debug(`Requesting method: ${method} with params: ${JSON.stringify(params)}`)
     if (params?.signerAccountId) {
       // Extract the actual account ID from the hedera:<network>:<address> format
-      const actualAccountId = params.signerAccountId.split(':').pop()
+      const actualAccountId = params?.signerAccountId?.split(':')?.pop()
       this.logger.debug(`Actual account ID: ${actualAccountId}`)
       signer = this.signers.find((s) => s?.getAccountId()?.toString() === actualAccountId)
       this.logger.debug(`Found signer: ${signer?.getAccountId()?.toString()}`)
+      if (!signer) {
+        throw new Error(
+          `Signer not found for account ID: ${params?.signerAccountId}. Did you use the correct format? e.g hedera:<network>:<address> `,
+        )
+      }
     } else {
       signer = this.signers[this.signers.length - 1]
     }
