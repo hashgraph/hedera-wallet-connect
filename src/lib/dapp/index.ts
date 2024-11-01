@@ -136,17 +136,20 @@ export class DAppConnector {
       if (!this.projectId) {
         throw new Error('Project ID is not defined')
       }
-      this.walletConnectClient = await SignClient.init({
+      const signClient = await SignClient.init({
         logger,
         relayUrl: 'wss://relay.walletconnect.com',
         projectId: this.projectId,
         metadata: this.dAppMetadata,
       })
+      this.walletConnectClient = signClient
       const existingSessions = this.walletConnectClient.session.getAll()
 
-      if (existingSessions.length > 0)
+      if (existingSessions.length > 0) {
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
-      else this.checkIframeConnect()
+      } else {
+        await this.checkIframeConnect()
+      }
 
       this.walletConnectClient.on('session_event', (event) => {
         // Handle session events, such as "chainChanged", "accountsChanged", etc.
@@ -188,6 +191,8 @@ export class DAppConnector {
         }
         this.logger.info('Pairing deleted by wallet')
       })
+    } catch (e) {
+      this.logger.error('Error initializing DAppConnector:', e)
     } finally {
       this.isInitializing = false
     }
@@ -439,11 +444,13 @@ export class DAppConnector {
     // Filter out any existing signers with duplicate AccountIds
     for (const newSigner of newSigners) {
       // Find all existing signers with the same AccountId
-      const existingSigners = this.signers.filter(
-        (s) =>
-          s.getAccountId().toString() === newSigner.getAccountId().toString() &&
-          newSigner.extensionId === s.extensionId,
-      )
+      const existingSigners = this.signers.filter((s) => {
+        const matchingAccountId =
+          s.getAccountId().toString() === newSigner.getAccountId().toString()
+        const matchingExtensionId = newSigner.extensionId === s.extensionId
+        const isNotSameSession = s.topic !== newSigner.topic
+        return matchingAccountId && matchingExtensionId && isNotSameSession
+      })
 
       // Disconnect all existing sessions for this AccountId
       for (const existingSigner of existingSigners) {
@@ -484,7 +491,19 @@ export class DAppConnector {
     method,
     params,
   }: Req['request']): Promise<Res> {
-    const signer = this.signers[this.signers.length - 1]
+    let signer: DAppSigner | undefined
+
+    this.logger.debug(`Requesting method: ${method} with params: ${JSON.stringify(params)}`)
+    if (params?.signerAccountId) {
+      // Extract the actual account ID from the hedera:<network>:<address> format
+      const actualAccountId = params.signerAccountId.split(':').pop()
+      this.logger.debug(`Actual account ID: ${actualAccountId}`)
+      signer = this.signers.find((s) => s?.getAccountId()?.toString() === actualAccountId)
+      this.logger.debug(`Found signer: ${signer?.getAccountId()?.toString()}`)
+    } else {
+      signer = this.signers[this.signers.length - 1]
+    }
+
     if (!signer) {
       throw new Error('There is no active session. Connect to the wallet at first.')
     }
@@ -541,7 +560,7 @@ export class DAppConnector {
    * @example
    * ```ts
    * const params = {
-   *  signerAccountId: '0.0.12345',
+   *  signerAccountId: 'hedera:testnet:0.0.12345',
    *  message: 'Hello World!'
    * }
    *
