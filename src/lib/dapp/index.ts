@@ -91,7 +91,7 @@ export class DAppConnector {
     methods?: string[],
     events?: string[],
     chains?: string[],
-    logLevel: 'error' | 'warn' | 'info' | 'debug' = 'info',
+    logLevel: 'error' | 'warn' | 'info' | 'debug' = 'debug',
   ) {
     this.logger = new DefaultLogger(logLevel)
     this.dAppMetadata = metadata
@@ -443,16 +443,24 @@ export class DAppConnector {
 
     // Filter out any existing signers with duplicate AccountIds
     for (const newSigner of newSigners) {
-      // Find all existing signers with the same AccountId
-      const existingSigners = this.signers.filter((s) => {
+      // We check if any signers have the same account, extension + metadata name.
+      const existingSigners = this.signers.filter(async (currentSigner) => {
         const matchingAccountId =
-          s.getAccountId().toString() === newSigner.getAccountId().toString()
-        const matchingExtensionId = newSigner.extensionId === s.extensionId
-        const isNotSameSession = s.topic !== newSigner.topic
-        return matchingAccountId && matchingExtensionId && isNotSameSession
+          currentSigner?.getAccountId()?.toString() === newSigner?.getAccountId()?.toString()
+        const matchingExtensionId = newSigner.extensionId === currentSigner.extensionId
+        const newSignerMetadata = newSigner.getMetadata()
+        const existingSignerMetadata = currentSigner.getMetadata()
+        const metadataNameMatch = newSignerMetadata?.name === existingSignerMetadata?.name
+        if (currentSigner.topic === newSigner.topic) {
+          this.logger.error(
+            'The topic was already connected. This is a weird error. Please report it.',
+            newSigner.getAccountId().toString(),
+          )
+        }
+        return matchingAccountId && matchingExtensionId && metadataNameMatch
       })
 
-      // Disconnect all existing sessions for this AccountId
+      // Any dupes get disconnected + removed from the signers array.
       for (const existingSigner of existingSigners) {
         this.logger.debug(
           `Disconnecting duplicate signer for account ${existingSigner.getAccountId().toString()}`,
@@ -497,7 +505,6 @@ export class DAppConnector {
     if (params?.signerAccountId) {
       // Extract the actual account ID from the hedera:<network>:<address> format
       const actualAccountId = params?.signerAccountId?.split(':')?.pop()
-      this.logger.debug(`Actual account ID: ${actualAccountId}`)
       signer = this.signers.find((s) => s?.getAccountId()?.toString() === actualAccountId)
       this.logger.debug(`Found signer: ${signer?.getAccountId()?.toString()}`)
       if (!signer) {
@@ -512,6 +519,8 @@ export class DAppConnector {
     if (!signer) {
       throw new Error('There is no active session. Connect to the wallet at first.')
     }
+
+    this.logger.debug(`Using signer: ${signer.getAccountId().toString()} - about to request.`)
 
     return await signer.request({
       method: method,
