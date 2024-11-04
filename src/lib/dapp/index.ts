@@ -520,7 +520,9 @@ export class DAppConnector {
       throw new Error('There is no active session. Connect to the wallet at first.')
     }
 
-    this.logger.debug(`Using signer: ${signer.getAccountId().toString()} - about to request.`)
+    this.logger.debug(
+      `Using signer: ${signer.getAccountId().toString()}: ${signer.topic} - about to request.`,
+    )
 
     return await signer.request({
       method: method,
