@@ -21,29 +21,37 @@
 import * as esbuild from 'esbuild'
 import copy from 'esbuild-plugin-copy'
 
-export const config = {
+const DOCUSAURUS_STATIC = 'docs/static/demos/typescript'
+const DIST = 'dist/demos/typescript'
+
+// Create separate configs for dist and docusaurus builds
+const baseConfig = {
   bundle: true,
   minify: false,
   platform: 'browser',
-  // format: 'esm',
   alias: {
     '@hashgraph/sdk': './node_modules/@hashgraph/sdk/src/index.js',
     '@hashgraph/proto': './node_modules/@hashgraph/proto',
   },
+  entryPoints: [
+    'demos/typescript/main.ts',
+    'demos/typescript/dapp/main.ts', 
+    'demos/typescript/wallet/main.ts',
+  ],
+}
+
+// Config for dist build
+const distConfig = {
+  ...baseConfig,
+  outdir: DIST,
   plugins: [
     copy({
       assets: {
         from: ['demos/typescript/**/*.(html|css|ico|jpg|png)'],
-        to: ['./'],
+        to: ['.'],
       },
-      watch: true, // for ../dev.mjs
+      watch: true,
     }),
-  ],
-  outdir: 'dist/demos/typescript',
-  entryPoints: [
-    'demos/typescript/main.ts',
-    'demos/typescript/dapp/main.ts',
-    'demos/typescript/wallet/main.ts',
   ],
   define: {
     'process.env.dappUrl': '"https://wc.hgraph.app/dapp/index.html"',
@@ -51,4 +59,34 @@ export const config = {
   },
 }
 
-esbuild.build(config)
+// Config for docusaurus build
+const docusaurusConfig = {
+  ...baseConfig,
+  outdir: DOCUSAURUS_STATIC,
+  plugins: [
+    copy({
+      assets: [
+        {
+          from: ['demos/typescript/main.css'],
+          to: ['../..']
+        },
+        {
+          from: ['demos/typescript/**/*.(html|ico|jpg|png)'],
+          to: ['.'],
+          flatten: false
+        }
+      ],
+      watch: true,
+    }),
+  ],
+  define: {
+    'process.env.dappUrl': '"/demos/typescript/dapp/index.html"',
+    'process.env.walletUrl': '"/demos/typescript/wallet/index.html"',
+  },
+}
+
+// Build for dist
+await esbuild.build(distConfig)
+
+// Build for Docusaurus
+await esbuild.build(docusaurusConfig)

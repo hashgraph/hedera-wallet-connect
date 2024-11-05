@@ -59,7 +59,8 @@ const config: Config = {
       },
       style: 'dark',
       items: [
-        { to: '/docs/installation', label: 'Documentation', position: 'left' },
+        { to: '/', label: 'Documentation', position: 'left' },
+        { to: '/demos', label: 'Demos', position: 'left' },
         {
           href: 'https://github.com/hashgraph/hedera-wallet-connect',
           label: 'GitHub',
