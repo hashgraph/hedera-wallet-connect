@@ -35,7 +35,7 @@ jobs:
 
       - name: Set prerelease version
         run: |
-          npm version prerelease --preid="canary.$(git rev-parse --short HEAD)"
+          npm version prerelease --preid="canary.$(git rev-parse --short HEAD)" --no-git-tag-version
 
       - name: Publish
         run: npm publish --tag canary --public
