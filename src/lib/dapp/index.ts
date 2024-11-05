@@ -444,7 +444,7 @@ export class DAppConnector {
     // Filter out any existing signers with duplicate AccountIds
     for (const newSigner of newSigners) {
       // We check if any signers have the same account, extension + metadata name.
-      const existingSigners = this.signers.filter(async (currentSigner) => {
+      const existingSigners = this.signers.filter((currentSigner) => {
         const matchingAccountId =
           currentSigner?.getAccountId()?.toString() === newSigner?.getAccountId()?.toString()
         const matchingExtensionId = newSigner.extensionId === currentSigner.extensionId
