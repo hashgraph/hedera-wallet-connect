@@ -22,9 +22,9 @@ import { AccountId, LedgerId } from '@hashgraph/sdk'
 import { EngineTypes, SessionTypes, SignClientTypes } from '@walletconnect/types'
 import QRCodeModal from '@walletconnect/qrcode-modal'
 import { WalletConnectModal } from '@walletconnect/modal'
-
 import SignClient from '@walletconnect/sign-client'
 import { getSdkError } from '@walletconnect/utils'
+import { DefaultLogger, ILogger } from '../shared/logger'
 import {
   HederaJsonRpcMethod,
   accountAndLedgerFromSession,
@@ -58,6 +58,7 @@ export * from './DAppSigner'
 type BaseLogger = 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'fatal'
 
 export class DAppConnector {
+  private logger: ILogger
   dAppMetadata: SignClientTypes.Metadata
   network: LedgerId = LedgerId.TESTNET
   projectId: string
@@ -81,6 +82,7 @@ export class DAppConnector {
    * @param methods - Array of supported methods for the DApp (optional).
    * @param events - Array of supported events for the DApp (optional).
    * @param chains - Array of supported chains for the DApp (optional).
+   * @param logLevel - Logging level for the DAppConnector (optional).
    */
   constructor(
     metadata: SignClientTypes.Metadata,
@@ -89,7 +91,9 @@ export class DAppConnector {
     methods?: string[],
     events?: string[],
     chains?: string[],
+    logLevel: 'error' | 'warn' | 'info' | 'debug' = 'debug',
   ) {
+    this.logger = new DefaultLogger(logLevel)
     this.dAppMetadata = metadata
     this.network = network
     this.projectId = projectId
@@ -113,30 +117,44 @@ export class DAppConnector {
   }
 
   /**
+   * Sets the logging level for the DAppConnector
+   * @param level - The logging level to set
+   */
+  public setLogLevel(level: 'error' | 'warn' | 'info' | 'debug'): void {
+    if (this.logger instanceof DefaultLogger) {
+      this.logger.setLogLevel(level)
+    }
+  }
+
+  /**
    * Initializes the DAppConnector instance.
    * @param logger - `BaseLogger` for logging purposes (optional).
    */
-  async init({ logger }: { logger?: BaseLogger } = {}) {
+  async init({ logger }: { logger?: BaseLogger } = {}): Promise<void> {
     try {
       this.isInitializing = true
       if (!this.projectId) {
         throw new Error('Project ID is not defined')
       }
-      this.walletConnectClient = await SignClient.init({
+      const signClient = await SignClient.init({
         logger,
         relayUrl: 'wss://relay.walletconnect.com',
         projectId: this.projectId,
         metadata: this.dAppMetadata,
       })
+      this.walletConnectClient = signClient
       const existingSessions = this.walletConnectClient.session.getAll()
 
-      if (existingSessions.length > 0)
+      if (existingSessions.length > 0) {
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
-      else this.checkIframeConnect()
+      } else {
+        await this.checkIframeConnect()
+      }
 
       this.walletConnectClient.on('session_event', (event) => {
         // Handle session events, such as "chainChanged", "accountsChanged", etc.
-        console.log(event)
+        this.logger.debug('Session event received:', event)
+        this.validateAndRefreshSigners()
       })
 
       this.walletConnectClient.on('session_update', ({ topic, params }) => {
@@ -146,32 +164,35 @@ export class DAppConnector {
         // Overwrite the `namespaces` of the existing session with the incoming one.
         const updatedSession = { ..._session, namespaces }
         // Integrate the updated session state into your dapp state.
-        console.log(updatedSession)
+        this.logger.info('Session updated:', updatedSession)
+        this.signers = this.signers.filter((signer) => signer.topic !== topic)
+        this.signers.push(...this.createSigners(updatedSession))
       })
 
       this.walletConnectClient.on('session_delete', (pairing) => {
-        console.log(pairing)
+        this.logger.info('Session deleted:', pairing)
         this.signers = this.signers.filter((signer) => signer.topic !== pairing.topic)
         // Session was deleted -> reset the dapp state, clean up from user session, etc.
         try {
           this.disconnect(pairing.topic)
         } catch (e) {
-          console.error(e)
+          this.logger.error('Error disconnecting session:', e)
         }
-        console.log('Dapp: Session deleted by wallet!')
+        this.logger.info('Session deleted by wallet')
       })
 
       this.walletConnectClient.core.pairing.events.on('pairing_delete', (pairing) => {
-        console.log(pairing)
+        this.logger.info('Pairing deleted:', pairing)
         this.signers = this.signers.filter((signer) => signer.topic !== pairing.topic)
         try {
           this.disconnect(pairing.topic)
         } catch (e) {
-          console.error(e)
+          this.logger.error('Error disconnecting pairing:', e)
         }
-        console.log(`Dapp: Pairing deleted by wallet!`)
-        // clean up after the pairing for `topic` was deleted.
+        this.logger.info('Pairing deleted by wallet')
       })
+    } catch (e) {
+      this.logger.error('Error initializing DAppConnector:', e)
     } finally {
       this.isInitializing = false
     }
@@ -185,6 +206,9 @@ export class DAppConnector {
    * @throws {Error} - If no signer is found for the provided account ID.
    */
   public getSigner(accountId: AccountId): DAppSigner {
+    if (this.isInitializing) {
+      throw new Error('DAppConnector is not initialized yet. Try again later.')
+    }
     const signer = this.signers.find((signer) => signer.getAccountId().equals(accountId))
     if (!signer) throw new Error('Signer is not found for this accountId')
     return signer
@@ -281,6 +305,35 @@ export class DAppConnector {
   }
 
   /**
+   * Validates the session by checking if the session exists.
+   * @param topic - The topic of the session to validate.
+   * @returns {boolean} - True if the session exists, false otherwise.
+   */
+  private validateSession(topic: string): boolean {
+    try {
+      if (!this.walletConnectClient) {
+        return false
+      }
+
+      const session = this.walletConnectClient.session.get(topic)
+
+      if (!session) {
+        return false
+      }
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Validates the session and refreshes the signers by removing the invalid ones.
+   */
+  private validateAndRefreshSigners() {
+    this.signers = this.signers.filter((signer) => this.validateSession(signer.topic))
+  }
+
+  /**
    *  Initiates the WallecConnect connection if the wallet in iframe mode is detected.
    */
   private async checkIframeConnect() {
@@ -314,11 +367,23 @@ export class DAppConnector {
    * @param topic - The topic of the session to disconnect.
    * @returns A Promise that resolves when the session is disconnected.
    */
-  public async disconnect(topic: string): Promise<void> {
-    await this.walletConnectClient!.disconnect({
-      topic: topic,
-      reason: getSdkError('USER_DISCONNECTED'),
-    })
+  public async disconnect(topic: string): Promise<boolean> {
+    try {
+      if (!this.walletConnectClient) {
+        throw new Error('WalletConnect is not initialized')
+      }
+      await this.walletConnectClient.disconnect({
+        topic: topic,
+        reason: getSdkError('USER_DISCONNECTED'),
+      })
+      return true
+    } catch (e) {
+      this.logger.error(
+        'Either the session was already disconnected or the topic is invalid',
+        e,
+      )
+      return false
+    }
   }
 
   /**
@@ -338,11 +403,11 @@ export class DAppConnector {
       throw new Error('There is no active session/pairing. Connect to the wallet at first.')
     }
 
-    const disconnectionPromises: Promise<void>[] = []
+    const disconnectionPromises: Promise<boolean>[] = []
 
     // disconnect sessions
     for (const session of this.walletConnectClient.session.getAll()) {
-      console.log(`Disconnecting from session: ${session}`)
+      this.logger.info(`Disconnecting from session: ${session}`)
       const promise = this.disconnect(session.topic)
       disconnectionPromises.push(promise)
     }
@@ -374,7 +439,44 @@ export class DAppConnector {
   }
 
   private async onSessionConnected(session: SessionTypes.Struct) {
-    this.signers.push(...this.createSigners(session))
+    const newSigners = this.createSigners(session)
+
+    // Filter out any existing signers with duplicate AccountIds
+    for (const newSigner of newSigners) {
+      // We check if any signers have the same account, extension + metadata name.
+      const existingSigners = this.signers.filter(async (currentSigner) => {
+        const matchingAccountId =
+          currentSigner?.getAccountId()?.toString() === newSigner?.getAccountId()?.toString()
+        const matchingExtensionId = newSigner.extensionId === currentSigner.extensionId
+        const newSignerMetadata = newSigner.getMetadata()
+        const existingSignerMetadata = currentSigner.getMetadata()
+        const metadataNameMatch = newSignerMetadata?.name === existingSignerMetadata?.name
+        if (currentSigner.topic === newSigner.topic) {
+          this.logger.error(
+            'The topic was already connected. This is a weird error. Please report it.',
+            newSigner.getAccountId().toString(),
+          )
+        }
+        return matchingAccountId && matchingExtensionId && metadataNameMatch
+      })
+
+      // Any dupes get disconnected + removed from the signers array.
+      for (const existingSigner of existingSigners) {
+        this.logger.debug(
+          `Disconnecting duplicate signer for account ${existingSigner.getAccountId().toString()}`,
+        )
+        await this.disconnect(existingSigner.topic)
+        this.signers = this.signers.filter((s) => s.topic !== existingSigner.topic)
+      }
+    }
+
+    // Add new signers after all duplicates have been cleaned up
+    this.signers.push(...newSigners)
+    this.logger.debug(
+      `Current signers after connection: ${this.signers
+        .map((s) => `${s.getAccountId().toString()}:${s.topic}`)
+        .join(', ')}`,
+    )
   }
 
   private async connectURI(
@@ -397,10 +499,30 @@ export class DAppConnector {
     method,
     params,
   }: Req['request']): Promise<Res> {
-    const signer = this.signers[this.signers.length - 1]
+    let signer: DAppSigner | undefined
+
+    this.logger.debug(`Requesting method: ${method} with params: ${JSON.stringify(params)}`)
+    if (params?.signerAccountId) {
+      // Extract the actual account ID from the hedera:<network>:<address> format
+      const actualAccountId = params?.signerAccountId?.split(':')?.pop()
+      signer = this.signers.find((s) => s?.getAccountId()?.toString() === actualAccountId)
+      this.logger.debug(`Found signer: ${signer?.getAccountId()?.toString()}`)
+      if (!signer) {
+        throw new Error(
+          `Signer not found for account ID: ${params?.signerAccountId}. Did you use the correct format? e.g hedera:<network>:<address> `,
+        )
+      }
+    } else {
+      signer = this.signers[this.signers.length - 1]
+    }
+
     if (!signer) {
       throw new Error('There is no active session. Connect to the wallet at first.')
     }
+
+    this.logger.debug(
+      `Using signer: ${signer.getAccountId().toString()}: ${signer.topic} - about to request.`,
+    )
 
     return await signer.request({
       method: method,
@@ -454,7 +576,7 @@ export class DAppConnector {
    * @example
    * ```ts
    * const params = {
-   *  signerAccountId: '0.0.12345',
+   *  signerAccountId: 'hedera:testnet:0.0.12345',
    *  message: 'Hello World!'
    * }
    *
