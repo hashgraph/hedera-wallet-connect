@@ -1,17 +1,13 @@
-name: Publish Canary
-# on:
-#   pull_request:
-#     branches:
-#       - main
-# Until the npm token scope is fixed, we can't publish canaries. Keeping this in the repo to make it easier to re-enable.
+name: Publish Prerelease
+
 on:
   pull_request:
     branches:
-      - disabled-until-npm-token-scope-fixed
+      - main
 
 jobs:
-  publish-canary:
-    name: Publish Canary
+  publish-prerelease:
+    name: Publish Prerelease
     runs-on: wallet-tools-linux-medium
     permissions:
       contents: read
@@ -38,13 +34,10 @@ jobs:
           touch .npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
 
-      - name: Set canary version
-        run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          COMMIT_HASH=$(git rev-parse --short HEAD)
-          npm version --no-git-tag-version "${CURRENT_VERSION}-canary.${COMMIT_HASH}"
+      - name: Set prerelease version
+        run: npm version prepatch --no-git-tag-version
 
       - name: Publish
-        run: npm publish --tag canary --public
+        run: npm publish --public
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
