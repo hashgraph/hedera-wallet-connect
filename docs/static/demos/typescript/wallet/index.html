@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wallet</title>
+    <link rel="stylesheet" href="/main.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Wallet</h1>
+      <div>
+        <p>
+          This demo requires a Hedera testnet account as well as a project id from
+          WalletConnect.
+        </p>
+        <p>
+          Please see
+          <a target="_blank" href="https://portal.hedera.com"> https://portal.hedera.com </a>
+          and
+          <a target="_blank" href="https://cloud.walletconnect.com">
+            https://cloud.walletconnect.com
+          </a>
+        </p>
+        <p>
+          <b>Disclaimer:</b> This demo is for demonstration purposes only. It is not intended to
+          be used in production. Do not use your mainnet account or private key!
+        </p>
+        <section>
+          <form id="init">
+            <fieldset>
+              <legend>Step 1: Initialize WalletConnect</legend>
+              <label>
+                Project Id:
+                <input type="text" name="project-id" required />
+              </label>
+              <label>
+                Name:
+                <input type="text" name="name" required />
+              </label>
+              <label>
+                Description:
+                <input type="text" name="description" required />
+              </label>
+              <label>
+                Url:
+                <input type="text" name="url" required />
+              </label>
+              <label>
+                Icons:
+                <input type="text" name="icons" required />
+              </label>
+            </fieldset>
+            <button type="submit">Initialize WalletConnect</button>
+          </form>
+        </section>
+        <section>
+          <form id="set-account" class="toggle">
+            <fieldset>
+              <legend>Step 2: Set a hedera account</legend>
+              <p>
+                <i>
+                  For brevity, this demo only supports a single account, though WalletConnect
+                  supports multiple accounts.
+                </i>
+              </p>
+              <label>
+                Hedera Testnet Account Id:
+                <input type="text" name="account-id" required />
+              </label>
+              <label
+                >Hedera Testnet Private Key:
+                <input type="password" name="private-key" required />
+              </label>
+            </fieldset>
+            <button type="submit">Set account</button>
+          </form>
+        </section>
+        <section>
+          <form id="pair" class="toggle">
+            <fieldset>
+              <legend>Step 3: Connect a dApp</legend>
+              <p>
+                <i
+                  >WalletConnect saves pairing and session information in localStorage. If
+                  you've previously paired with a dApp and the session has not expired, you do
+                  not need to pair again.</i
+                >
+              </p>
+              <label>
+                dApp pairing string
+                <input type="text" name="uri" required />
+              </label>
+            </fieldset>
+            <button type="submit">Pair</button>
+          </form>
+        </section>
+        <hr />
+        <h2>Pairing and session management:</h2>
+        <section>
+          <form id="disconnect" class="toggle">
+            <button type="submit">Disconnect all sessions and pairings</button>
+            <button
+              type="button"
+              onclick="localStorage.clear(); sessionStorage.clear(); location.reload();"
+            >
+              Clear saved data
+            </button>
+          </form>
+        </section>
+      </div>
+      <script src="main.js" defer></script>
+    </main>
+  </body>
+</html>
