@@ -39,7 +39,7 @@ async function setIframeSrcWithRetry() {
     } catch (error) {
       if (attempt === MAX_RETRIES - 1) {
         console.error('Failed to set iframe sources after maximum retries:', error)
-        throw error
+        // throw error
       }
       console.warn(`Attempt ${attempt + 1} failed, retrying...`)
     }
