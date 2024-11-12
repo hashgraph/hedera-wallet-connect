@@ -109,7 +109,13 @@
           </form>
         </section>
       </div>
-      <script src="./main.js" defer></script>
+      <script>
+        const scriptPath = new URL('main.js', window.location.href).pathname
+        const script = document.createElement('script')
+        script.src = scriptPath
+        script.defer = true
+        document.body.appendChild(script)
+      </script>
     </main>
   </body>
 </html>
