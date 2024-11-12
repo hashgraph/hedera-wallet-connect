@@ -148,46 +148,13 @@ export class DAppConnector {
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
       else this.checkIframeConnect()
 
-      this.walletConnectClient.on('session_event', (event) => {
-        // Handle session events, such as "chainChanged", "accountsChanged", etc.
-        this.logger.debug('Session event received:', event)
-        this.validateAndRefreshSigners()
-      })
-
-      this.walletConnectClient.on('session_update', ({ topic, params }) => {
-        // Handle session update
-        const { namespaces } = params
-        const _session = this.walletConnectClient!.session.get(topic)
-        // Overwrite the `namespaces` of the existing session with the incoming one.
-        const updatedSession = { ..._session, namespaces }
-        // Integrate the updated session state into your dapp state.
-        this.logger.info('Session updated:', updatedSession)
-        this.signers = this.signers.filter((signer) => signer.topic !== topic)
-        this.signers.push(...this.createSigners(updatedSession))
-      })
-
-      this.walletConnectClient.on('session_delete', (pairing) => {
-        this.logger.info('Session deleted:', pairing)
-        this.signers = this.signers.filter((signer) => signer.topic !== pairing.topic)
-        // Session was deleted -> reset the dapp state, clean up from user session, etc.
-        try {
-          this.disconnect(pairing.topic)
-        } catch (e) {
-          this.logger.error('Error disconnecting session:', e)
-        }
-        this.logger.info('Session deleted by wallet')
-      })
-
-      this.walletConnectClient.core.pairing.events.on('pairing_delete', (pairing) => {
-        this.logger.info('Pairing deleted:', pairing)
-        this.signers = this.signers.filter((signer) => signer.topic !== pairing.topic)
-        try {
-          this.disconnect(pairing.topic)
-        } catch (e) {
-          this.logger.error('Error disconnecting pairing:', e)
-        }
-        this.logger.info('Pairing deleted by wallet')
-      })
+      this.walletConnectClient.on('session_event', this.handleSessionEvent.bind(this))
+      this.walletConnectClient.on('session_update', this.handleSessionUpdate.bind(this))
+      this.walletConnectClient.on('session_delete', this.handleSessionDelete.bind(this))
+      this.walletConnectClient.core.pairing.events.on(
+        'pairing_delete',
+        this.handlePairingDelete.bind(this),
+      )
     } catch (e) {
       this.logger.error('Error initializing DAppConnector:', e)
     } finally {
@@ -665,6 +632,53 @@ export class DAppConnector {
       method: HederaJsonRpcMethod.SignTransaction,
       params,
     })
+  }
+
+  private handleSessionEvent(
+    args: SignClientTypes.BaseEventArgs<{
+      event: { name: string; data: any }
+      chainId: string
+    }>,
+  ) {
+    this.logger.debug('Session event received:', args)
+    this.validateAndRefreshSigners()
+  }
+
+  private handleSessionUpdate({
+    topic,
+    params,
+  }: {
+    topic: string
+    params: { namespaces: SessionTypes.Namespaces }
+  }) {
+    const { namespaces } = params
+    const _session = this.walletConnectClient!.session.get(topic)
+    const updatedSession = { ..._session, namespaces }
+    this.logger.info('Session updated:', updatedSession)
+    this.signers = this.signers.filter((signer) => signer.topic !== topic)
+    this.signers.push(...this.createSigners(updatedSession))
+  }
+
+  private handleSessionDelete(event: { topic: string }) {
+    this.logger.info('Session deleted:', event)
+    this.signers = this.signers.filter((signer) => signer.topic !== event.topic)
+    try {
+      this.disconnect(event.topic)
+    } catch (e) {
+      this.logger.error('Error disconnecting session:', e)
+    }
+    this.logger.info('Session deleted by wallet')
+  }
+
+  private handlePairingDelete(event: { topic: string }) {
+    this.logger.info('Pairing deleted:', event)
+    this.signers = this.signers.filter((signer) => signer.topic !== event.topic)
+    try {
+      this.disconnect(event.topic)
+    } catch (e) {
+      this.logger.error('Error disconnecting pairing:', e)
+    }
+    this.logger.info('Pairing deleted by wallet')
   }
 }
 
