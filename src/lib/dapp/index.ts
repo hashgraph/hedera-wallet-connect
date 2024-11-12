@@ -136,20 +136,17 @@ export class DAppConnector {
       if (!this.projectId) {
         throw new Error('Project ID is not defined')
       }
-      const signClient = await SignClient.init({
+      this.walletConnectClient = await SignClient.init({
         logger,
         relayUrl: 'wss://relay.walletconnect.com',
         projectId: this.projectId,
         metadata: this.dAppMetadata,
       })
-      this.walletConnectClient = signClient
       const existingSessions = this.walletConnectClient.session.getAll()
 
-      if (existingSessions.length > 0) {
+      if (existingSessions.length > 0)
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
-      } else {
-        await this.checkIframeConnect()
-      }
+      else this.checkIframeConnect()
 
       this.walletConnectClient.on('session_event', (event) => {
         // Handle session events, such as "chainChanged", "accountsChanged", etc.
