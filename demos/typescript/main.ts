@@ -18,9 +18,32 @@
  *
  */
 
-// set iframe src
-const iframe = document.querySelectorAll('iframe')
-const dapp = iframe[0]
-const wallet = iframe[1]
-dapp.src = process.env.dappUrl!
-wallet.src = process.env.walletUrl!
+const MAX_RETRIES = 3
+const INITIAL_DELAY = 20000 // 20 seconds
+
+async function setIframeSrcWithRetry() {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const iframe = document.querySelectorAll('iframe')
+      const dapp = iframe[0]
+      const wallet = iframe[1]
+
+      await new Promise((resolve) => setTimeout(resolve, INITIAL_DELAY * Math.pow(2, attempt)))
+
+      dapp.src = process.env.dappUrl!
+      wallet.src = process.env.walletUrl!
+      console.log('demo iframes are loaded')
+
+      // If we get here, it worked
+      return
+    } catch (error) {
+      if (attempt === MAX_RETRIES - 1) {
+        console.error('Failed to set iframe sources after maximum retries:', error)
+        throw error
+      }
+      console.warn(`Attempt ${attempt + 1} failed, retrying...`)
+    }
+  }
+}
+
+setIframeSrcWithRetry()
