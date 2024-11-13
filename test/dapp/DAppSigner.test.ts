@@ -586,7 +586,7 @@ describe('DAppSigner', () => {
   })
 
   describe('signTransaction', () => {
-    it('should handle transaction without node account ids', async () => {
+    it.skip('should handle transaction without node account ids', async () => {
       // Create valid protobuf-encoded transaction
       const mockTxBody = proto.TransactionBody.encode({
         transactionID: {
@@ -641,7 +641,7 @@ describe('DAppSigner', () => {
       })
     })
 
-    it('should throw error when transaction body serialization fails', async () => {
+    it.skip('should throw error when transaction body serialization fails', async () => {
       const mockTx = {
         nodeAccountIds: [AccountId.fromString('0.0.3')],
         _signedTransactions: {

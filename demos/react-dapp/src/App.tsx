@@ -9,6 +9,8 @@ import {
   PublicKey,
   TransactionId,
   TransferTransaction,
+  AccountCreateTransaction,
+  KeyList,
 } from '@hashgraph/sdk'
 import { SessionTypes, SignClientTypes } from '@walletconnect/types'
 
@@ -26,7 +28,7 @@ import {
   transactionToBase64String,
   SignAndExecuteQueryParams,
   ExecuteTransactionParams,
-} from '../../../dist/src/index'
+} from '../../../dist'
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Modal from './components/Modal'
@@ -64,6 +66,10 @@ const App: React.FC = () => {
   const [isModalOpen, setModalOpen] = useState<boolean>(false)
   const [isModalLoading, setIsModalLoading] = useState<boolean>(false)
   const [modalData, setModalData] = useState<any>(null)
+
+  // Multi-signature account states
+  const [publicKeyInputs, setPublicKeyInputs] = useState<string[]>([''])
+  const [threshold, setThreshold] = useState<number>(1)
 
   useEffect(() => {
     const state = JSON.parse(localStorage.getItem('hedera-wc-demos-saved-state') || '{}')
@@ -237,6 +243,36 @@ const App: React.FC = () => {
 
     console.log('Signed transaction: ', transactionSigned)
     return { transaction: transactionSigned }
+  }
+
+  // Create multi-signature account
+  const handleCreateMultisigAccount = async () => {
+    // Fetch public keys from mirror node for each account
+    const fetchPublicKey = async (accountId: string) => {
+      const response = await fetch(
+        `https://testnet.mirrornode.hedera.com/api/v1/accounts/${accountId}`
+      )
+      const data = await response.json()
+      return data.key.key
+    }
+
+    const publicKeys = await Promise.all(
+      publicKeyInputs.filter(id => id).map(accountId => fetchPublicKey(accountId))
+    )
+
+    console.log('Public keys: ', publicKeys)
+
+    const transaction = new AccountCreateTransaction()
+      .setKey(new KeyList(publicKeys.map((key) => PublicKey.fromString(key)), threshold))
+      .setInitialBalance(new Hbar(0))
+      .setAccountMemo('Multisig Account')
+
+    const frozen = await transaction.freezeWithSigner(selectedSigner!)
+    const result = await frozen.executeWithSigner(selectedSigner!)
+    console.log('Result: transaction completed', result)
+    const receipt = await result.getReceiptWithSigner(selectedSigner!)
+    console.log('Receipt: ', receipt)
+    return receipt;
   }
 
   /**
@@ -598,6 +634,63 @@ const App: React.FC = () => {
             </button>
             <span> </span>
             <button onClick={handleClearData}>Clear saved data</button>
+          </div>
+        </section>
+        <section>
+          <div>
+            <fieldset>
+              <legend>Create Multi-signature Account</legend>
+              <AccountSelector
+                accounts={signers.map((signer) => signer.getAccountId())}
+                selectedAccount={selectedSigner?.getAccountId() || null}
+                onSelect={(accountId) =>
+                  setSelectedSigner(dAppConnector?.getSigner(accountId)!)
+                }
+              />
+              {publicKeyInputs.map((input, index) => (
+                <div key={index}>
+                  <label>
+                    Account ID {index + 1}:
+                    <input
+                      value={input}
+                      onChange={(e) => {
+                        const newInputs = [...publicKeyInputs]
+                        newInputs[index] = e.target.value
+                        setPublicKeyInputs(newInputs)
+                      }}
+                      placeholder="Enter Account ID"
+                    />
+                  </label>
+                  {index === publicKeyInputs.length - 1 && (
+                    <button onClick={() => setPublicKeyInputs([...publicKeyInputs, ''])}>
+                      Add Another Account
+                    </button>
+                  )}
+                </div>
+              ))}
+              <label>
+                Threshold:
+                <input
+                  type="number"
+                  min="1"
+                  max={publicKeyInputs.filter(Boolean).length}
+                  value={threshold}
+                  onChange={(e) => setThreshold(parseInt(e.target.value))}
+                />
+              </label>
+            </fieldset>
+            <button
+              disabled={disableButtons || !publicKeyInputs[0] || threshold < 1}
+              onClick={() => {
+                modalWrapper(async () => {
+                  if (!dAppConnector) throw new Error('DAppConnector is required')
+                  if (!selectedSigner) throw new Error('Selected signer is required')
+                  return handleCreateMultisigAccount()
+                })
+              }}
+            >
+              Create Multisig Account
+            </button>
           </div>
         </section>
         <Modal title="Send Request" isOpen={isModalOpen} onClose={() => setModalOpen(false)}>

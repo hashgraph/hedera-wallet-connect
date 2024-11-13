@@ -59,17 +59,33 @@ import {
   transactionToTransactionBody,
   extensionOpen,
 } from '../shared'
+import { DefaultLogger, ILogger } from '../shared/logger'
 
 const clients: Record<string, Client | null> = {}
 
 export class DAppSigner implements Signer {
+  private logger: ILogger
+
   constructor(
     private readonly accountId: AccountId,
     private readonly signClient: ISignClient,
     public readonly topic: string,
     private readonly ledgerId: LedgerId = LedgerId.MAINNET,
     public readonly extensionId?: string,
-  ) {}
+    logLevel: 'error' | 'warn' | 'info' | 'debug' = 'debug',
+  ) {
+    this.logger = new DefaultLogger(logLevel)
+  }
+
+  /**
+   * Sets the logging level for the DAppSigner
+   * @param level - The logging level to set
+   */
+  public setLogLevel(level: 'error' | 'warn' | 'info' | 'debug'): void {
+    if (this.logger instanceof DefaultLogger) {
+      this.logger.setLogLevel(level)
+    }
+  }
 
   private _getHederaClient() {
     const ledgerIdString = this.ledgerId.toString()
@@ -147,25 +163,31 @@ export class DAppSigner implements Signer {
     data: Uint8Array[],
     signOptions?: Record<string, any>,
   ): Promise<SignerSignature[]> {
-    const { signatureMap } = await this.request<SignTransactionResult['result']>({
-      method: HederaJsonRpcMethod.SignMessage,
-      params: {
-        signerAccountId: this._signerAccountId,
-        message: Uint8ArrayToBase64String(data[0]),
-      },
-    })
+    this.logger.debug('Signing data')
+    try {
+      const { signatureMap } = await this.request<SignTransactionResult['result']>({
+        method: HederaJsonRpcMethod.SignMessage,
+        params: {
+          signerAccountId: this._signerAccountId,
+          message: Uint8ArrayToBase64String(data[0]),
+        },
+      })
 
-    const sigmap = base64StringToSignatureMap(signatureMap)
+      const sigmap = base64StringToSignatureMap(signatureMap)
+      const signerSignature = new SignerSignature({
+        accountId: this.getAccountId(),
+        publicKey: PublicKey.fromBytes(sigmap.sigPair[0].pubKeyPrefix as Uint8Array),
+        signature:
+          (sigmap.sigPair[0].ed25519 as Uint8Array) ||
+          (sigmap.sigPair[0].ECDSASecp256k1 as Uint8Array),
+      })
 
-    const signerSignature = new SignerSignature({
-      accountId: this.getAccountId(),
-      publicKey: PublicKey.fromBytes(sigmap.sigPair[0].pubKeyPrefix as Uint8Array),
-      signature:
-        (sigmap.sigPair[0].ed25519 as Uint8Array) ||
-        (sigmap.sigPair[0].ECDSASecp256k1 as Uint8Array),
-    })
-
-    return [signerSignature]
+      this.logger.debug('Data signed successfully')
+      return [signerSignature]
+    } catch (error) {
+      this.logger.error('Error signing data:', error)
+      throw error
+    }
   }
 
   async checkTransaction<T extends Transaction>(transaction: T): Promise<T> {
@@ -216,7 +238,12 @@ export class DAppSigner implements Signer {
     error?: any
   }> {
     try {
-      const transaction = Transaction.fromBytes(request.toBytes())
+      const requestToBytes = request.toBytes()
+      this.logger.debug('Creating transaction from bytes', requestToBytes, request)
+
+      const transaction = Transaction.fromBytes(requestToBytes)
+      this.logger.debug('Executing transaction request', transaction)
+
       const result = await this.request<SignAndExecuteTransactionResult['result']>({
         method: HederaJsonRpcMethod.SignAndExecuteTransaction,
         params: {
@@ -225,8 +252,10 @@ export class DAppSigner implements Signer {
         },
       })
 
+      this.logger.debug('Transaction request completed successfully')
       return { result: TransactionResponse.fromJSON(result) as OutputT }
     } catch (error) {
+      this.logger.error('Error executing transaction request:', error)
       return { error }
     }
   }
@@ -255,6 +284,26 @@ export class DAppSigner implements Signer {
     }
   }
 
+  /**
+   * Executes a free receipt query without signing a transaction.
+   * Enables the DApp to fetch the receipt of a transaction without making a new request
+   * to the wallet.
+   * @param request - The query to execute
+   * @returns The result of the query
+   */
+  private async executeReceiptQueryFromRequest(request: Executable<any, any, any>) {
+    try {
+      const isMainnet = this.ledgerId === LedgerId.MAINNET
+      const client = isMainnet ? Client.forMainnet() : Client.forTestnet()
+
+      const receipt = TransactionReceiptQuery.fromBytes(request.toBytes())
+      const result = await receipt.execute(client)
+      return { result }
+    } catch (error) {
+      return { error }
+    }
+  }
+
   private async _tryExecuteQueryRequest<RequestT, ResponseT, OutputT>(
     request: Executable<RequestT, ResponseT, OutputT>,
   ): Promise<{
@@ -262,7 +311,35 @@ export class DAppSigner implements Signer {
     error?: any
   }> {
     try {
-      const query = Query.fromBytes(request.toBytes())
+      const isReceiptQuery = request instanceof TransactionReceiptQuery
+
+      if (isReceiptQuery) {
+        this.logger.debug('Attempting to execute free receipt query', request)
+        const result = await this.executeReceiptQueryFromRequest(request)
+        if (!result?.error) {
+          return { result: result.result as OutputT }
+        } else {
+          this.logger.error(
+            'Error executing free receipt query. Sending to wallet.',
+            result.error,
+          )
+        }
+      }
+
+      /**
+       * Note, should we be converting these to specific query types?
+       * Left alone to avoid changing the API for other requests.
+       */
+      const query = isReceiptQuery
+        ? TransactionReceiptQuery.fromBytes(request.toBytes())
+        : Query.fromBytes(request.toBytes())
+
+      this.logger.debug(
+        'Executing query request',
+        query,
+        queryToBase64String(query),
+        isReceiptQuery,
+      )
 
       const result = await this.request<SignAndExecuteQueryResult['result']>({
         method: HederaJsonRpcMethod.SignAndExecuteQuery,
@@ -271,6 +348,7 @@ export class DAppSigner implements Signer {
           query: queryToBase64String(query),
         },
       })
+      this.logger.debug('Query request completed successfully', result)
 
       return { result: this._parseQueryResponse(query, result.response) as OutputT }
     } catch (error) {
@@ -281,9 +359,16 @@ export class DAppSigner implements Signer {
   async call<RequestT, ResponseT, OutputT>(
     request: Executable<RequestT, ResponseT, OutputT>,
   ): Promise<OutputT> {
-    const txResult = await this._tryExecuteTransactionRequest(request)
-    if (txResult.result) {
-      return txResult.result
+    const isReceiptQuery = request instanceof TransactionReceiptQuery
+
+    let txResult: { result?: OutputT; error?: any } | undefined = undefined
+
+    // a receipt query is a free query and we should not execute a transaction.
+    if (!isReceiptQuery) {
+      txResult = await this._tryExecuteTransactionRequest(request)
+      if (txResult.result) {
+        return txResult.result
+      }
     }
 
     const queryResult = await this._tryExecuteQueryRequest(request)
@@ -292,14 +377,28 @@ export class DAppSigner implements Signer {
     }
 
     // TODO: make this error more usable
+
+    if (isReceiptQuery) {
+      throw new Error(
+        'Error executing receipt query: \n' +
+          JSON.stringify({
+            queryError: {
+              name: queryResult.error?.name,
+              message: queryResult.error?.message,
+              stack: queryResult.error?.stack,
+            },
+          }),
+      )
+    }
+
     throw new Error(
       'Error executing transaction or query: \n' +
         JSON.stringify(
           {
             txError: {
-              name: txResult.error?.name,
-              message: txResult.error?.message,
-              stack: txResult.error?.stack,
+              name: txResult?.error?.name,
+              message: txResult?.error?.message,
+              stack: txResult?.error?.stack,
             },
             queryError: {
               name: queryResult.error?.name,
