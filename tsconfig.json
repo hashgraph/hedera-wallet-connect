@@ -1,5 +1,5 @@
 {
-  "include": ["src/lib/**/*"],
+  "include": ["src/*.ts"],
   "exclude": ["test", "**/*.test.ts", "**/*.spec.ts"],
   "compilerOptions": {
     "target": "ES2017",
