@@ -42,7 +42,7 @@ import {
   TransactionRecordQuery,
 } from '@hashgraph/sdk'
 import { proto } from '@hashgraph/proto'
-import type { ISignClient } from '@walletconnect/types'
+import type { CoreTypes, ISignClient } from '@walletconnect/types'
 
 import {
   HederaJsonRpcMethod,
@@ -137,6 +137,10 @@ export class DAppSigner implements Signer {
 
   getAccountRecords(): Promise<TransactionRecord[]> {
     return this.call(new AccountRecordsQuery().setAccountId(this.accountId))
+  }
+
+  getMetadata(): CoreTypes.Metadata {
+    return this.signClient.metadata
   }
 
   async sign(
