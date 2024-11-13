@@ -791,4 +791,160 @@ describe('DAppSigner', () => {
       })
     })
   })
+
+  describe('setLogLevel', () => {
+    it('should update log level when using DefaultLogger', () => {
+      const newLevel = 'error' as const
+      signer.setLogLevel(newLevel)
+      // @ts-ignore - accessing private property for testing
+      expect(signer.logger.getLogLevel()).toBe(newLevel)
+    })
+  })
+
+  describe('executeReceiptQueryFromRequest', () => {
+    it('should execute free receipt query successfully', async () => {
+      const mockReceipt = TransactionReceipt.fromBytes(
+        proto.TransactionGetReceiptResponse.encode({
+          receipt: {
+            status: proto.ResponseCodeEnum.SUCCESS,
+            accountID: {
+              shardNum: Long.fromNumber(0),
+              realmNum: Long.fromNumber(0),
+              accountNum: Long.fromNumber(123),
+            },
+          },
+        }).finish(),
+      )
+
+      jest
+        .spyOn(TransactionReceiptQuery.prototype, 'execute')
+        .mockResolvedValueOnce(mockReceipt)
+
+      const receiptQuery = new TransactionReceiptQuery().setTransactionId(
+        TransactionId.generate(testAccountId),
+      )
+
+      // @ts-ignore - accessing private method for testing
+      const result = await signer.executeReceiptQueryFromRequest(receiptQuery)
+
+      expect(result.result).toBeDefined()
+      expect(result.error).toBeUndefined()
+      expect(TransactionReceiptQuery.prototype.execute).toHaveBeenCalled()
+    })
+
+    it('should handle successful receipt query with no error in result', async () => {
+      // Mock the execute method directly on TransactionReceiptQuery
+      jest.spyOn(TransactionReceiptQuery.prototype, 'execute').mockResolvedValueOnce(
+        TransactionReceipt.fromBytes(
+          proto.TransactionGetReceiptResponse.encode({
+            receipt: {
+              status: proto.ResponseCodeEnum.SUCCESS,
+              accountID: {
+                shardNum: Long.fromNumber(0),
+                realmNum: Long.fromNumber(0),
+                accountNum: Long.fromNumber(123),
+              },
+            },
+          }).finish(),
+        ),
+      )
+
+      const receiptQuery = new TransactionReceiptQuery().setTransactionId(
+        TransactionId.generate(testAccountId),
+      )
+
+      // @ts-ignore - accessing private method for testing
+      const result = await signer.executeReceiptQueryFromRequest(receiptQuery)
+
+      expect(result.error).toBeUndefined()
+      expect(result.result).toBeDefined()
+      expect(result.result).toBeInstanceOf(TransactionReceipt)
+    }, 15000)
+
+    it('should return error when receipt query fails', async () => {
+      const mockError = new Error('Receipt query failed')
+
+      // Mock the execute method to throw an error
+      jest.spyOn(TransactionReceiptQuery.prototype, 'execute').mockRejectedValueOnce(mockError)
+
+      const receiptQuery = new TransactionReceiptQuery().setTransactionId(
+        TransactionId.generate(testAccountId),
+      )
+
+      // @ts-ignore - accessing private method for testing
+      const result = await signer.executeReceiptQueryFromRequest(receiptQuery)
+
+      expect(result.result).toBeUndefined()
+      expect(result.error).toBe(mockError)
+    })
+
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+  })
+
+  describe('call with TransactionReceiptQuery', () => {
+    let signerRequestSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      signerRequestSpy = jest.spyOn(signer, 'request')
+    })
+
+    afterEach(() => {
+      signerRequestSpy.mockRestore()
+    })
+
+    it('should handle receipt query failure with detailed error', async () => {
+      const mockError = new Error('Receipt query failed')
+      const mockClient = {
+        execute: jest.fn().mockRejectedValue(mockError),
+        isAutoValidateChecksumsEnabled: jest.fn().mockReturnValue(false),
+        network: {},
+        mirrorNetwork: [],
+        isMainnet: false,
+        isTestnet: true,
+      }
+
+      jest.spyOn(Client, 'forTestnet').mockReturnValue(mockClient as any)
+      signerRequestSpy.mockRejectedValue(new Error('Wallet request failed'))
+
+      const receiptQuery = new TransactionReceiptQuery().setTransactionId(
+        TransactionId.generate(testAccountId),
+      )
+
+      await expect(signer.call(receiptQuery)).rejects.toThrow(/Error executing receipt query/)
+    })
+
+    it('should fallback to wallet request if free receipt query fails', async () => {
+      const mockError = new Error('Free receipt query failed')
+      const mockClient = {
+        execute: jest.fn().mockRejectedValue(mockError),
+        isAutoValidateChecksumsEnabled: jest.fn().mockReturnValue(false),
+        network: {},
+        mirrorNetwork: [],
+        isMainnet: false,
+        isTestnet: true,
+      }
+
+      jest.spyOn(Client, 'forTestnet').mockReturnValue(mockClient as any)
+
+      const mockReceipt = proto.TransactionGetReceiptResponse.encode({
+        receipt: {
+          status: proto.ResponseCodeEnum.SUCCESS,
+        },
+      }).finish()
+
+      signerRequestSpy.mockResolvedValueOnce({
+        response: Uint8ArrayToBase64String(mockReceipt),
+      })
+
+      const receiptQuery = new TransactionReceiptQuery().setTransactionId(
+        TransactionId.generate(testAccountId),
+      )
+
+      const result = await signer.call(receiptQuery)
+      expect(result).toBeInstanceOf(TransactionReceipt)
+      expect(signerRequestSpy).toHaveBeenCalled()
+    })
+  })
 })
