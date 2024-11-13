@@ -6,8 +6,8 @@
     "type": "git",
     "url": "git+https://github.com/hashgraph/hedera-wallet-connect.git"
   },
-  "main": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "author": "Hgraph <support@hgraph.io>",
   "keywords": [
     "hedera",
