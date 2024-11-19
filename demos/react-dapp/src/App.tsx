@@ -28,6 +28,8 @@ import {
   transactionToBase64String,
   SignAndExecuteQueryParams,
   ExecuteTransactionParams,
+  base64StringToUint8Array,
+  verifySignerSignature,
 } from '../../../dist'
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -58,6 +60,7 @@ const App: React.FC = () => {
   const [amount, setAmount] = useState('')
   const [message, setMessage] = useState('')
   const [publicKey, setPublicKey] = useState('')
+  const [signMethod, setSignMethod] = useState<'connector' | 'signer'>('connector')
   const [selectedTransactionMethod, setSelectedTransactionMethod] = useState(
     'hedera_executeTransaction',
   )
@@ -185,6 +188,31 @@ const App: React.FC = () => {
       return {
         signatureMap,
         verified,
+      }
+    })
+  }
+
+  const handleSignMessageThroughSigner = async () => {
+    modalWrapper(async () => {
+      if (!selectedSigner) throw new Error('Selected signer is required')
+      const params: SignMessageParams = {
+        signerAccountId: 'hedera:testnet:' + selectedSigner.getAccountId().toString(),
+        message,
+      }
+
+      const buffered = btoa(params.message)
+      const base64 = base64StringToUint8Array(buffered)
+
+      const signResult = await (selectedSigner as DAppSigner).sign(
+        [base64]
+      )
+      const accountPublicKey = PublicKey.fromString(publicKey)
+      const verifiedResult = verifySignerSignature(params.message, signResult[0], accountPublicKey)
+      console.log('SignatureMap: ', signResult)
+      console.log('Verified: ', verifiedResult)
+      return {
+        signatureMap: signResult,
+        verified: verifiedResult,
       }
     })
   }
@@ -490,13 +518,17 @@ const App: React.FC = () => {
           <div>
             <fieldset>
               <legend>3. hedera_signMessage</legend>
-              <AccountSelector
-                accounts={signers.map((signer) => signer.getAccountId())}
-                selectedAccount={selectedSigner?.getAccountId() || null}
-                onSelect={(accountId) =>
-                  setSelectedSigner(dAppConnector?.getSigner(accountId)!)
-                }
-              />
+              <label>
+                Sign Method:
+                <select
+                  value={signMethod}
+                  onChange={(e) => setSignMethod(e.target.value as 'connector' | 'signer')}
+                  className="mb-2"
+                >
+                  <option value="connector">Sign with Connector</option>
+                  <option value="signer">Sign with Signer</option>
+                </select>
+              </label>
               <label>
                 Message:
                 <input value={message} onChange={(e) => setMessage(e.target.value)} required />
@@ -511,7 +543,10 @@ const App: React.FC = () => {
               </label>
               <p>The public key for the account is used to verify the signed message</p>
             </fieldset>
-            <button disabled={disableButtons} onClick={handleSignMessage}>
+            <button 
+              disabled={disableButtons} 
+              onClick={signMethod === 'connector' ? handleSignMessage : handleSignMessageThroughSigner}
+            >
               Submit to wallet
             </button>
           </div>

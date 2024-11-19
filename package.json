@@ -55,6 +55,7 @@
     "dev:ts-demo": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/demos/typescript/dev.mjs\"",
     "dev:react-demo": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/demos/react/dev.mjs\"",
     "test": "jest",
+    "test:watch": "jest --watch",
     "test:connect": "jest --testMatch '**/DAppConnector.test.ts' --verbose",
     "test:signer": "jest --testMatch '**/DAppSigner.test.ts' --verbose",
     "prepublishOnly": "rm -Rf dist && npm run build",

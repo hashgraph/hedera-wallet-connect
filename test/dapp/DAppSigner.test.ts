@@ -64,6 +64,8 @@ import {
 } from '../_helpers'
 import { ISignClient, SessionTypes } from '@walletconnect/types'
 import Long from 'long'
+import { base64StringToUint8Array } from '../../dist'
+import { Buffer } from 'buffer'
 
 jest.mock('../../src/lib/shared/extensionController', () => ({
   extensionOpen: jest.fn(),
@@ -251,7 +253,7 @@ describe('DAppSigner', () => {
       signerRequestSpy.mockRestore()
     })
 
-    it('should sign a message', async () => {
+    it('should sign a message with UTF-8 encoding', async () => {
       const mockPublicKey = PrivateKey.generate().publicKey
       const mockSignature = new Uint8Array([1, 2, 3])
 
@@ -270,8 +272,11 @@ describe('DAppSigner', () => {
         }),
       )
 
-      const message = new Uint8Array([4, 5, 6])
-      const signatures = await signer.sign([message])
+      const testMessage = 'Hello'
+      const message = Buffer.from(testMessage, 'utf-8')
+      const signatures = await signer.sign([message], {
+        encoding: 'utf-8',
+      })
 
       expect(signatures).toHaveLength(1)
       expect(signatures[0].accountId.toString()).toBe(signer.getAccountId().toString())
@@ -280,7 +285,45 @@ describe('DAppSigner', () => {
         method: HederaJsonRpcMethod.SignMessage,
         params: {
           signerAccountId: 'hedera:testnet:' + signer.getAccountId().toString(),
-          message: Uint8ArrayToBase64String(message),
+          message: testMessage,
+        },
+      })
+    })
+
+    it('should sign a base64 encoded message', async () => {
+      const mockPublicKey = PrivateKey.generate().publicKey
+      const mockSignature = new Uint8Array([1, 2, 3])
+
+      signerRequestSpy.mockImplementation(() =>
+        Promise.resolve({
+          signatureMap: Uint8ArrayToBase64String(
+            proto.SignatureMap.encode({
+              sigPair: [
+                {
+                  pubKeyPrefix: mockPublicKey.toBytes(),
+                  ed25519: mockSignature,
+                },
+              ],
+            }).finish(),
+          ),
+        }),
+      )
+
+      const originalMessage = 'Hello, World!'
+      const buffered = btoa(originalMessage)
+      const base64Message = base64StringToUint8Array(buffered)
+      const signatures = await signer.sign([base64Message], {
+        encoding: 'base64',
+      })
+
+      expect(signatures).toHaveLength(1)
+      expect(signatures[0].accountId.toString()).toBe(signer.getAccountId().toString())
+      expect(Array.from(signatures[0].signature)).toEqual(Array.from(mockSignature))
+      expect(signerRequestSpy).toHaveBeenCalledWith({
+        method: HederaJsonRpcMethod.SignMessage,
+        params: {
+          signerAccountId: 'hedera:testnet:' + signer.getAccountId().toString(),
+          message: Uint8ArrayToBase64String(base64Message),
         },
       })
     })
@@ -520,24 +563,12 @@ describe('DAppSigner', () => {
 
       // Test TransactionReceiptQuery
       const mockTransactionReceipt = proto.TransactionGetReceiptResponse.encode({
-        header: {
-          nodeTransactionPrecheckCode: proto.ResponseCodeEnum.OK,
-        },
         receipt: {
           status: proto.ResponseCodeEnum.SUCCESS,
           accountID: {
             shardNum: Long.fromNumber(0),
             realmNum: Long.fromNumber(0),
             accountNum: Long.fromNumber(123),
-          },
-          topicRunningHash: new Uint8Array([1, 2, 3]),
-          topicSequenceNumber: Long.fromNumber(1),
-          exchangeRate: {
-            currentRate: {
-              hbarEquiv: 1,
-              centEquiv: 12,
-              expirationTime: { seconds: Long.fromNumber(Date.now() / 1000) },
-            },
           },
         },
       }).finish()

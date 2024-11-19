@@ -166,6 +166,15 @@ export function Uint8ArrayToBase64String(binary: Uint8Array): string {
 }
 
 /**
+ * Encodes the binary data represented by the `Uint8Array` to a UTF-8 string.
+ * @param binary - The `Uint8Array` containing binary data to be converted
+ * @returns UTF-8 string representation of the input `Uint8Array`
+ */
+export function Uint8ArrayToString(binary: Uint8Array): string {
+  return Buffer.from(binary).toString('utf-8')
+}
+
+/**
  * Converts a Base64-encoded string to a `Uint8Array`.
  * @param base64string - Base64-encoded string to be converted
  * @returns A `Uint8Array` representing the decoded binary data

@@ -49,7 +49,6 @@ import {
   SignAndExecuteQueryResult,
   SignAndExecuteTransactionResult,
   SignTransactionResult,
-  Uint8ArrayToBase64String,
   base64StringToSignatureMap,
   base64StringToUint8Array,
   ledgerIdToCAIPChainId,
@@ -58,6 +57,8 @@ import {
   transactionToBase64String,
   transactionToTransactionBody,
   extensionOpen,
+  Uint8ArrayToBase64String,
+  Uint8ArrayToString,
 } from '../shared'
 import { DefaultLogger, ILogger } from '../shared/logger'
 
@@ -161,17 +162,26 @@ export class DAppSigner implements Signer {
 
   async sign(
     data: Uint8Array[],
-    signOptions?: Record<string, any>,
+    signOptions: {
+      encoding?: 'utf-8' | 'base64'
+    } = {
+      encoding: 'utf-8',
+    },
   ): Promise<SignerSignature[]> {
-    this.logger.debug('Signing data')
+    this.logger.debug('Signing data', data[0])
     try {
       const { signatureMap } = await this.request<SignTransactionResult['result']>({
         method: HederaJsonRpcMethod.SignMessage,
         params: {
           signerAccountId: this._signerAccountId,
-          message: Uint8ArrayToBase64String(data[0]),
+          message:
+            signOptions.encoding === 'base64'
+              ? Uint8ArrayToBase64String(data[0])
+              : Uint8ArrayToString(data[0]),
         },
       })
+
+      this.logger.debug('Data signed successfully')
 
       const sigmap = base64StringToSignatureMap(signatureMap)
       const signerSignature = new SignerSignature({
