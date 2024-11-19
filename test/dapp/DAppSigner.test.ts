@@ -54,6 +54,7 @@ import {
   SignAndExecuteQueryParams,
   Uint8ArrayToBase64String,
   base64StringToQuery,
+  base64StringToUint8Array,
 } from '../../src'
 import {
   projectId,
@@ -64,7 +65,6 @@ import {
 } from '../_helpers'
 import { ISignClient, SessionTypes } from '@walletconnect/types'
 import Long from 'long'
-import { base64StringToUint8Array } from '../../dist'
 import { Buffer } from 'buffer'
 
 jest.mock('../../src/lib/shared/extensionController', () => ({
