@@ -168,7 +168,6 @@ export class DAppSigner implements Signer {
       encoding: 'utf-8',
     },
   ): Promise<SignerSignature[]> {
-    this.logger.debug('Signing data', data[0])
     try {
       const messageToSign =
         signOptions.encoding === 'base64'
@@ -182,8 +181,6 @@ export class DAppSigner implements Signer {
           message: messageToSign,
         },
       })
-
-      this.logger.debug('Data signed successfully')
 
       const sigmap = base64StringToSignatureMap(signatureMap)
       const signerSignature = new SignerSignature({
