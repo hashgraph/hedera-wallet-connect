@@ -170,14 +170,16 @@ export class DAppSigner implements Signer {
   ): Promise<SignerSignature[]> {
     this.logger.debug('Signing data', data[0])
     try {
+      const messageToSign =
+        signOptions.encoding === 'base64'
+          ? Uint8ArrayToBase64String(data[0])
+          : Uint8ArrayToString(data[0])
+
       const { signatureMap } = await this.request<SignTransactionResult['result']>({
         method: HederaJsonRpcMethod.SignMessage,
         params: {
           signerAccountId: this._signerAccountId,
-          message:
-            signOptions.encoding === 'base64'
-              ? Uint8ArrayToBase64String(data[0])
-              : Uint8ArrayToString(data[0]),
+          message: messageToSign,
         },
       })
 
