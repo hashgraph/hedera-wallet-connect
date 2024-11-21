@@ -208,8 +208,24 @@ export class DAppConnector {
     try {
       const { uri, approval } = await this.connectURI(pairingTopic)
       this.walletConnectModal.openModal({ uri })
-      const session = await approval()
-      await this.onSessionConnected(session)
+
+      const session = await new Promise<SessionTypes.Struct>(async (resolve, reject) => {
+        this.walletConnectModal.subscribeModal((state: { open: boolean }) => {
+          // the modal was closed so reject the promise
+          if (!state.open) {
+            reject(new Error('User rejected pairing'))
+          }
+        })
+
+        try {
+          const approvedSession = await approval()
+          await this.onSessionConnected(approvedSession)
+          resolve(approvedSession)
+        } catch (error) {
+          reject(error)
+        }
+      })
+
       return session
     } finally {
       this.walletConnectModal.closeModal()

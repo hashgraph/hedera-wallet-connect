@@ -26,7 +26,7 @@ import {
   transactionToBase64String,
   SignAndExecuteQueryParams,
   ExecuteTransactionParams,
-} from '../../../dist/src/index'
+} from '../../../dist/index'
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Modal from './components/Modal'
@@ -171,7 +171,8 @@ const App: React.FC = () => {
         message,
       }
 
-      const { signatureMap } = await dAppConnector!.signMessage(params)
+      const signMessageResult = await dAppConnector!.signMessage(params)
+      const signatureMap = signMessageResult.result.signatureMap
       const accountPublicKey = PublicKey.fromString(publicKey)
       const verified = verifyMessageSignature(message, signatureMap, accountPublicKey)
       console.log('SignatureMap: ', signatureMap)
@@ -195,7 +196,8 @@ const App: React.FC = () => {
         query: queryToBase64String(query),
       }
 
-      const { response } = await dAppConnector!.signAndExecuteQuery(params)
+      const execution = await dAppConnector!.signAndExecuteQuery(params)
+      const response = execution.result.response
       const bytes = Buffer.from(response, 'base64')
       const accountInfo = AccountInfo.fromBytes(bytes)
       console.log('AccountInfo: ', accountInfo)
