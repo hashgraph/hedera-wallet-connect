@@ -151,6 +151,11 @@ export class DAppConnector {
       this.walletConnectClient.on('session_event', this.handleSessionEvent.bind(this))
       this.walletConnectClient.on('session_update', this.handleSessionUpdate.bind(this))
       this.walletConnectClient.on('session_delete', this.handleSessionDelete.bind(this))
+      // Listen for custom session_delete events from DAppSigner
+      this.walletConnectClient.core.events.on(
+        'session_delete',
+        this.handleSessionDelete.bind(this),
+      )
       this.walletConnectClient.core.pairing.events.on(
         'pairing_delete',
         this.handlePairingDelete.bind(this),
@@ -269,9 +274,10 @@ export class DAppConnector {
   }
 
   /**
-   * Validates the session by checking if the session exists.
+   * Validates the session by checking if the session exists and is valid.
+   * Also ensures the signer exists for the session.
    * @param topic - The topic of the session to validate.
-   * @returns {boolean} - True if the session exists, false otherwise.
+   * @returns {boolean} - True if the session exists and has a valid signer, false otherwise.
    */
   private validateSession(topic: string): boolean {
     try {
@@ -280,12 +286,25 @@ export class DAppConnector {
       }
 
       const session = this.walletConnectClient.session.get(topic)
-
       if (!session) {
+        // If session doesn't exist but we have a signer for it, clean up
+        const hasSigner = this.signers.some((signer) => signer.topic === topic)
+        if (hasSigner) {
+          this.handleSessionDelete({ topic })
+        }
         return false
       }
+
+      // Verify we have a signer for this session
+      const hasSigner = this.signers.some((signer) => signer.topic === topic)
+      if (!hasSigner) {
+        this.logger.warn(`Session exists but no signer found for topic: ${topic}`)
+        return false
+      }
+
       return true
-    } catch {
+    } catch (e) {
+      this.logger.error('Error validating session:', e)
       return false
     }
   }
@@ -662,13 +681,23 @@ export class DAppConnector {
 
   private handleSessionDelete(event: { topic: string }) {
     this.logger.info('Session deleted:', event)
-    this.signers = this.signers.filter((signer) => signer.topic !== event.topic)
-    try {
-      this.disconnect(event.topic)
-    } catch (e) {
-      this.logger.error('Error disconnecting session:', e)
+    let deletedSigner: boolean = false
+    this.signers = this.signers.filter((signer) => {
+      if (signer.topic !== event.topic) {
+        return true
+      }
+      deletedSigner = true
+      return false
+    })
+    // prevent emitting disconnected event if signers is untouched.
+    if (deletedSigner) {
+      try {
+        this.disconnect(event.topic)
+      } catch (e) {
+        this.logger.error('Error disconnecting session:', e)
+      }
+      this.logger.info('Session deleted and signer removed')
     }
-    this.logger.info('Session deleted by wallet')
   }
 
   private handlePairingDelete(event: { topic: string }) {
