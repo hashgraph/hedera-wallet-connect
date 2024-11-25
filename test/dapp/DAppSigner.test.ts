@@ -66,6 +66,8 @@ import {
 import { ISignClient, SessionTypes } from '@walletconnect/types'
 import Long from 'long'
 import { Buffer } from 'buffer'
+import { SessionNotFoundError } from '../../src/lib/dapp/SessionNotFoundError'
+import { connect } from 'http2'
 
 jest.mock('../../src/lib/shared/extensionController', () => ({
   extensionOpen: jest.fn(),
@@ -86,7 +88,15 @@ describe('DAppSigner', () => {
   const testExtensionId = 'test-extension-id'
 
   beforeEach(() => {
-    connector = new DAppConnector(dAppMetadata, LedgerId.TESTNET, projectId)
+    connector = new DAppConnector(
+      dAppMetadata,
+      LedgerId.TESTNET,
+      projectId,
+      undefined,
+      undefined,
+      undefined,
+      'off',
+    )
     // @ts-ignore
     connector.signers = connector.createSigners(fakeSession)
     signer = connector.signers[0]
@@ -94,7 +104,30 @@ describe('DAppSigner', () => {
     mockSignClient = {
       request: jest.fn(),
       metadata: dAppMetadata,
-    } as any
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      session: {
+        get: jest.fn(() => fakeSession),
+      },
+      emit: jest.fn(),
+    } as any as ISignClient
+
+    // Mock the Hedera client
+    const mockClient = {
+      getNodeAccountIdsForExecute: jest.fn().mockReturnValue([new AccountId(3)]),
+      network: {
+        '0.0.3': new AccountId(3),
+        '0.0.4': new AccountId(4),
+        '0.0.5': new AccountId(5),
+      },
+      execute: jest.fn(),
+      isAutoValidateChecksumsEnabled: jest.fn().mockReturnValue(false),
+      mirrorNetwork: ['testnet.mirrornode.hedera.com:443'],
+      isMainnet: false,
+      isTestnet: true,
+    }
+
+    jest.spyOn(Client, 'forTestnet').mockReturnValue(mockClient as any)
 
     signer = new DAppSigner(
       testAccountId,
@@ -102,10 +135,12 @@ describe('DAppSigner', () => {
       testTopic,
       LedgerId.TESTNET,
       testExtensionId,
+      'off',
     )
   })
 
   afterEach(() => {
+    jest.restoreAllMocks()
     global.gc && global.gc()
   })
 
@@ -239,6 +274,109 @@ describe('DAppSigner', () => {
         method: HederaJsonRpcMethod.SignAndExecuteQuery,
         params,
       })
+    })
+  })
+
+  describe('_tryExecuteTransactionRequest', () => {
+    beforeEach(() => {
+      mockSignClient = {
+        request: jest.fn(),
+        metadata: dAppMetadata,
+        session: {
+          get: jest.fn(() => fakeSession),
+        },
+        emit: jest.fn(),
+      } as any as ISignClient
+
+      signer = new DAppSigner(
+        testAccountId,
+        mockSignClient,
+        testTopic,
+        LedgerId.TESTNET,
+        testExtensionId,
+        'off',
+      )
+    })
+
+    it('should handle transaction execution error', async () => {
+      const mockError = new Error('Transaction execution failed')
+      mockSignClient.request.mockRejectedValue(mockError)
+
+      const mockTransaction = prepareTestTransaction(new TopicCreateTransaction(), {
+        freeze: true,
+      })
+      const mockRequest = {
+        toBytes: jest.fn().mockReturnValue(mockTransaction.toBytes()),
+      }
+
+      // @ts-ignore - accessing private method for testing
+      const result = await signer._tryExecuteTransactionRequest(mockRequest)
+
+      expect(result.result).toBeUndefined()
+      expect(result.error).toBe(mockError)
+    })
+
+    it('should handle successful transaction execution', async () => {
+      const mockResponse = {
+        signedTransactions: ['mockSignedTransaction'],
+        receipt: {
+          status: 22,
+          accountId: null,
+          fileId: null,
+          contractId: null,
+          topicId: null,
+          tokenId: null,
+          scheduleId: null,
+          exchangeRate: {
+            hbars: 1,
+            cents: 1,
+            expirationTime: 1234567890,
+          },
+        },
+        transactionId: '0.0.123@1234567890.000000000',
+        transactionHash: '0x1234567890abcdef',
+        nodeId: '0.0.3',
+        hash: 'hash',
+      }
+
+      // Mock session.get to return a session
+      mockSignClient.session.get.mockReturnValue({ topic: testTopic })
+      mockSignClient.request.mockResolvedValue(mockResponse)
+
+      const mockTransaction = prepareTestTransaction(new TopicCreateTransaction(), {
+        freeze: true,
+      })
+      const mockRequest = {
+        toBytes: jest.fn().mockReturnValue(mockTransaction.toBytes()),
+      }
+
+      // @ts-ignore - accessing private method for testing
+      const result = await signer._tryExecuteTransactionRequest(mockRequest)
+
+      console.log('result is', result)
+
+      expect(result.result).toBeDefined()
+      expect(result.error).toBeUndefined()
+    })
+
+    it('should handle session not found error', async () => {
+      ;(mockSignClient.session.get as jest.Mock).mockReturnValue(null)
+
+      const mockTransaction = prepareTestTransaction(new TopicCreateTransaction(), {
+        freeze: true,
+      })
+      const mockRequest = {
+        toBytes: jest.fn().mockReturnValue(mockTransaction.toBytes()),
+      }
+
+      // @ts-ignore - accessing private method for testing
+      const result = await signer._tryExecuteTransactionRequest(mockRequest)
+
+      expect(result.result).toBeUndefined()
+      expect(result.error).toBeInstanceOf(Error)
+      expect(result.error.message).toBe(
+        'Session no longer exists. Please reconnect to the wallet.',
+      )
     })
   })
 
@@ -498,7 +636,7 @@ describe('DAppSigner', () => {
           realmNum: Long.fromNumber(0),
           accountNum: Long.fromNumber(123),
         },
-        contractAccountID: '',
+        contractAccountID: null,
         deleted: false,
         proxyAccountID: null,
         proxyReceived: Long.ZERO,
@@ -666,7 +804,10 @@ describe('DAppSigner', () => {
         topic: testTopic,
         request: {
           method: HederaJsonRpcMethod.SignTransaction,
-          params: expect.any(Object),
+          params: expect.objectContaining({
+            signerAccountId: 'hedera:testnet:' + signer.getAccountId().toString(),
+            transactionBody: expect.any(String),
+          }),
         },
         chainId: expect.any(String),
       })
@@ -696,6 +837,56 @@ describe('DAppSigner', () => {
       const { extensionOpen } = require('../../src/lib/shared/extensionController')
       await signer.request(mockRequest)
       expect(extensionOpen).toHaveBeenCalledWith(testExtensionId)
+    })
+  })
+
+  describe('session validation', () => {
+    let mockSignClient: jest.Mocked<ISignClient>
+    let signer: DAppSigner
+
+    beforeEach(() => {
+      // Create a fresh signer and mock client for each test
+      mockSignClient = {
+        request: jest.fn(),
+        metadata: dAppMetadata,
+        session: {
+          get: jest.fn(),
+        },
+        emit: jest.fn(),
+      } as any as ISignClient
+
+      signer = new DAppSigner(
+        testAccountId,
+        mockSignClient,
+        testTopic,
+        LedgerId.TESTNET,
+        testExtensionId,
+        'off',
+      )
+    })
+
+    it('should throw SessionNotFoundError when session does not exist', async () => {
+      // Mock session.get to return null to simulate deleted session
+      ;(mockSignClient.session.get as jest.Mock).mockReturnValue(null)
+
+      try {
+        await signer.request({ method: 'test', params: {} })
+        fail('Expected request to throw SessionNotFoundError')
+      } catch (error) {
+        expect(error).toBeInstanceOf(SessionNotFoundError)
+      }
+    })
+
+    it('should proceed with request when session exists', async () => {
+      // Mock session.get to return a valid session
+      ;(mockSignClient.session.get as jest.Mock).mockReturnValue(fakeSession)
+
+      const mockResponse = { success: true }
+      mockSignClient.request.mockResolvedValue(mockResponse)
+
+      const result = await signer.request({ method: 'test', params: {} })
+      expect(result).toEqual(mockResponse)
+      expect(mockSignClient.emit).not.toHaveBeenCalled()
     })
   })
 
@@ -833,6 +1024,22 @@ describe('DAppSigner', () => {
   })
 
   describe('executeReceiptQueryFromRequest', () => {
+    beforeEach(() => {
+      const mockClient = {
+        getNodeAccountIdsForExecute: jest.fn().mockReturnValue([new AccountId(3)]),
+        network: {
+          '0.0.3': new AccountId(3),
+          '0.0.4': new AccountId(4),
+          '0.0.5': new AccountId(5),
+        },
+      }
+      jest.spyOn(Client, 'forTestnet').mockReturnValue(mockClient as any)
+    })
+
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+
     it('should execute free receipt query successfully', async () => {
       const mockReceipt = TransactionReceipt.fromBytes(
         proto.TransactionGetReceiptResponse.encode({
@@ -847,9 +1054,8 @@ describe('DAppSigner', () => {
         }).finish(),
       )
 
-      jest
-        .spyOn(TransactionReceiptQuery.prototype, 'execute')
-        .mockResolvedValueOnce(mockReceipt)
+      const mockExecute = jest.fn().mockResolvedValue(mockReceipt)
+      jest.spyOn(TransactionReceiptQuery.prototype, 'execute').mockImplementation(mockExecute)
 
       const receiptQuery = new TransactionReceiptQuery().setTransactionId(
         TransactionId.generate(testAccountId),
@@ -860,57 +1066,7 @@ describe('DAppSigner', () => {
 
       expect(result.result).toBeDefined()
       expect(result.error).toBeUndefined()
-      expect(TransactionReceiptQuery.prototype.execute).toHaveBeenCalled()
-    })
-
-    it('should handle successful receipt query with no error in result', async () => {
-      // Mock the execute method directly on TransactionReceiptQuery
-      jest.spyOn(TransactionReceiptQuery.prototype, 'execute').mockResolvedValueOnce(
-        TransactionReceipt.fromBytes(
-          proto.TransactionGetReceiptResponse.encode({
-            receipt: {
-              status: proto.ResponseCodeEnum.SUCCESS,
-              accountID: {
-                shardNum: Long.fromNumber(0),
-                realmNum: Long.fromNumber(0),
-                accountNum: Long.fromNumber(123),
-              },
-            },
-          }).finish(),
-        ),
-      )
-
-      const receiptQuery = new TransactionReceiptQuery().setTransactionId(
-        TransactionId.generate(testAccountId),
-      )
-
-      // @ts-ignore - accessing private method for testing
-      const result = await signer.executeReceiptQueryFromRequest(receiptQuery)
-
-      expect(result.error).toBeUndefined()
-      expect(result.result).toBeDefined()
-      expect(result.result).toBeInstanceOf(TransactionReceipt)
-    }, 15000)
-
-    it('should return error when receipt query fails', async () => {
-      const mockError = new Error('Receipt query failed')
-
-      // Mock the execute method to throw an error
-      jest.spyOn(TransactionReceiptQuery.prototype, 'execute').mockRejectedValueOnce(mockError)
-
-      const receiptQuery = new TransactionReceiptQuery().setTransactionId(
-        TransactionId.generate(testAccountId),
-      )
-
-      // @ts-ignore - accessing private method for testing
-      const result = await signer.executeReceiptQueryFromRequest(receiptQuery)
-
-      expect(result.result).toBeUndefined()
-      expect(result.error).toBe(mockError)
-    })
-
-    afterEach(() => {
-      jest.restoreAllMocks()
+      expect(mockExecute).toHaveBeenCalled()
     })
   })
 

@@ -60,7 +60,7 @@ import {
   Uint8ArrayToBase64String,
   Uint8ArrayToString,
 } from '../shared'
-import { DefaultLogger, ILogger } from '../shared/logger'
+import { DefaultLogger, ILogger, LogLevel } from '../shared/logger'
 import { SessionNotFoundError } from './SessionNotFoundError'
 
 const clients: Record<string, Client | null> = {}
@@ -74,7 +74,7 @@ export class DAppSigner implements Signer {
     public readonly topic: string,
     private readonly ledgerId: LedgerId = LedgerId.MAINNET,
     public readonly extensionId?: string,
-    logLevel: 'error' | 'warn' | 'info' | 'debug' = 'debug',
+    logLevel: LogLevel = 'debug',
   ) {
     this.logger = new DefaultLogger(logLevel)
   }
@@ -83,7 +83,7 @@ export class DAppSigner implements Signer {
    * Sets the logging level for the DAppSigner
    * @param level - The logging level to set
    */
-  public setLogLevel(level: 'error' | 'warn' | 'info' | 'debug'): void {
+  public setLogLevel(level: LogLevel): void {
     if (this.logger instanceof DefaultLogger) {
       this.logger.setLogLevel(level)
     }
@@ -118,7 +118,8 @@ export class DAppSigner implements Signer {
 
   request<T>(request: { method: string; params: any }): Promise<T> {
     // Avoid a wallet call if the session is no longer valid
-    if (!this.signClient.session.get(this.topic)) {
+    if (!this?.signClient?.session?.get(this.topic)) {
+      this.logger.error('Session no longer exists. Please reconnect to the wallet.')
       throw new SessionNotFoundError(
         'Session no longer exists. Please reconnect to the wallet.',
       )

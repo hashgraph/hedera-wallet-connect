@@ -24,7 +24,7 @@ import QRCodeModal from '@walletconnect/qrcode-modal'
 import { WalletConnectModal } from '@walletconnect/modal'
 import SignClient from '@walletconnect/sign-client'
 import { getSdkError } from '@walletconnect/utils'
-import { DefaultLogger, ILogger } from '../shared/logger'
+import { DefaultLogger, ILogger, LogLevel } from '../shared/logger'
 import {
   HederaJsonRpcMethod,
   accountAndLedgerFromSession,
@@ -91,7 +91,7 @@ export class DAppConnector {
     methods?: string[],
     events?: string[],
     chains?: string[],
-    logLevel: 'error' | 'warn' | 'info' | 'debug' = 'debug',
+    logLevel: LogLevel = 'debug',
   ) {
     this.logger = new DefaultLogger(logLevel)
     this.dAppMetadata = metadata
@@ -120,7 +120,7 @@ export class DAppConnector {
    * Sets the logging level for the DAppConnector
    * @param level - The logging level to set
    */
-  public setLogLevel(level: 'error' | 'warn' | 'info' | 'debug'): void {
+  public setLogLevel(level: LogLevel): void {
     if (this.logger instanceof DefaultLogger) {
       this.logger.setLogLevel(level)
     }
