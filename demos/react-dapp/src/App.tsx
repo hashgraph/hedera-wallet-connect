@@ -26,7 +26,7 @@ import {
   transactionToBase64String,
   SignAndExecuteQueryParams,
   ExecuteTransactionParams,
-} from '../../../dist/src/index'
+} from '../../../dist'
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Modal from './components/Modal'
@@ -38,6 +38,7 @@ const App: React.FC = () => {
   const [description, setDescription] = useState('')
   const [url, setUrl] = useState('')
   const [icons, setIcons] = useState('')
+  const [base64Transaction, setBase64Transaction] = useState('')
 
   // Session management states
   const [dAppConnector, setDAppConnector] = useState<DAppConnector | null>(null)
@@ -237,6 +238,35 @@ const App: React.FC = () => {
 
     console.log('Signed transaction: ', transactionSigned)
     return { transaction: transactionSigned }
+  }
+
+  const handleBase64TransactionExecution = async () => {
+    if (!selectedSigner || !base64Transaction) return
+
+    try {
+      setIsLoading(true)
+      const accountId = selectedSigner.getAccountId()
+      const params: SignAndExecuteTransactionParams = {
+        transactionList: base64Transaction,
+        signerAccountId: 'hedera:testnet:' + accountId.toString(),
+      }
+  
+      const result = await dAppConnector!.signAndExecuteTransaction(params)
+      
+      setModalData({
+        title: 'Transaction Executed',
+        content: JSON.stringify(result, null, 2),
+      })
+      setModalOpen(true)
+    } catch (error) {
+      setModalData({
+        title: 'Error',
+        content: error instanceof Error ? error.message : 'Unknown error occurred',
+      })
+      setModalOpen(true)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   /**
@@ -589,8 +619,39 @@ const App: React.FC = () => {
             </button>
           </div>
         </section>
-        <hr />
-        <h2>Pairing and session management:</h2>
+        <section>
+          <h2>Execute Base64 Transaction</h2>
+          <div>
+            <label>Transaction Bytes</label>
+            <textarea
+              placeholder="Paste base64 transaction bytes here"
+              value={base64Transaction}
+              onChange={(e) => setBase64Transaction(e.target.value)}
+              style={{
+                width: '100%',
+                minHeight: '120px',
+                padding: '0.5rem',
+                marginBottom: '1rem',
+                border: '1px solid black',
+                fontFamily: 'monospace',
+                fontSize: '14px',
+                borderRadius: '1rem'
+              }}
+            />
+            <button
+              onClick={handleBase64TransactionExecution}
+              disabled={!dAppConnector || !selectedSigner || !base64Transaction || isLoading}
+            >
+              {!dAppConnector 
+                ? 'Initialize WalletConnect First'
+                : !selectedSigner 
+                  ? 'Connect Wallet First'
+                  : isLoading 
+                    ? 'Executing...' 
+                    : 'Execute Transaction'}
+            </button>
+          </div>
+        </section>
         <section>
           <div>
             <button disabled={!dAppConnector} onClick={handleDisconnectSessions}>
