@@ -652,6 +652,8 @@ const App: React.FC = () => {
             </button>
           </div>
         </section>
+        <hr />
+        <h2>Pairing and session management:</h2>
         <section>
           <div>
             <button disabled={!dAppConnector} onClick={handleDisconnectSessions}>
