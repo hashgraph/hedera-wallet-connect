@@ -9,6 +9,8 @@ import {
   PublicKey,
   TransactionId,
   TransferTransaction,
+  AccountCreateTransaction,
+  KeyList,
 } from '@hashgraph/sdk'
 import { SessionTypes, SignClientTypes } from '@walletconnect/types'
 
@@ -26,6 +28,8 @@ import {
   transactionToBase64String,
   SignAndExecuteQueryParams,
   ExecuteTransactionParams,
+  base64StringToUint8Array,
+  verifySignerSignature,
 } from '../../../dist'
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -57,6 +61,7 @@ const App: React.FC = () => {
   const [amount, setAmount] = useState('')
   const [message, setMessage] = useState('')
   const [publicKey, setPublicKey] = useState('')
+  const [signMethod, setSignMethod] = useState<'connector' | 'signer'>('connector')
   const [selectedTransactionMethod, setSelectedTransactionMethod] = useState(
     'hedera_executeTransaction',
   )
@@ -65,6 +70,10 @@ const App: React.FC = () => {
   const [isModalOpen, setModalOpen] = useState<boolean>(false)
   const [isModalLoading, setIsModalLoading] = useState<boolean>(false)
   const [modalData, setModalData] = useState<any>(null)
+
+  // Multi-signature account states
+  const [publicKeyInputs, setPublicKeyInputs] = useState<string[]>([''])
+  const [threshold, setThreshold] = useState<number>(1)
 
   useEffect(() => {
     const state = JSON.parse(localStorage.getItem('hedera-wc-demos-saved-state') || '{}')
@@ -184,6 +193,33 @@ const App: React.FC = () => {
     })
   }
 
+  const handleSignMessageThroughSigner = async () => {
+    modalWrapper(async () => {
+      if (!selectedSigner) throw new Error('Selected signer is required')
+      const params: SignMessageParams = {
+        signerAccountId: 'hedera:testnet:' + selectedSigner.getAccountId().toString(),
+        message,
+      }
+
+      const buffered = btoa(params.message)
+      const base64 = base64StringToUint8Array(buffered)
+
+      const signResult = await (selectedSigner as DAppSigner).sign([base64])
+      const accountPublicKey = PublicKey.fromString(publicKey)
+      const verifiedResult = verifySignerSignature(
+        params.message,
+        signResult[0],
+        accountPublicKey,
+      )
+      console.log('SignatureMap: ', signResult)
+      console.log('Verified: ', verifiedResult)
+      return {
+        signatureMap: signResult,
+        verified: verifiedResult,
+      }
+    })
+  }
+
   // 4. hedera_signAndExecuteQuery
   const handleExecuteQuery = () => {
     modalWrapper(async () => {
@@ -250,9 +286,9 @@ const App: React.FC = () => {
         transactionList: base64Transaction,
         signerAccountId: 'hedera:testnet:' + accountId.toString(),
       }
-  
+
       const result = await dAppConnector!.signAndExecuteTransaction(params)
-      
+
       setModalData({
         title: 'Transaction Executed',
         content: JSON.stringify(result, null, 2),
@@ -267,6 +303,40 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false)
     }
+  }
+  // Create multi-signature account
+  const handleCreateMultisigAccount = async () => {
+    // Fetch public keys from mirror node for each account
+    const fetchPublicKey = async (accountId: string) => {
+      const response = await fetch(
+        `https://testnet.mirrornode.hedera.com/api/v1/accounts/${accountId}`,
+      )
+      const data = await response.json()
+      return data.key.key
+    }
+
+    const publicKeys = await Promise.all(
+      publicKeyInputs.filter((id) => id).map((accountId) => fetchPublicKey(accountId)),
+    )
+
+    console.log('Public keys: ', publicKeys)
+
+    const transaction = new AccountCreateTransaction()
+      .setKey(
+        new KeyList(
+          publicKeys.map((key) => PublicKey.fromString(key)),
+          threshold,
+        ),
+      )
+      .setInitialBalance(new Hbar(0))
+      .setAccountMemo('Multisig Account')
+
+    const frozen = await transaction.freezeWithSigner(selectedSigner!)
+    const result = await frozen.executeWithSigner(selectedSigner!)
+    console.log('Result: transaction completed', result)
+    const receipt = await result.getReceiptWithSigner(selectedSigner!)
+    console.log('Receipt: ', receipt)
+    return receipt
   }
 
   /**
@@ -373,7 +443,7 @@ const App: React.FC = () => {
       <main>
         <h1>dApp</h1>
         <p>
-          This demo dApp requires a project id from WalletConnect. Please see
+          This demo dApp requires a project id from WalletConnect. Please see {' '}
           <a target="_blank" href="https://cloud.walletconnect.com">
             https://cloud.walletconnect.com
           </a>
@@ -472,6 +542,7 @@ const App: React.FC = () => {
           </div>
         </section>
         <hr />
+        <h2>Sign methods:</h2>
         <section>
           <fieldset>
             <legend>1. hedera_getNodeAddresses</legend>
@@ -484,13 +555,17 @@ const App: React.FC = () => {
           <div>
             <fieldset>
               <legend>3. hedera_signMessage</legend>
-              <AccountSelector
-                accounts={signers.map((signer) => signer.getAccountId())}
-                selectedAccount={selectedSigner?.getAccountId() || null}
-                onSelect={(accountId) =>
-                  setSelectedSigner(dAppConnector?.getSigner(accountId)!)
-                }
-              />
+              <label>
+                Sign Method:
+                <select
+                  value={signMethod}
+                  onChange={(e) => setSignMethod(e.target.value as 'connector' | 'signer')}
+                  className="mb-2"
+                >
+                  <option value="connector">Sign with Connector</option>
+                  <option value="signer">Sign with Signer</option>
+                </select>
+              </label>
               <label>
                 Message:
                 <input value={message} onChange={(e) => setMessage(e.target.value)} required />
@@ -505,7 +580,12 @@ const App: React.FC = () => {
               </label>
               <p>The public key for the account is used to verify the signed message</p>
             </fieldset>
-            <button disabled={disableButtons} onClick={handleSignMessage}>
+            <button
+              disabled={disableButtons}
+              onClick={
+                signMethod === 'connector' ? handleSignMessage : handleSignMessageThroughSigner
+              }
+            >
               Submit to wallet
             </button>
           </div>
@@ -635,19 +715,19 @@ const App: React.FC = () => {
                 border: '1px solid black',
                 fontFamily: 'monospace',
                 fontSize: '14px',
-                borderRadius: '1rem'
+                borderRadius: '1rem',
               }}
             />
             <button
               onClick={handleBase64TransactionExecution}
               disabled={!dAppConnector || !selectedSigner || !base64Transaction || isLoading}
             >
-              {!dAppConnector 
+              {!dAppConnector
                 ? 'Initialize WalletConnect First'
-                : !selectedSigner 
+                : !selectedSigner
                   ? 'Connect Wallet First'
-                  : isLoading 
-                    ? 'Executing...' 
+                  : isLoading
+                    ? 'Executing...'
                     : 'Execute Transaction'}
             </button>
           </div>
@@ -661,6 +741,63 @@ const App: React.FC = () => {
             </button>
             <span> </span>
             <button onClick={handleClearData}>Clear saved data</button>
+          </div>
+        </section>
+        <section>
+          <div>
+            <fieldset>
+              <legend>Create Multi-signature Account</legend>
+              <AccountSelector
+                accounts={signers.map((signer) => signer.getAccountId())}
+                selectedAccount={selectedSigner?.getAccountId() || null}
+                onSelect={(accountId) =>
+                  setSelectedSigner(dAppConnector?.getSigner(accountId)!)
+                }
+              />
+              {publicKeyInputs.map((input, index) => (
+                <div key={index}>
+                  <label>
+                    Account ID {index + 1}:
+                    <input
+                      value={input}
+                      onChange={(e) => {
+                        const newInputs = [...publicKeyInputs]
+                        newInputs[index] = e.target.value
+                        setPublicKeyInputs(newInputs)
+                      }}
+                      placeholder="Enter Account ID"
+                    />
+                  </label>
+                  {index === publicKeyInputs.length - 1 && (
+                    <button onClick={() => setPublicKeyInputs([...publicKeyInputs, ''])}>
+                      Add Another Account
+                    </button>
+                  )}
+                </div>
+              ))}
+              <label>
+                Threshold:
+                <input
+                  type="number"
+                  min="1"
+                  max={publicKeyInputs.filter(Boolean).length}
+                  value={threshold}
+                  onChange={(e) => setThreshold(parseInt(e.target.value))}
+                />
+              </label>
+            </fieldset>
+            <button
+              disabled={disableButtons || !publicKeyInputs[0] || threshold < 1}
+              onClick={() => {
+                modalWrapper(async () => {
+                  if (!dAppConnector) throw new Error('DAppConnector is required')
+                  if (!selectedSigner) throw new Error('Selected signer is required')
+                  return handleCreateMultisigAccount()
+                })
+              }}
+            >
+              Create Multisig Account
+            </button>
           </div>
         </section>
         <Modal title="Send Request" isOpen={isModalOpen} onClose={() => setModalOpen(false)}>
