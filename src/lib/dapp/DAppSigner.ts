@@ -327,12 +327,11 @@ export class DAppSigner implements Signer {
         const result = await this.executeReceiptQueryFromRequest(request)
         if (!result?.error) {
           return { result: result.result as OutputT }
-        } else {
-          this.logger.error(
-            'Error executing free receipt query. Sending to wallet.',
-            result.error,
-          )
         }
+        this.logger.error(
+          'Error executing free receipt query. Sending to wallet.',
+          result.error,
+        )
       }
 
       /**
