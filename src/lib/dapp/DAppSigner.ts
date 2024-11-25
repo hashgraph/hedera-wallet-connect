@@ -278,7 +278,7 @@ export class DAppSigner implements Signer {
       return { result: TransactionResponse.fromJSON(result) as OutputT }
     } catch (error) {
       // Check if error is due to session being deleted
-      if (error instanceof Error && error.message.includes('Session no longer exists')) {
+      if (error instanceof SessionNotFoundError) {
         this.logger.error('Session was deleted, removing signer')
         // Notify DAppConnector to remove this signer
         this.signClient.emit({
