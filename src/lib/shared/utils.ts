@@ -104,11 +104,11 @@ export function transactionToTransactionBody<T extends Transaction>(
 ) {
   // This is a private function, though provides the capabilities to construct a proto.TransactionBody
   //@ts-ignore
-  return transaction._signedTransactions.current.bodyBytes
+  return transaction._makeTransactionBody(nodeAccountId)
 }
 
-export function transactionBodyToBase64String(transactionBody: Uint8Array) {
-  return Uint8ArrayToBase64String(transactionBody)
+export function transactionBodyToBase64String(transactionBody: proto.ITransactionBody) {
+  return Uint8ArrayToBase64String(proto.TransactionBody.encode(transactionBody).finish())
 }
 
 /**
@@ -163,6 +163,15 @@ export function base64StringToSignatureMap(base64string: string): proto.Signatur
  */
 export function Uint8ArrayToBase64String(binary: Uint8Array): string {
   return Buffer.from(binary).toString('base64')
+}
+
+/**
+ * Encodes the binary data represented by the `Uint8Array` to a UTF-8 string.
+ * @param binary - The `Uint8Array` containing binary data to be converted
+ * @returns UTF-8 string representation of the input `Uint8Array`
+ */
+export function Uint8ArrayToString(binary: Uint8Array): string {
+  return Buffer.from(binary).toString('utf-8')
 }
 
 /**
