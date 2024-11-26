@@ -14,7 +14,6 @@ import {
   TopicCreateTransaction,
 } from '@hashgraph/sdk'
 import { SessionTypes, SignClientTypes } from '@walletconnect/types'
-import { proto } from '@hashgraph/proto'
 import * as nacl from 'tweetnacl'
 
 import {
