@@ -398,6 +398,7 @@ export class DAppConnector {
           session.topic,
           network,
           session.sessionProperties?.extensionId,
+          this.logger instanceof DefaultLogger ? this.logger.getLogLevel() : 'debug',
         ),
     )
   }

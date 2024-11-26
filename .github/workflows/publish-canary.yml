@@ -7,6 +7,7 @@ on:
 jobs:
   publish-canary:
     name: Publish Canary
+    if: github.event.pull_request.head.repo.fork == false
     runs-on: wallet-tools-linux-medium
     permissions:
       contents: read
