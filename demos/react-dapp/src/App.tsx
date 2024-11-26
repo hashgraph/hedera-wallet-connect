@@ -11,8 +11,11 @@ import {
   TransferTransaction,
   AccountCreateTransaction,
   KeyList,
+  TopicCreateTransaction,
 } from '@hashgraph/sdk'
 import { SessionTypes, SignClientTypes } from '@walletconnect/types'
+import { proto } from '@hashgraph/proto'
+import * as nacl from 'tweetnacl'
 
 import {
   HederaSessionEvent,
@@ -30,10 +33,16 @@ import {
   ExecuteTransactionParams,
   base64StringToUint8Array,
   verifySignerSignature,
+  transactionToTransactionBody,
+  SignTransactionParams,
+  base64StringToSignatureMap,
+  Uint8ArrayToBase64String,
+  extractFirstSignature,
 } from '../../../dist'
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Modal from './components/Modal'
+
 
 const App: React.FC = () => {
   // Connector data states
@@ -304,6 +313,84 @@ const App: React.FC = () => {
       setIsLoading(false)
     }
   }
+  // Test signature verification with different HWC versions
+  const handleTestSignatureVerification = async () => {
+    modalWrapper(async () => {
+      if (!selectedSigner) throw new Error('Selected signer is required')
+      const accountId = selectedSigner.getAccountId().toString()
+
+      // Create a TopicCreateTransaction and freeze it
+      const transactionId = TransactionId.generate(accountId)
+      const transaction = new TopicCreateTransaction()
+        .setTransactionId(transactionId)
+        .freezeWith(Client.forTestnet())
+
+      // Generate TransactionBody for different Hedera Wallet versions
+      const transactionBody1_3_6 = transactionToTransactionBody(transaction, AccountId.fromString("0.0.3"))
+      if (!transactionBody1_3_6) throw new Error("Transaction is null or undefined HWC (1.3.6)")
+
+      const transactionBody1_3_4 = transaction._signedTransactions.current.bodyBytes
+      if (!transactionBody1_3_4) throw new Error("Transaction is null or undefined HWC (1.3.4)")
+
+      // Prepare sign parameters
+      const signParams1_3_6: SignTransactionParams = {
+        transaction,
+        signerAccountId: `hedera:testnet:${accountId}`,
+      }
+
+      const signedWithConnector = await dAppConnector!.signTransaction(signParams1_3_6);
+
+      console.log(`✅ Transaction signed successfully with connector!`, signedWithConnector);
+      // Sign the transaction using both versions
+      const signResult1_3_6 = await selectedSigner.signTransaction(transaction)
+      console.log(`✅ Transaction signed successfully HWC (1.3.6)!`)
+      const signatureMap1_3_6 = signResult1_3_6._signedTransactions.current.sigMap;
+      const signatureMapConnector = signedWithConnector._signedTransactions.current.sigMap;
+
+      // Extract first signatures
+      const firstSignature1_3_6 = extractFirstSignature(signatureMap1_3_6)
+      const firstSignatureConnector = extractFirstSignature(signatureMapConnector)
+
+      // Fetch public key from mirror node
+      const { key: publicKeyString } = await getPublicKey(accountId)
+      const bytesToSign = transaction._signedTransactions.get(0)!.bodyBytes!
+      const publicKeyBytes = PublicKey.fromString(publicKeyString).toBytes()
+
+      // Verify signatures
+      const verify1_3_6 = nacl.sign.detached.verify(
+        bytesToSign,
+        firstSignature1_3_6,
+        publicKeyBytes
+      )
+
+      const verifyFromConnector = nacl.sign.detached.verify(
+        bytesToSign,
+        firstSignatureConnector,
+        publicKeyBytes
+      )
+
+      return {
+        hwc1_3_6_verification: verify1_3_6,
+        connectorVerification: verifyFromConnector,
+        publicKey: publicKeyString,
+      }
+    })
+  }
+
+  // Helper function to fetch public key
+  const getPublicKey = async (accountId: string, network = "testnet") => {
+    try {
+      const response = await fetch(
+        `https://${network}.mirrornode.hedera.com/api/v1/accounts/${accountId}`
+      )
+      const data = await response.json()
+      return { key: data?.key?.key, type: data?.key?._type }
+    } catch (error) {
+      console.error("Failed to fetch public key:", error)
+      throw error
+    }
+  }
+
   // Create multi-signature account
   const handleCreateMultisigAccount = async () => {
     // Fetch public keys from mirror node for each account
@@ -797,6 +884,22 @@ const App: React.FC = () => {
               }}
             >
               Create Multisig Account
+            </button>
+          </div>
+        </section>
+        <section>
+          <h2>Signature Verification Test</h2>
+          <div>
+            <button
+              onClick={() => {
+                modalWrapper(async () => {
+                  if (!dAppConnector) throw new Error('DAppConnector is required')
+                  if (!selectedSigner) throw new Error('Selected signer is required')
+                  return handleTestSignatureVerification()
+                })
+              }}
+            >
+              Test Signature Verification
             </button>
           </div>
         </section>

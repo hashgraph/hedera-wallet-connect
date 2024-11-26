@@ -306,25 +306,71 @@ describe('DAppConnector', () => {
     describe('signTransaction', () => {
       const transaction = prepareTestTransaction(new TopicCreateTransaction(), { freeze: true })
       const params: SignTransactionParams = {
-        signerAccountId: testUserAccountId.toString(),
-        transactionBody: transactionBodyToBase64String(
-          transactionToTransactionBody(transaction, AccountId.fromString('0.0.3'))!,
-        ),
+        signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+        transaction: transaction,
       }
 
-      it('should throw an error if there is no any signer', async () => {
+      it('should throw an error if there is no signer', async () => {
         connector.signers = []
         await expect(connector.signTransaction(params)).rejects.toThrow(
-          'Signer not found for account ID: 0.0.12345. Did you use the correct format? e.g hedera:<network>:<address>',
+          `No signer found for account ${testUserAccountId.toString()}`,
         )
       })
 
-      it('should invoke last signer request with correct params', async () => {
+      it('should throw an error if no transaction is provided', async () => {
+        // @ts-ignore
+        const invalidParams = {
+          signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+          transaction: undefined,
+        } as SignTransactionParams
+
+        await expect(connector.signTransaction(invalidParams)).rejects.toThrow(
+          'No transaction provided',
+        )
+      })
+
+      it('should throw an error if signerAccountId is malformed', async () => {
+        const invalidParams = {
+          signerAccountId: undefined,
+          transaction: transaction,
+        }
+
+        await expect(connector.signTransaction(invalidParams)).rejects.toThrow(
+          'No signer found for account undefined',
+        )
+      })
+
+      it('should invoke signer.signTransaction with the transaction', async () => {
+        const mockSigner = {
+          getAccountId: () => testUserAccountId,
+          signTransaction: jest.fn().mockResolvedValue({
+            _signedTransactions: new Map([
+              [0, { sigMap: { sigPair: [{ ed25519: new Uint8Array([1, 2, 3]) }] } }],
+            ]),
+          }),
+        }
+        connector.signers = [mockSigner as any]
+
         await connector.signTransaction(params)
-        expect(lastSignerRequestMock).toHaveBeenCalledWith({
-          method: HederaJsonRpcMethod.SignTransaction,
-          params,
-        })
+        expect(mockSigner.signTransaction).toHaveBeenCalledWith(transaction)
+      })
+
+      it('should return a signed transaction with valid signature map', async () => {
+        const mockSignedTransaction = {
+          _signedTransactions: new Map([
+            [0, { sigMap: { sigPair: [{ ed25519: new Uint8Array([1, 2, 3]) }] } }],
+          ]),
+        }
+        const mockSigner = {
+          getAccountId: () => testUserAccountId,
+          signTransaction: jest.fn().mockResolvedValue(mockSignedTransaction),
+        }
+        connector.signers = [mockSigner as any]
+
+        const result = await connector.signTransaction(params)
+        const sigMap = result._signedTransactions.get(0)?.sigMap
+        expect(sigMap).toBeDefined()
+        expect(sigMap.sigPair[0].ed25519).toEqual(new Uint8Array([1, 2, 3]))
       })
     })
   })
