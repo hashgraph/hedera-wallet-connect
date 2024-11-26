@@ -42,6 +42,7 @@ const App: React.FC = () => {
   const [description, setDescription] = useState('')
   const [url, setUrl] = useState('')
   const [icons, setIcons] = useState('')
+  const [base64Transaction, setBase64Transaction] = useState('')
 
   // Session management states
   const [dAppConnector, setDAppConnector] = useState<DAppConnector | null>(null)
@@ -203,11 +204,13 @@ const App: React.FC = () => {
       const buffered = btoa(params.message)
       const base64 = base64StringToUint8Array(buffered)
 
-      const signResult = await (selectedSigner as DAppSigner).sign(
-        [base64]
-      )
+      const signResult = await (selectedSigner as DAppSigner).sign([base64])
       const accountPublicKey = PublicKey.fromString(publicKey)
-      const verifiedResult = verifySignerSignature(params.message, signResult[0], accountPublicKey)
+      const verifiedResult = verifySignerSignature(
+        params.message,
+        signResult[0],
+        accountPublicKey,
+      )
       console.log('SignatureMap: ', signResult)
       console.log('Verified: ', verifiedResult)
       return {
@@ -273,25 +276,58 @@ const App: React.FC = () => {
     return { transaction: transactionSigned }
   }
 
+  const handleBase64TransactionExecution = async () => {
+    if (!selectedSigner || !base64Transaction) return
+
+    try {
+      setIsLoading(true)
+      const accountId = selectedSigner.getAccountId()
+      const params: SignAndExecuteTransactionParams = {
+        transactionList: base64Transaction,
+        signerAccountId: 'hedera:testnet:' + accountId.toString(),
+      }
+
+      const result = await dAppConnector!.signAndExecuteTransaction(params)
+
+      setModalData({
+        title: 'Transaction Executed',
+        content: JSON.stringify(result, null, 2),
+      })
+      setModalOpen(true)
+    } catch (error) {
+      setModalData({
+        title: 'Error',
+        content: error instanceof Error ? error.message : 'Unknown error occurred',
+      })
+      setModalOpen(true)
+    } finally {
+      setIsLoading(false)
+    }
+  }
   // Create multi-signature account
   const handleCreateMultisigAccount = async () => {
     // Fetch public keys from mirror node for each account
     const fetchPublicKey = async (accountId: string) => {
       const response = await fetch(
-        `https://testnet.mirrornode.hedera.com/api/v1/accounts/${accountId}`
+        `https://testnet.mirrornode.hedera.com/api/v1/accounts/${accountId}`,
       )
       const data = await response.json()
       return data.key.key
     }
 
     const publicKeys = await Promise.all(
-      publicKeyInputs.filter(id => id).map(accountId => fetchPublicKey(accountId))
+      publicKeyInputs.filter((id) => id).map((accountId) => fetchPublicKey(accountId)),
     )
 
     console.log('Public keys: ', publicKeys)
 
     const transaction = new AccountCreateTransaction()
-      .setKey(new KeyList(publicKeys.map((key) => PublicKey.fromString(key)), threshold))
+      .setKey(
+        new KeyList(
+          publicKeys.map((key) => PublicKey.fromString(key)),
+          threshold,
+        ),
+      )
       .setInitialBalance(new Hbar(0))
       .setAccountMemo('Multisig Account')
 
@@ -300,7 +336,7 @@ const App: React.FC = () => {
     console.log('Result: transaction completed', result)
     const receipt = await result.getReceiptWithSigner(selectedSigner!)
     console.log('Receipt: ', receipt)
-    return receipt;
+    return receipt
   }
 
   /**
@@ -407,7 +443,7 @@ const App: React.FC = () => {
       <main>
         <h1>dApp</h1>
         <p>
-          This demo dApp requires a project id from WalletConnect. Please see
+          This demo dApp requires a project id from WalletConnect. Please see {' '}
           <a target="_blank" href="https://cloud.walletconnect.com">
             https://cloud.walletconnect.com
           </a>
@@ -506,6 +542,7 @@ const App: React.FC = () => {
           </div>
         </section>
         <hr />
+        <h2>Sign methods:</h2>
         <section>
           <fieldset>
             <legend>1. hedera_getNodeAddresses</legend>
@@ -543,9 +580,11 @@ const App: React.FC = () => {
               </label>
               <p>The public key for the account is used to verify the signed message</p>
             </fieldset>
-            <button 
-              disabled={disableButtons} 
-              onClick={signMethod === 'connector' ? handleSignMessage : handleSignMessageThroughSigner}
+            <button
+              disabled={disableButtons}
+              onClick={
+                signMethod === 'connector' ? handleSignMessage : handleSignMessageThroughSigner
+              }
             >
               Submit to wallet
             </button>
@@ -657,6 +696,39 @@ const App: React.FC = () => {
               }}
             >
               Submit to wallet
+            </button>
+          </div>
+        </section>
+        <section>
+          <h2>Execute Base64 Transaction</h2>
+          <div>
+            <label>Transaction Bytes</label>
+            <textarea
+              placeholder="Paste base64 transaction bytes here"
+              value={base64Transaction}
+              onChange={(e) => setBase64Transaction(e.target.value)}
+              style={{
+                width: '100%',
+                minHeight: '120px',
+                padding: '0.5rem',
+                marginBottom: '1rem',
+                border: '1px solid black',
+                fontFamily: 'monospace',
+                fontSize: '14px',
+                borderRadius: '1rem',
+              }}
+            />
+            <button
+              onClick={handleBase64TransactionExecution}
+              disabled={!dAppConnector || !selectedSigner || !base64Transaction || isLoading}
+            >
+              {!dAppConnector
+                ? 'Initialize WalletConnect First'
+                : !selectedSigner
+                  ? 'Connect Wallet First'
+                  : isLoading
+                    ? 'Executing...'
+                    : 'Execute Transaction'}
             </button>
           </div>
         </section>
