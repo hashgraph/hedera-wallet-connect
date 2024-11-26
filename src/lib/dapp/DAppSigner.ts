@@ -278,7 +278,8 @@ export class DAppSigner implements Signer {
       this.logger.debug('Transaction request completed successfully')
       return { result: TransactionResponse.fromJSON(result) as OutputT }
     } catch (error) {
-      // Check if error is due to session being deleted
+      this.logger.error('Error executing transaction request:', error)
+
       if (error instanceof SessionNotFoundError) {
         this.logger.error('Session was deleted, removing signer')
         // Notify DAppConnector to remove this signer
@@ -290,9 +291,8 @@ export class DAppSigner implements Signer {
           },
           chainId: ledgerIdToCAIPChainId(this.ledgerId),
         })
-      } else {
-        this.logger.error('Error executing transaction request:', error)
       }
+
       return { error }
     }
   }

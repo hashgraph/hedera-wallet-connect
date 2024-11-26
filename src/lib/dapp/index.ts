@@ -286,17 +286,16 @@ export class DAppConnector {
       }
 
       const session = this.walletConnectClient.session.get(topic)
+      const hasSigner = this.signers.some((signer) => signer.topic === topic)
       if (!session) {
         // If session doesn't exist but we have a signer for it, clean up
-        const hasSigner = this.signers.some((signer) => signer.topic === topic)
         if (hasSigner) {
+          this.logger.warn(`Signer exists but no session found for topic: ${topic}`)
           this.handleSessionDelete({ topic })
         }
         return false
       }
 
-      // Verify we have a signer for this session
-      const hasSigner = this.signers.some((signer) => signer.topic === topic)
       if (!hasSigner) {
         this.logger.warn(`Session exists but no signer found for topic: ${topic}`)
         return false
