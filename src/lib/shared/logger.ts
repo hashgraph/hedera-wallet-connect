@@ -16,6 +16,10 @@ export class DefaultLogger implements ILogger {
     this.logLevel = level
   }
 
+  getLogLevel(): 'error' | 'warn' | 'info' | 'debug' {
+    return this.logLevel
+  }
+
   error(message: string, ...args: any[]): void {
     if (['error', 'warn', 'info', 'debug'].includes(this.logLevel)) {
       console.error(`[ERROR] ${message}`, ...args)
