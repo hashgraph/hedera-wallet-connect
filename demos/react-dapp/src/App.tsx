@@ -325,29 +325,26 @@ const App: React.FC = () => {
         .freezeWith(Client.forTestnet())
 
       // Generate TransactionBody for different Hedera Wallet versions
-      const transactionBody1_3_6 = transactionToTransactionBody(transaction, AccountId.fromString("0.0.3"))
-      if (!transactionBody1_3_6) throw new Error("Transaction is null or undefined HWC (1.3.6)")
-
-      const transactionBody1_3_4 = transaction._signedTransactions.current.bodyBytes
-      if (!transactionBody1_3_4) throw new Error("Transaction is null or undefined HWC (1.3.4)")
+      const transactionBody = transactionToTransactionBody(transaction, AccountId.fromString("0.0.3"))
+      if (!transactionBody) throw new Error("Transaction is null or undefined")
 
       // Prepare sign parameters
-      const signParams1_3_6: SignTransactionParams = {
+      const signParams: SignTransactionParams = {
         transaction,
         signerAccountId: `hedera:testnet:${accountId}`,
       }
 
-      const signedWithConnector = await dAppConnector!.signTransaction(signParams1_3_6);
+      const signedWithConnector = await dAppConnector!.signTransaction(signParams);
 
       console.log(`✅ Transaction signed successfully with connector!`, signedWithConnector);
       // Sign the transaction using both versions
-      const signResult1_3_6 = await selectedSigner.signTransaction(transaction)
-      console.log(`✅ Transaction signed successfully HWC (1.3.6)!`)
-      const signatureMap1_3_6 = signResult1_3_6._signedTransactions.current.sigMap;
+      const signResult = await selectedSigner.signTransaction(transaction)
+      console.log(`✅ Transaction signed successfully through signer!`, signResult)
+      const signatureMapSigner = signResult._signedTransactions.current.sigMap;
       const signatureMapConnector = signedWithConnector._signedTransactions.current.sigMap;
 
       // Extract first signatures
-      const firstSignature1_3_6 = extractFirstSignature(signatureMap1_3_6)
+      const firstSignature = extractFirstSignature(signatureMapSigner)
       const firstSignatureConnector = extractFirstSignature(signatureMapConnector)
 
       // Fetch public key from mirror node
@@ -356,9 +353,9 @@ const App: React.FC = () => {
       const publicKeyBytes = PublicKey.fromString(publicKeyString).toBytes()
 
       // Verify signatures
-      const verify1_3_6 = nacl.sign.detached.verify(
+      const verifySigner = nacl.sign.detached.verify(
         bytesToSign,
-        firstSignature1_3_6,
+        firstSignature,
         publicKeyBytes
       )
 
@@ -369,7 +366,7 @@ const App: React.FC = () => {
       )
 
       return {
-        hwc1_3_6_verification: verify1_3_6,
+        signerVerification: verifySigner,
         connectorVerification: verifyFromConnector,
         publicKey: publicKeyString,
       }
