@@ -119,7 +119,18 @@ export class DAppSigner implements Signer {
   request<T>(request: { method: string; params: any }): Promise<T> {
     // Avoid a wallet call if the session is no longer valid
     if (!this?.signClient?.session?.get(this.topic)) {
-      this.logger.error('Session no longer exists. Please reconnect to the wallet.')
+      this.logger.error(
+        'Session no longer exists, signer will be removed. Please reconnect to the wallet.',
+      )
+      // Notify DAppConnector to remove this signer
+      this.signClient.emit({
+        topic: this.topic,
+        event: {
+          name: 'session_delete',
+          data: { topic: this.topic },
+        },
+        chainId: ledgerIdToCAIPChainId(this.ledgerId),
+      })
       throw new SessionNotFoundError(
         'Session no longer exists. Please reconnect to the wallet.',
       )
@@ -256,11 +267,6 @@ export class DAppSigner implements Signer {
     error?: any
   }> {
     try {
-      // Verify session is still valid before proceeding
-      if (!this.signClient.session.get(this.topic)) {
-        throw new Error('Session no longer exists. Please reconnect to the wallet.')
-      }
-
       const requestToBytes = request.toBytes()
       this.logger.debug('Creating transaction from bytes', requestToBytes, request)
 
@@ -279,19 +285,6 @@ export class DAppSigner implements Signer {
       return { result: TransactionResponse.fromJSON(result) as OutputT }
     } catch (error) {
       this.logger.error('Error executing transaction request:', error)
-
-      if (error instanceof SessionNotFoundError) {
-        this.logger.error('Session was deleted, removing signer')
-        // Notify DAppConnector to remove this signer
-        this.signClient.emit({
-          topic: this.topic,
-          event: {
-            name: 'session_delete',
-            data: { topic: this.topic },
-          },
-          chainId: ledgerIdToCAIPChainId(this.ledgerId),
-        })
-      }
 
       return { error }
     }
