@@ -54,6 +54,7 @@ import { DAppSigner } from './DAppSigner'
 import { JsonRpcResult } from '@walletconnect/jsonrpc-types'
 
 export * from './DAppSigner'
+export { SessionNotFoundError } from './SessionNotFoundError'
 
 type BaseLogger = 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'fatal'
 
