@@ -18,7 +18,14 @@
  *
  */
 
-import { AccountId, AccountInfoQuery, LedgerId, TopicCreateTransaction } from '@hashgraph/sdk'
+import {
+  AccountInfoQuery,
+  LedgerId,
+  TopicCreateTransaction,
+  PublicKey,
+  PrivateKey,
+  Client,
+} from '@hashgraph/sdk'
 import {
   DAppConnector,
   ExecuteTransactionParams,
@@ -30,9 +37,11 @@ import {
   SignTransactionParams,
   queryToBase64String,
   transactionToBase64String,
-  transactionToTransactionBody,
-  transactionBodyToBase64String,
   DAppSigner,
+  base64StringToUint8Array,
+  networkNamespaces,
+  Uint8ArrayToBase64String,
+  extractFirstSignature,
 } from '../../src'
 import {
   projectId,
@@ -43,7 +52,8 @@ import {
 } from '../_helpers'
 import Client, { SignClient } from '@walletconnect/sign-client'
 import { SessionTypes } from '@walletconnect/types'
-import { networkNamespaces } from '../../src/lib/shared'
+import * as nacl from 'tweetnacl'
+import { proto } from '@hashgraph/proto'
 
 describe('DAppConnector', () => {
   let connector: DAppConnector
@@ -306,26 +316,185 @@ describe('DAppConnector', () => {
     describe('signTransaction', () => {
       const transaction = prepareTestTransaction(new TopicCreateTransaction(), { freeze: true })
       const params: SignTransactionParams = {
-        signerAccountId: testUserAccountId.toString(),
-        transactionBody: transactionBodyToBase64String(
-          transactionToTransactionBody(transaction, AccountId.fromString('0.0.3'))!,
-        ),
+        signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+        transaction: transaction,
       }
 
-      it('should throw an error if there is no any signer', async () => {
+      it('should throw an error if there is no signer', async () => {
         connector.signers = []
         await expect(connector.signTransaction(params)).rejects.toThrow(
-          'Signer not found for account ID: 0.0.12345. Did you use the correct format? e.g hedera:<network>:<address>',
+          `No signer found for account ${testUserAccountId.toString()}`,
         )
       })
 
-      it('should invoke last signer request with correct params', async () => {
-        await connector.signTransaction(params)
-        expect(lastSignerRequestMock).toHaveBeenCalledWith({
-          method: HederaJsonRpcMethod.SignTransaction,
-          params,
-        })
+      it('should throw an error if no transaction is provided', async () => {
+        // @ts-ignore
+        const invalidParams = {
+          signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+          transaction: undefined,
+        } as SignTransactionParams
+
+        await expect(connector.signTransaction(invalidParams)).rejects.toThrow(
+          'No transaction provided',
+        )
       })
+
+      it('should throw an error if signerAccountId is malformed', async () => {
+        const invalidParams = {
+          signerAccountId: undefined,
+          transaction: transaction,
+        }
+
+        await expect(connector.signTransaction(invalidParams)).rejects.toThrow(
+          'No signer found for account undefined',
+        )
+      })
+
+      it('should invoke signer.signTransaction with the transaction', async () => {
+        const mockSigner = {
+          getAccountId: () => testUserAccountId,
+          signTransaction: jest.fn().mockResolvedValue({
+            _signedTransactions: new Map([
+              [0, { sigMap: { sigPair: [{ ed25519: new Uint8Array([1, 2, 3]) }] } }],
+            ]),
+          }),
+        }
+        connector.signers = [mockSigner as any]
+
+        await connector.signTransaction(params)
+        expect(mockSigner.signTransaction).toHaveBeenCalledWith(transaction)
+      })
+
+      it('should return a signed transaction with valid signature map', async () => {
+        const mockSignedTransaction = {
+          _signedTransactions: new Map([
+            [0, { sigMap: { sigPair: [{ ed25519: new Uint8Array([1, 2, 3]) }] } }],
+          ]),
+        }
+        const mockSigner = {
+          getAccountId: () => testUserAccountId,
+          signTransaction: jest.fn().mockResolvedValue(mockSignedTransaction),
+        }
+        connector.signers = [mockSigner as any]
+
+        const result = await connector.signTransaction(params)
+        const sigMap = result._signedTransactions.get(0)?.sigMap
+        expect(sigMap).toBeDefined()
+        expect(sigMap.sigPair[0].ed25519).toEqual(new Uint8Array([1, 2, 3]))
+      })
+    })
+  })
+
+  describe('signature verification', () => {
+    let mockSigner: DAppSigner
+    const privateKey = PrivateKey.generateED25519()
+    const publicKey = privateKey.publicKey
+
+    beforeEach(() => {
+      // Create a real signer that can actually sign transactions
+      mockSigner = new DAppSigner(
+        testUserAccountId,
+        mockSignClient,
+        fakeSession.topic,
+        LedgerId.TESTNET,
+      )
+
+      // Mock the request method to simulate actual signing with our private key
+      jest
+        .spyOn(mockSigner as any, 'request')
+        .mockImplementation(async ({ method, params }) => {
+          if (method === HederaJsonRpcMethod.SignTransaction) {
+            // Convert the base64 transaction body back to bytes
+            const bodyBytes = base64StringToUint8Array(params.transactionBody)
+
+            // Create a signature using our private key
+            const signature = privateKey.sign(bodyBytes)
+
+            // Create a signature map
+            const signatureMap = {
+              sigPair: [
+                {
+                  pubKeyPrefix: publicKey.toBytes(),
+                  ed25519: signature,
+                },
+              ],
+            }
+
+            return {
+              signatureMap: Uint8ArrayToBase64String(
+                proto.SignatureMap.encode(signatureMap).finish(),
+              ),
+            }
+          }
+          return {}
+        })
+
+      connector.signers = [mockSigner]
+    })
+
+    it('should verify signatures using real signing', async () => {
+      // Create a test transaction
+      const transaction = prepareTestTransaction(new TopicCreateTransaction(), { freeze: true })
+
+      // Sign with connector
+      const connectorParams: SignTransactionParams = {
+        signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+        transaction: transaction,
+      }
+
+      const connectorSigned = await connector.signTransaction(connectorParams)
+      const connectorSigMap = connectorSigned._signedTransactions.get(0)!.sigMap
+      const connectorSignature = extractFirstSignature(connectorSigMap)
+      const bytesToVerify = connectorSigned._signedTransactions.get(0)!.bodyBytes!
+
+      // Sign directly with private key for comparison
+      const directSigned = await transaction.sign(privateKey)
+      const directSigMap = directSigned._signedTransactions.get(0)!.sigMap
+      const directSignature = extractFirstSignature(directSigMap)
+
+      // Verify both signatures with real verification
+      const publicKeyBytes = publicKey.toBytes()
+
+      const connectorVerified = nacl.sign.detached.verify(
+        bytesToVerify,
+        connectorSignature,
+        publicKeyBytes,
+      )
+
+      const directVerified = nacl.sign.detached.verify(
+        bytesToVerify,
+        directSignature,
+        publicKeyBytes,
+      )
+
+      expect(connectorVerified).toBe(true)
+      expect(directVerified).toBe(true)
+
+      // Both signatures should be identical since they're signed with the same key
+      expect(Buffer.from(connectorSignature)).toEqual(Buffer.from(directSignature))
+    })
+
+    it('should fail verification with wrong public key', async () => {
+      // Create a test transaction
+      const transaction = prepareTestTransaction(new TopicCreateTransaction(), { freeze: true })
+
+      const params: SignTransactionParams = {
+        signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+        transaction: transaction,
+      }
+
+      const signed = await connector.signTransaction(params)
+      const sigMap = signed._signedTransactions.get(0)!.sigMap
+      const signature = extractFirstSignature(sigMap)
+      const bytesToVerify = signed._signedTransactions.get(0)!.bodyBytes!
+
+      // Use a different key for verification
+      const wrongKey = PrivateKey.generateED25519().publicKey
+      const wrongKeyBytes = wrongKey.toBytes()
+
+      const verified = nacl.sign.detached.verify(bytesToVerify, signature, wrongKeyBytes)
+
+      expect(verified).toBe(false)
     })
   })
 
@@ -526,9 +695,8 @@ describe('DAppConnector', () => {
             events: [],
           },
         },
-      }
+      } as unknown as SessionTypes.Struct
       const extensionId = 'test-extension'
-
       // Initialize walletConnectClient
       connector.walletConnectClient = mockSignClient
 

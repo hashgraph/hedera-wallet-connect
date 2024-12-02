@@ -20,7 +20,7 @@
 
 import { JsonRpcResult } from '@walletconnect/jsonrpc-types'
 import { EngineTypes } from '@walletconnect/types'
-import type { TransactionResponseJSON } from '@hashgraph/sdk'
+import type { Transaction, TransactionResponseJSON } from '@hashgraph/sdk'
 import { HederaJsonRpcMethod } from './methods'
 
 /**
@@ -152,7 +152,7 @@ export interface SignAndExecuteTransactionResponse extends EngineTypes.RespondPa
 // params
 export interface SignTransactionParams {
   signerAccountId: string
-  transactionBody: string
+  transaction: Transaction
 }
 
 //request
