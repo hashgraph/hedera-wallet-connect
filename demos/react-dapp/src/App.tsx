@@ -314,63 +314,60 @@ const App: React.FC = () => {
   }
   // Test signature verification with different HWC versions
   const handleTestSignatureVerification = async () => {
-    modalWrapper(async () => {
-      if (!selectedSigner) throw new Error('Selected signer is required')
-      const accountId = selectedSigner.getAccountId().toString()
+    if (!selectedSigner) throw new Error('Selected signer is required')
+    const accountId = selectedSigner.getAccountId().toString()
 
-      // Create a TopicCreateTransaction and freeze it
-      const transactionId = TransactionId.generate(accountId)
-      const transaction = new TopicCreateTransaction()
-        .setTransactionId(transactionId)
-        .freezeWith(Client.forTestnet())
+    // Create a TopicCreateTransaction and freeze it
+    const transactionId = TransactionId.generate(accountId)
+    const transaction = new TopicCreateTransaction()
+      .setTransactionId(transactionId)
+      .freezeWith(Client.forTestnet())
 
-      // Generate TransactionBody for different Hedera Wallet versions
-      const transactionBody = transactionToTransactionBody(transaction, AccountId.fromString("0.0.3"))
-      if (!transactionBody) throw new Error("Transaction is null or undefined")
+    // Generate TransactionBody for different Hedera Wallet versions
+    const transactionBody = transactionToTransactionBody(
+      transaction,
+      AccountId.fromString('0.0.3'),
+    )
+    if (!transactionBody) throw new Error('Transaction is null or undefined')
 
-      // Prepare sign parameters
-      const signParams: SignTransactionParams = {
-        transaction,
-        signerAccountId: `hedera:testnet:${accountId}`,
-      }
+    // Prepare sign parameters
+    const signParams: SignTransactionParams = {
+      transaction,
+      signerAccountId: `hedera:testnet:${accountId}`,
+    }
 
-      const signedWithConnector = await dAppConnector!.signTransaction(signParams);
+    const signedWithConnector = await dAppConnector!.signTransaction(signParams)
 
-      console.log(`✅ Transaction signed successfully with connector!`, signedWithConnector);
-      // Sign the transaction using both versions
-      const signResult = await selectedSigner.signTransaction(transaction)
-      console.log(`✅ Transaction signed successfully through signer!`, signResult)
-      const signatureMapSigner = signResult._signedTransactions.current.sigMap;
-      const signatureMapConnector = signedWithConnector._signedTransactions.current.sigMap;
+    console.log(`✅ Transaction signed successfully with connector!`, signedWithConnector)
+    // Sign the transaction using both versions
+    const signResult = await selectedSigner.signTransaction(transaction)
+    console.log(`✅ Transaction signed successfully through signer!`, signResult)
+    const signatureMapSigner = signResult._signedTransactions.current.sigMap
+    const signatureMapConnector = signedWithConnector._signedTransactions.current.sigMap
 
-      // Extract first signatures
-      const firstSignature = extractFirstSignature(signatureMapSigner)
-      const firstSignatureConnector = extractFirstSignature(signatureMapConnector)
+    // Extract first signatures
+    const firstSignature = extractFirstSignature(signatureMapSigner)
+    const firstSignatureConnector = extractFirstSignature(signatureMapConnector)
 
-      // Fetch public key from mirror node
-      const { key: publicKeyString } = await getPublicKey(accountId)
-      const bytesToSign = transaction._signedTransactions.get(0)!.bodyBytes!
-      const publicKeyBytes = PublicKey.fromString(publicKeyString).toBytes()
+    // Fetch public key from mirror node
+    const { key: publicKeyString } = await getPublicKey(accountId)
+    const bytesToSign = transaction._signedTransactions.get(0)!.bodyBytes!
+    const publicKeyBytes = PublicKey.fromString(publicKeyString).toBytes()
 
-      // Verify signatures
-      const verifySigner = nacl.sign.detached.verify(
-        bytesToSign,
-        firstSignature,
-        publicKeyBytes
-      )
+    // Verify signatures
+    const verifySigner = nacl.sign.detached.verify(bytesToSign, firstSignature, publicKeyBytes)
 
-      const verifyFromConnector = nacl.sign.detached.verify(
-        bytesToSign,
-        firstSignatureConnector,
-        publicKeyBytes
-      )
+    const verifyFromConnector = nacl.sign.detached.verify(
+      bytesToSign,
+      firstSignatureConnector,
+      publicKeyBytes,
+    )
 
-      return {
-        signerVerification: verifySigner,
-        connectorVerification: verifyFromConnector,
-        publicKey: publicKeyString,
-      }
-    })
+    return {
+      signerVerification: verifySigner,
+      connectorVerification: verifyFromConnector,
+      publicKey: publicKeyString,
+    }
   }
 
   // Helper function to fetch public key
