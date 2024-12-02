@@ -317,7 +317,7 @@ describe('DAppConnector', () => {
       const transaction = prepareTestTransaction(new TopicCreateTransaction(), { freeze: true })
       const params: SignTransactionParams = {
         signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
-        transaction: transaction,
+        transactionBody: transaction,
       }
 
       it('should throw an error if there is no signer', async () => {
@@ -331,18 +331,18 @@ describe('DAppConnector', () => {
         // @ts-ignore
         const invalidParams = {
           signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
-          transaction: undefined,
+          transactionBody: undefined,
         } as SignTransactionParams
 
         await expect(connector.signTransaction(invalidParams)).rejects.toThrow(
-          'No transaction provided',
+          'Transaction sent in incorrect format. Ensure transaction body is either a base64 transaction body or Transaction object.',
         )
       })
 
       it('should throw an error if signerAccountId is malformed', async () => {
         const invalidParams = {
           signerAccountId: undefined,
-          transaction: transaction,
+          transactionBody: transaction,
         }
 
         await expect(connector.signTransaction(invalidParams)).rejects.toThrow(
@@ -381,6 +381,41 @@ describe('DAppConnector', () => {
         const sigMap = result._signedTransactions.get(0)?.sigMap
         expect(sigMap).toBeDefined()
         expect(sigMap.sigPair[0].ed25519).toEqual(new Uint8Array([1, 2, 3]))
+      })
+
+      it('should handle base64 string transaction body', async () => {
+        const mockRequest = jest
+          .fn()
+          .mockResolvedValue({ signedTransaction: 'mocked-signed-transaction' })
+        // @ts-ignore - accessing private method for testing
+        connector.request = mockRequest
+
+        const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
+          freeze: true,
+        })
+        const base64Body = transactionToBase64String(transaction)
+        const base64Params = {
+          signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+          transactionBody: base64Body,
+        }
+
+        const result = await connector.signTransaction(base64Params)
+        expect(result).toEqual({ signedTransaction: 'mocked-signed-transaction' })
+        expect(mockRequest).toHaveBeenCalledWith({
+          method: HederaJsonRpcMethod.SignTransaction,
+          params: base64Params,
+        })
+      })
+
+      it('should throw an error if transaction body is neither string nor Transaction', async () => {
+        const invalidParams = {
+          signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+          transactionBody: 123, // number instead of string or Transaction
+        } as unknown as SignTransactionParams
+
+        await expect(connector.signTransaction(invalidParams)).rejects.toThrow(
+          'Transaction sent in incorrect format. Ensure transaction body is either a base64 transaction body or Transaction object.',
+        )
       })
     })
   })
@@ -439,7 +474,7 @@ describe('DAppConnector', () => {
       // Sign with connector
       const connectorParams: SignTransactionParams = {
         signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
-        transaction: transaction,
+        transactionBody: transaction,
       }
 
       const connectorSigned = await connector.signTransaction(connectorParams)
@@ -480,7 +515,7 @@ describe('DAppConnector', () => {
 
       const params: SignTransactionParams = {
         signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
-        transaction: transaction,
+        transactionBody: transaction,
       }
 
       const signed = await connector.signTransaction(params)

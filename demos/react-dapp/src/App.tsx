@@ -332,7 +332,7 @@ const App: React.FC = () => {
 
     // Prepare sign parameters
     const signParams: SignTransactionParams = {
-      transaction,
+      transactionBody: transaction,
       signerAccountId: `hedera:testnet:${accountId}`,
     }
 
