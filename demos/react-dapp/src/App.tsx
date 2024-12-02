@@ -11,8 +11,10 @@ import {
   TransferTransaction,
   AccountCreateTransaction,
   KeyList,
+  TopicCreateTransaction,
 } from '@hashgraph/sdk'
 import { SessionTypes, SignClientTypes } from '@walletconnect/types'
+import * as nacl from 'tweetnacl'
 
 import {
   HederaSessionEvent,
@@ -30,10 +32,16 @@ import {
   ExecuteTransactionParams,
   base64StringToUint8Array,
   verifySignerSignature,
+  transactionToTransactionBody,
+  SignTransactionParams,
+  base64StringToSignatureMap,
+  Uint8ArrayToBase64String,
+  extractFirstSignature,
 } from '../../../dist'
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Modal from './components/Modal'
+
 
 const App: React.FC = () => {
   // Connector data states
@@ -304,6 +312,78 @@ const App: React.FC = () => {
       setIsLoading(false)
     }
   }
+  // Test signature verification with different HWC versions
+  const handleTestSignatureVerification = async () => {
+    if (!selectedSigner) throw new Error('Selected signer is required')
+    const accountId = selectedSigner.getAccountId().toString()
+
+    // Create a TopicCreateTransaction and freeze it
+    const transactionId = TransactionId.generate(accountId)
+    const transaction = new TopicCreateTransaction()
+      .setTransactionId(transactionId)
+      .freezeWith(Client.forTestnet())
+
+    // Generate TransactionBody for different Hedera Wallet versions
+    const transactionBody = transactionToTransactionBody(
+      transaction,
+      AccountId.fromString('0.0.3'),
+    )
+    if (!transactionBody) throw new Error('Transaction is null or undefined')
+
+    // Prepare sign parameters
+    const signParams: SignTransactionParams = {
+      transaction,
+      signerAccountId: `hedera:testnet:${accountId}`,
+    }
+
+    const signedWithConnector = await dAppConnector!.signTransaction(signParams)
+
+    console.log(`✅ Transaction signed successfully with connector!`, signedWithConnector)
+    // Sign the transaction using both versions
+    const signResult = await selectedSigner.signTransaction(transaction)
+    console.log(`✅ Transaction signed successfully through signer!`, signResult)
+    const signatureMapSigner = signResult._signedTransactions.current.sigMap
+    const signatureMapConnector = signedWithConnector._signedTransactions.current.sigMap
+
+    // Extract first signatures
+    const firstSignature = extractFirstSignature(signatureMapSigner)
+    const firstSignatureConnector = extractFirstSignature(signatureMapConnector)
+
+    // Fetch public key from mirror node
+    const { key: publicKeyString } = await getPublicKey(accountId)
+    const bytesToSign = transaction._signedTransactions.get(0)!.bodyBytes!
+    const publicKeyBytes = PublicKey.fromString(publicKeyString).toBytes()
+
+    // Verify signatures
+    const verifySigner = nacl.sign.detached.verify(bytesToSign, firstSignature, publicKeyBytes)
+
+    const verifyFromConnector = nacl.sign.detached.verify(
+      bytesToSign,
+      firstSignatureConnector,
+      publicKeyBytes,
+    )
+
+    return {
+      signerVerification: verifySigner,
+      connectorVerification: verifyFromConnector,
+      publicKey: publicKeyString,
+    }
+  }
+
+  // Helper function to fetch public key
+  const getPublicKey = async (accountId: string, network = "testnet") => {
+    try {
+      const response = await fetch(
+        `https://${network}.mirrornode.hedera.com/api/v1/accounts/${accountId}`
+      )
+      const data = await response.json()
+      return { key: data?.key?.key, type: data?.key?._type }
+    } catch (error) {
+      console.error("Failed to fetch public key:", error)
+      throw error
+    }
+  }
+
   // Create multi-signature account
   const handleCreateMultisigAccount = async () => {
     // Fetch public keys from mirror node for each account
@@ -797,6 +877,22 @@ const App: React.FC = () => {
               }}
             >
               Create Multisig Account
+            </button>
+          </div>
+        </section>
+        <section>
+          <h2>Signature Verification Test</h2>
+          <div>
+            <button
+              onClick={() => {
+                modalWrapper(async () => {
+                  if (!dAppConnector) throw new Error('DAppConnector is required')
+                  if (!selectedSigner) throw new Error('Selected signer is required')
+                  return handleTestSignatureVerification()
+                })
+              }}
+            >
+              Test Signature Verification
             </button>
           </div>
         </section>

@@ -44,7 +44,6 @@ import {
   SignAndExecuteTransactionRequest,
   SignAndExecuteTransactionResult,
   SignTransactionParams,
-  SignTransactionRequest,
   SignTransactionResult,
   ExtensionData,
   extensionConnect,
@@ -632,26 +631,34 @@ export class DAppConnector {
    *
    * @param {SignTransactionParams} params - The parameters of type {@link SignTransactionParams | `SignTransactionParams`} required for `Transaction` signing.
    * @param {string} params.signerAccountId - a signer Hedera Account identifier in {@link https://hips.hedera.com/hip/hip-30 | HIP-30} (`<nework>:<shard>.<realm>.<num>`) form.
-   * @param {string[]} params.transaction - Array of Base64-encoded `Transaction`'s
+   * @param {Transaction} params.transaction - a built Transaction.
    * @returns Promise\<{@link SignTransactionResult}\>
    * @example
    * ```ts
-   * const transactionBodyObject = transactionToTransactionBody(transaction, AccountId.fromString('0.0.3'))
-   * const transactionBody = transactionBodyToBase64String(transactionBodyObject)
    *
    * const params = {
    *  signerAccountId: '0.0.12345',
-   *  transactionBody
+   *  transaction
    * }
    *
    * const result = await dAppConnector.signTransaction(params)
    * ```
    */
   public async signTransaction(params: SignTransactionParams) {
-    return await this.request<SignTransactionRequest, SignTransactionResult>({
-      method: HederaJsonRpcMethod.SignTransaction,
-      params,
-    })
+    const signerAccountId = params?.signerAccountId?.split(':')?.pop()
+    const accountSigner = this.signers.find(
+      (signer) => signer?.getAccountId()?.toString() === signerAccountId,
+    )
+
+    if (!accountSigner) {
+      throw new Error(`No signer found for account ${signerAccountId}`)
+    }
+
+    if (!params?.transaction) {
+      throw new Error('No transaction provided')
+    }
+
+    return await accountSigner.signTransaction(params.transaction)
   }
 
   private handleSessionEvent(
