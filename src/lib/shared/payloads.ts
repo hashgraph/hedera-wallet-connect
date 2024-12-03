@@ -152,7 +152,11 @@ export interface SignAndExecuteTransactionResponse extends EngineTypes.RespondPa
 // params
 export interface SignTransactionParams {
   signerAccountId: string
-  transaction: Transaction
+  /**
+   * @deprecated Using string for transactionBody is deprecated and will be removed in a future version.
+   * Please migrate to using Transaction objects directly.
+   */
+  transactionBody: Transaction | string
 }
 
 //request

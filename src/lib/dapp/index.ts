@@ -18,7 +18,7 @@
  *
  */
 
-import { AccountId, LedgerId } from '@hashgraph/sdk'
+import { AccountId, LedgerId, Transaction } from '@hashgraph/sdk'
 import { EngineTypes, SessionTypes, SignClientTypes } from '@walletconnect/types'
 import QRCodeModal from '@walletconnect/qrcode-modal'
 import { WalletConnectModal } from '@walletconnect/modal'
@@ -48,6 +48,7 @@ import {
   ExtensionData,
   extensionConnect,
   findExtensions,
+  SignTransactionRequest,
 } from '../shared'
 import { DAppSigner } from './DAppSigner'
 import { JsonRpcResult } from '@walletconnect/jsonrpc-types'
@@ -612,34 +613,51 @@ export class DAppConnector {
    *
    * @param {SignTransactionParams} params - The parameters of type {@link SignTransactionParams | `SignTransactionParams`} required for `Transaction` signing.
    * @param {string} params.signerAccountId - a signer Hedera Account identifier in {@link https://hips.hedera.com/hip/hip-30 | HIP-30} (`<nework>:<shard>.<realm>.<num>`) form.
-   * @param {Transaction} params.transaction - a built Transaction.
+   * @param {Transaction | string} params.transactionBody - a built Transaction object, or a base64 string of a transaction body (deprecated).
+   * @deprecated Using string for params.transactionBody is deprecated and will be removed in a future version. Please migrate to using Transaction objects directly.
    * @returns Promise\<{@link SignTransactionResult}\>
    * @example
    * ```ts
    *
    * const params = {
    *  signerAccountId: '0.0.12345',
-   *  transaction
+   *  transactionBody
    * }
    *
    * const result = await dAppConnector.signTransaction(params)
    * ```
    */
   public async signTransaction(params: SignTransactionParams) {
-    const signerAccountId = params?.signerAccountId?.split(':')?.pop()
-    const accountSigner = this.signers.find(
-      (signer) => signer?.getAccountId()?.toString() === signerAccountId,
+    if (typeof params?.transactionBody === 'string') {
+      this.logger.warn(
+        'Transaction body is a string. This is not recommended, please migrate to passing a transaction object directly.',
+      )
+      return await this.request<SignTransactionRequest, SignTransactionResult>({
+        method: HederaJsonRpcMethod.SignTransaction,
+        params,
+      })
+    }
+
+    if (params?.transactionBody instanceof Transaction) {
+      const signerAccountId = params?.signerAccountId?.split(':')?.pop()
+      const accountSigner = this.signers.find(
+        (signer) => signer?.getAccountId()?.toString() === signerAccountId,
+      )
+
+      if (!accountSigner) {
+        throw new Error(`No signer found for account ${signerAccountId}`)
+      }
+
+      if (!params?.transactionBody) {
+        throw new Error('No transaction provided')
+      }
+
+      return await accountSigner.signTransaction(params.transactionBody as Transaction)
+    }
+
+    throw new Error(
+      'Transaction sent in incorrect format. Ensure transaction body is either a base64 transaction body or Transaction object.',
     )
-
-    if (!accountSigner) {
-      throw new Error(`No signer found for account ${signerAccountId}`)
-    }
-
-    if (!params?.transaction) {
-      throw new Error('No transaction provided')
-    }
-
-    return await accountSigner.signTransaction(params.transaction)
   }
 
   private handleSessionEvent(
