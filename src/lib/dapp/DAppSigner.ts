@@ -60,7 +60,8 @@ import {
   Uint8ArrayToBase64String,
   Uint8ArrayToString,
 } from '../shared'
-import { DefaultLogger, ILogger } from '../shared/logger'
+import { DefaultLogger, ILogger, LogLevel } from '../shared/logger'
+import { SessionNotFoundError } from './SessionNotFoundError'
 
 const clients: Record<string, Client | null> = {}
 
@@ -73,7 +74,7 @@ export class DAppSigner implements Signer {
     public readonly topic: string,
     private readonly ledgerId: LedgerId = LedgerId.MAINNET,
     public readonly extensionId?: string,
-    logLevel: 'error' | 'warn' | 'info' | 'debug' = 'debug',
+    logLevel: LogLevel = 'debug',
   ) {
     this.logger = new DefaultLogger(logLevel)
   }
@@ -82,7 +83,7 @@ export class DAppSigner implements Signer {
    * Sets the logging level for the DAppSigner
    * @param level - The logging level to set
    */
-  public setLogLevel(level: 'error' | 'warn' | 'info' | 'debug'): void {
+  public setLogLevel(level: LogLevel): void {
     if (this.logger instanceof DefaultLogger) {
       this.logger.setLogLevel(level)
     }
@@ -116,6 +117,25 @@ export class DAppSigner implements Signer {
   }
 
   request<T>(request: { method: string; params: any }): Promise<T> {
+    // Avoid a wallet call if the session is no longer valid
+    if (!this?.signClient?.session?.get(this.topic)) {
+      this.logger.error(
+        'Session no longer exists, signer will be removed. Please reconnect to the wallet.',
+      )
+      // Notify DAppConnector to remove this signer
+      this.signClient.emit({
+        topic: this.topic,
+        event: {
+          name: 'session_delete',
+          data: { topic: this.topic },
+        },
+        chainId: ledgerIdToCAIPChainId(this.ledgerId),
+      })
+      throw new SessionNotFoundError(
+        'Session no longer exists. Please reconnect to the wallet.',
+      )
+    }
+
     if (this.extensionId) extensionOpen(this.extensionId)
     return this.signClient.request<T>({
       topic: this.topic,
@@ -265,6 +285,7 @@ export class DAppSigner implements Signer {
       return { result: TransactionResponse.fromJSON(result) as OutputT }
     } catch (error) {
       this.logger.error('Error executing transaction request:', error)
+
       return { error }
     }
   }
@@ -356,10 +377,12 @@ export class DAppSigner implements Signer {
           query: queryToBase64String(query),
         },
       })
+
       this.logger.debug('Query request completed successfully', result)
 
       return { result: this._parseQueryResponse(query, result.response) as OutputT }
     } catch (error) {
+      this.logger.error('Error executing query request:', error)
       return { error }
     }
   }
