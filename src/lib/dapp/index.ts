@@ -479,7 +479,7 @@ export class DAppConnector {
     })
   }
 
-  private async request<Req extends EngineTypes.RequestParams, Res extends JsonRpcResult>({
+  public async request<Req extends EngineTypes.RequestParams, Res extends JsonRpcResult>({
     method,
     params,
   }: Req['request']): Promise<Res> {

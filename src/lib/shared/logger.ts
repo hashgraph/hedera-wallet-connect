@@ -9,9 +9,10 @@ export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'off'
 
 export class DefaultLogger implements ILogger {
   private logLevel: LogLevel = 'info'
-
-  constructor(logLevel: LogLevel = 'info') {
+  public name: string
+  constructor(logLevel: LogLevel = 'info', name?: string) {
     this.logLevel = logLevel
+    this.name = name || 'Logger'
   }
 
   setLogLevel(level: LogLevel): void {
@@ -24,25 +25,25 @@ export class DefaultLogger implements ILogger {
 
   error(message: string, ...args: any[]): void {
     if (['error', 'warn', 'info', 'debug'].includes(this.logLevel)) {
-      console.error(`[ERROR] ${message}`, ...args)
+      console.error(`[ERROR - ${this.name}] ${message}`, ...args)
     }
   }
 
   warn(message: string, ...args: any[]): void {
     if (['warn', 'info', 'debug'].includes(this.logLevel)) {
-      console.warn(`[WARN] ${message}`, ...args)
+      console.warn(`[WARN - ${this.name}] ${message}`, ...args)
     }
   }
 
   info(message: string, ...args: any[]): void {
     if (['info', 'debug'].includes(this.logLevel)) {
-      console.info(`[INFO] ${message}`, ...args)
+      console.info(`[INFO - ${this.name}] ${message}`, ...args)
     }
   }
 
   debug(message: string, ...args: any[]): void {
     if (this.logLevel === 'debug') {
-      console.debug(`[DEBUG] ${message}`, ...args)
+      console.debug(`[DEBUG - ${this.name}] ${message}`, ...args)
     }
   }
 }

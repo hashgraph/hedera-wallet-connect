@@ -16,15 +16,17 @@
   ],
   "license": "Apache-2.0",
   "devDependencies": {
-    "@hashgraph/hedera-wallet-connect": "^1.3.4",
+    "@hashgraph/hedera-wallet-connect": "^1.4.2",
+    "@reown/appkit": "^1.5.3",
     "@swc/core": "^1.7.40",
     "@swc/jest": "^0.2.36",
     "@types/jest": "^29.5.3",
     "@types/node": "^22.5.0",
     "@types/react-dom": "^18.2.21",
+    "@walletconnect/ethereum-provider": "^2.17.2",
     "@walletconnect/modal": "^2.7.0",
-    "@walletconnect/sign-client": "^2.17.0",
-    "@walletconnect/types": "^2.17.0",
+    "@walletconnect/sign-client": "^2.17.2",
+    "@walletconnect/types": "^2.17.2",
     "concurrently": "^9.0.1",
     "esbuild": "^0.24.0",
     "esbuild-plugin-copy": "^2.1.1",
@@ -40,10 +42,10 @@
     "react-dom": "^18.2.0",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
+    "tweetnacl": "^1.0.3",
     "typedoc": "^0.26.3",
     "typedoc-theme-hierarchy": "^4.1.2",
-    "typescript": "^5.2.2",
-    "tweetnacl": "^1.0.3"
+    "typescript": "^5.2.2"
   },
   "scripts": {
     "build": "rimraf dist && tsc",
