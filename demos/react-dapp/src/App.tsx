@@ -1,20 +1,6 @@
-import { Buffer } from 'buffer'
-import {
-  AccountId,
-  AccountInfo,
-  AccountInfoQuery,
-  Client,
-  Hbar,
-  LedgerId,
-  PublicKey,
-  TransactionId,
-  TransferTransaction,
-  AccountCreateTransaction,
-  KeyList,
-  TopicCreateTransaction,
-} from '@hashgraph/sdk'
-import { SessionTypes, SignClientTypes } from '@walletconnect/types'
-import * as nacl from 'tweetnacl'
+import React, { useEffect, useMemo, useState } from 'react'
+import Modal from './components/Modal'
+import V2App from './AppV2'
 
 import {
   HederaSessionEvent,
@@ -39,11 +25,9 @@ import {
   extractFirstSignature,
 } from '../../../dist'
 
-import React, { useEffect, useMemo, useState } from 'react'
-import Modal from './components/Modal'
+import { AccountId, AccountInfo, AccountInfoQuery, Client, Hbar, LedgerId, PublicKey, TransactionId, TransferTransaction, AccountCreateTransaction, KeyList, TopicCreateTransaction } from '@hashgraph/sdk'
 
-
-const App: React.FC = () => {
+const V1App: React.FC = () => {
   // Connector data states
   const [projectId, setProjectId] = useState('')
   const [name, setName] = useState('')
@@ -912,6 +896,31 @@ const App: React.FC = () => {
         </Modal>
       </main>
     </>
+  )
+}
+
+
+const App: React.FC = () => {
+  const [version, setVersion] = useState<'v1' | 'v2'>('v1')
+
+  return (
+      <div className="app-container">
+        <div className="version-selector">
+          <button 
+            className={version === 'v1' ? 'active' : ''} 
+            onClick={() => setVersion('v1')}
+          >
+            Version 1
+          </button>
+          <button 
+            className={version === 'v2' ? 'active' : ''} 
+            onClick={() => setVersion('v2')}
+          >
+            Version 2
+          </button>
+        </div>
+        {version === 'v1' ? <V1App /> : <V2App />}
+      </div>
   )
 }
 
