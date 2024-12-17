@@ -8,8 +8,8 @@
 # NOTE: Must be placed last to ensure enforcement over all other rules
 
 # Protection Rules for Github Configuration Files and Actions Workflows
-/.github/                                               @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/release-engineering-managers
-/.github/workflows/                                     @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/release-engineering-managers
+/.github/                                               @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
+/.github/workflows/                                     @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
 
 # NPM and typescript protections
 **/.npmignore                                           @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
@@ -27,12 +27,12 @@
 /CODEOWNERS                                             @hashgraph/release-engineering-managers
 
 # Protect the repository root files
-/README.md                                              @hashgraph/devops-ci @hashgraph/release-engineering-managers
+/README.md                                              @hashgraph/devops-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
 **/LICENSE                                              @hashgraph/release-engineering-managers
 
 # CodeCov configuration
-**/codecov.yml                                          @hashgraph/devops-ci @hashgraph/release-engineering-managers
+**/codecov.yml                                          @hashgraph/devops-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
 
 # Git Ignore definitions
-**/.gitignore                                           @hashgraph/devops-ci @hashgraph/release-engineering-managers
-**/.gitignore.*                                         @hashgraph/devops-ci @hashgraph/release-engineering-managers
+**/.gitignore                                           @hashgraph/devops-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
+**/.gitignore.*                                         @hashgraph/devops-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
