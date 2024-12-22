@@ -5,15 +5,21 @@ export interface ILogger {
   debug(message: string, ...args: any[]): void
 }
 
-export class DefaultLogger implements ILogger {
-  private logLevel: 'error' | 'warn' | 'info' | 'debug' = 'info'
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'off'
 
-  constructor(logLevel: 'error' | 'warn' | 'info' | 'debug' = 'info') {
+export class DefaultLogger implements ILogger {
+  private logLevel: LogLevel = 'info'
+
+  constructor(logLevel: LogLevel = 'info') {
     this.logLevel = logLevel
   }
 
-  setLogLevel(level: 'error' | 'warn' | 'info' | 'debug'): void {
+  setLogLevel(level: LogLevel): void {
     this.logLevel = level
+  }
+
+  getLogLevel(): LogLevel {
+    return this.logLevel
   }
 
   error(message: string, ...args: any[]): void {
