@@ -70,7 +70,7 @@ export class DAppSigner implements Signer {
 
   constructor(
     private readonly accountId: AccountId,
-    private readonly signClient: ISignClient,
+    public readonly signClient: ISignClient,
     public readonly topic: string,
     private readonly ledgerId: LedgerId = LedgerId.MAINNET,
     public readonly extensionId?: string,
@@ -137,11 +137,15 @@ export class DAppSigner implements Signer {
     }
 
     if (this.extensionId) extensionOpen(this.extensionId)
-    return this.signClient.request<T>({
+    const dAppRequest = {
       topic: this.topic,
       request,
       chainId: ledgerIdToCAIPChainId(this.ledgerId),
-    })
+      // hardcode expiry to 5 minutes
+      expiry: 300,
+    }
+    this.logger.debug('Sending request to wallet', dAppRequest)
+    return this.signClient.request<T>(dAppRequest)
   }
 
   getAccountId(): AccountId {
