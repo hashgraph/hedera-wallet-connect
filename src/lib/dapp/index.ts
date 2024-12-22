@@ -149,6 +149,11 @@ export class DAppConnector {
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
       else this.checkIframeConnect()
 
+      // Validate and refresh signers every 10 seconds
+      setInterval(() => {
+        this.validateAndRefreshSigners()
+      }, 10000)
+
       this.walletConnectClient.on('session_event', this.handleSessionEvent.bind(this))
       this.walletConnectClient.on('session_update', this.handleSessionUpdate.bind(this))
       this.walletConnectClient.on('session_delete', this.handleSessionDelete.bind(this))
@@ -287,20 +292,32 @@ export class DAppConnector {
       }
 
       const session = this.walletConnectClient.session.get(topic)
-      const hasSigner = this.signers.some((signer) => signer.topic === topic)
+      const signer = this.signers.find((signer) => signer.topic === topic)
       if (!session) {
         // If session doesn't exist but we have a signer for it, clean up
-        if (hasSigner) {
+        if (Boolean(signer)) {
           this.logger.warn(`Signer exists but no session found for topic: ${topic}`)
           this.handleSessionDelete({ topic })
         }
         return false
       }
 
-      if (!hasSigner) {
+      if (!Boolean(signer)) {
         this.logger.warn(`Session exists but no signer found for topic: ${topic}`)
         return false
       }
+
+      this.logger.info(`Session validated for topic: ${topic} - will extend expiry`)
+      this.walletConnectClient
+        .extend({
+          topic: topic,
+        })
+        .then(() => {
+          this.logger.info(`Session extended for topic: ${topic}`)
+        })
+        .catch((e) => {
+          this.logger.error('Error extending session:', e)
+        })
 
       return true
     } catch (e) {
