@@ -137,13 +137,12 @@ export class DAppSigner implements Signer {
     }
 
     if (this.extensionId) extensionOpen(this.extensionId)
-    const currentDate = Date.now()
     const dAppRequest = {
       topic: this.topic,
       request,
       chainId: ledgerIdToCAIPChainId(this.ledgerId),
       // hardcode expiry to 5 minutes
-      expiry: currentDate + 300,
+      expiry: 300,
     }
     this.logger.debug('Sending request to wallet', dAppRequest)
     return this.signClient.request<T>(dAppRequest)
