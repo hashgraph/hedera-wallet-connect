@@ -1,6 +1,30 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Modal from './components/Modal'
 import V2App from './AppV2'
+import { Buffer } from 'buffer'
+import {
+  AccountId,
+  AccountInfo,
+  AccountInfoQuery,
+  Client,
+  Hbar,
+  LedgerId,
+  PublicKey,
+  TransactionId,
+  TransferTransaction,
+  AccountCreateTransaction,
+  KeyList,
+  TopicCreateTransaction,
+  TokenCreateTransaction,
+  TokenMintTransaction,
+  TokenUpdateTransaction,
+  TokenId,
+  TokenType,
+  TokenSupplyType,
+  TransactionReceiptQuery,
+} from '@hashgraph/sdk'
+import { SessionTypes, SignClientTypes } from '@walletconnect/types'
+import * as nacl from 'tweetnacl'
 
 import {
   HederaSessionEvent,
@@ -25,9 +49,16 @@ import {
   extractFirstSignature,
 } from '../../../dist'
 
-import { AccountId, AccountInfo, AccountInfoQuery, Client, Hbar, LedgerId, PublicKey, TransactionId, TransferTransaction, AccountCreateTransaction, KeyList, TopicCreateTransaction } from '@hashgraph/sdk'
-
 const V1App: React.FC = () => {
+  // Fetch public keys from mirror node for each account
+  const fetchPublicKey = async (accountId: string) => {
+    const response = await fetch(
+      `https://testnet.mirrornode.hedera.com/api/v1/accounts/${accountId}`,
+    )
+    const data = await response.json()
+    return data.key.key
+  }
+
   // Connector data states
   const [projectId, setProjectId] = useState('')
   const [name, setName] = useState('')
@@ -35,6 +66,12 @@ const V1App: React.FC = () => {
   const [url, setUrl] = useState('')
   const [icons, setIcons] = useState('')
   const [base64Transaction, setBase64Transaction] = useState('')
+  const [tokenName, setTokenName] = useState('')
+  const [tokenSymbol, setTokenSymbol] = useState('')
+  const [tokenMetadata, setTokenMetadata] = useState('')
+  const [newMetadata, setNewMetadata] = useState('')
+  const [createdTokenId, setCreatedTokenId] = useState<string>('')
+  const [serialNumber, setSerialNumber] = useState<number>(1)
 
   // Session management states
   const [dAppConnector, setDAppConnector] = useState<DAppConnector | null>(null)
@@ -355,30 +392,123 @@ const V1App: React.FC = () => {
   }
 
   // Helper function to fetch public key
-  const getPublicKey = async (accountId: string, network = "testnet") => {
+  const getPublicKey = async (accountId: string, network = 'testnet') => {
     try {
       const response = await fetch(
-        `https://${network}.mirrornode.hedera.com/api/v1/accounts/${accountId}`
+        `https://${network}.mirrornode.hedera.com/api/v1/accounts/${accountId}`,
       )
       const data = await response.json()
       return { key: data?.key?.key, type: data?.key?._type }
     } catch (error) {
-      console.error("Failed to fetch public key:", error)
+      console.error('Failed to fetch public key:', error)
       throw error
     }
   }
 
+  const handleCreateToken = async () => {
+    modalWrapper(async () => {
+      if (!selectedSigner) throw new Error('Selected signer is required')
+      const accountId = selectedSigner.getAccountId()
+
+      const publicKey = await fetchPublicKey(accountId.toString())
+      const tokenName = `NFT Token ${serialNumber}`
+      const tokenSymbol = `NFT${serialNumber}`
+
+      const transaction = await new TokenCreateTransaction()
+        .setTokenName(tokenName)
+        .setTokenSymbol(tokenSymbol)
+        .setTreasuryAccountId(accountId)
+        .setAdminKey(PublicKey.fromStringED25519(publicKey))
+        .setSupplyKey(PublicKey.fromStringED25519(publicKey))
+        .setMaxSupply(100)
+        .setSupplyType(TokenSupplyType.Finite)
+        .setTokenType(TokenType.NonFungibleUnique)
+        .setDecimals(0)
+        .freezeWithSigner(selectedSigner)
+
+      const base64Transaction = transactionToBase64String(transaction)
+      const params: SignAndExecuteTransactionParams = {
+        transactionList: base64Transaction,
+        signerAccountId: 'hedera:testnet:' + accountId.toString(),
+      }
+
+      const result = await dAppConnector!.signAndExecuteTransaction(params)
+      console.log('Token Creation Result:', result)
+
+      const reciept = new TransactionReceiptQuery().setTransactionId(result.transactionId)
+      const signedReceipt = await reciept.executeWithSigner(selectedSigner)
+
+      console.log('reciept is', signedReceipt)
+
+      if (signedReceipt && signedReceipt.tokenId) {
+        setCreatedTokenId(signedReceipt.tokenId.toString())
+      }
+
+      return result
+    })
+  }
+
+  const handleMintToken = async () => {
+    modalWrapper(async () => {
+      if (!selectedSigner) throw new Error('Selected signer is required')
+      if (!createdTokenId)
+        throw new Error('No token ID available. Please create a token first.')
+
+      const accountId = selectedSigner.getAccountId()
+      const tokenId = TokenId.fromString(createdTokenId)
+
+      const transaction = await new TokenMintTransaction()
+        .setTokenId(tokenId)
+        .setMetadata([Buffer.from(tokenMetadata)])
+        .freezeWithSigner(selectedSigner)
+
+      const base64Transaction = transactionToBase64String(transaction)
+      const params: SignAndExecuteTransactionParams = {
+        transactionList: base64Transaction,
+        signerAccountId: 'hedera:testnet:' + accountId.toString(),
+      }
+
+      const result = await dAppConnector!.signAndExecuteTransaction(params)
+      console.log('Token Minting Result:', result)
+
+      setSerialNumber((prev) => prev + 1)
+
+      return result
+    })
+  }
+
+  const handleUpdateToken = async () => {
+    modalWrapper(async () => {
+      if (!selectedSigner) throw new Error('Selected signer is required')
+      if (!createdTokenId)
+        throw new Error('No token ID available. Please create a token first.')
+
+      const accountId = selectedSigner.getAccountId()
+      const tokenId = TokenId.fromString(createdTokenId)
+
+      const transaction = await new TokenUpdateTransaction()
+        .setTokenId(tokenId)
+        .setMetadata(Buffer.from(newMetadata))
+        .freezeWithSigner(selectedSigner)
+
+      const base64Transaction = transactionToBase64String(transaction)
+      const params: SignAndExecuteTransactionParams = {
+        transactionList: base64Transaction,
+        signerAccountId: 'hedera:testnet:' + accountId.toString(),
+      }
+
+      const result = await dAppConnector!.signAndExecuteTransaction(params)
+      const recieptQuery = new TransactionReceiptQuery().setTransactionId(result.transactionId)
+
+      const signedReceipt = await recieptQuery.executeWithSigner(selectedSigner)
+
+      console.log('Token Update Result:', result, signedReceipt)
+      return result
+    })
+  }
+
   // Create multi-signature account
   const handleCreateMultisigAccount = async () => {
-    // Fetch public keys from mirror node for each account
-    const fetchPublicKey = async (accountId: string) => {
-      const response = await fetch(
-        `https://testnet.mirrornode.hedera.com/api/v1/accounts/${accountId}`,
-      )
-      const data = await response.json()
-      return data.key.key
-    }
-
     const publicKeys = await Promise.all(
       publicKeyInputs.filter((id) => id).map((accountId) => fetchPublicKey(accountId)),
     )
@@ -507,7 +637,7 @@ const V1App: React.FC = () => {
       <main>
         <h1>dApp</h1>
         <p>
-          This demo dApp requires a project id from WalletConnect. Please see {' '}
+          This demo dApp requires a project id from WalletConnect. Please see{' '}
           <a target="_blank" href="https://cloud.walletconnect.com">
             https://cloud.walletconnect.com
           </a>
@@ -880,6 +1010,92 @@ const V1App: React.FC = () => {
             </button>
           </div>
         </section>
+        <section>
+          <h2>Token Operations</h2>
+          <div>
+            <fieldset>
+              <legend>Create Token</legend>
+              <label>
+                Token Name:
+                <input
+                  type="text"
+                  value={tokenName}
+                  onChange={(e) => setTokenName(e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Token Symbol:
+                <input
+                  type="text"
+                  value={tokenSymbol}
+                  onChange={(e) => setTokenSymbol(e.target.value)}
+                  required
+                />
+              </label>
+              <button
+                disabled={disableButtons || !tokenName || !tokenSymbol}
+                onClick={() => {
+                  modalWrapper(async () => {
+                    if (!dAppConnector) throw new Error('DAppConnector is required')
+                    if (!selectedSigner) throw new Error('Selected signer is required')
+                    return handleCreateToken()
+                  })
+                }}
+              >
+                Create Token
+              </button>
+            </fieldset>
+            <fieldset>
+              <legend>Mint Token</legend>
+              <label>
+                Token Metadata:
+                <input
+                  type="text"
+                  value={tokenMetadata}
+                  onChange={(e) => setTokenMetadata(e.target.value)}
+                  required
+                />
+              </label>
+              <button
+                disabled={disableButtons || !tokenMetadata || !createdTokenId}
+                onClick={() => {
+                  modalWrapper(async () => {
+                    if (!dAppConnector) throw new Error('DAppConnector is required')
+                    if (!selectedSigner) throw new Error('Selected signer is required')
+                    return handleMintToken()
+                  })
+                }}
+              >
+                Mint Token
+              </button>
+            </fieldset>
+            <fieldset>
+              <legend>Update Token</legend>
+              <label>
+                New Metadata:
+                <input
+                  type="text"
+                  value={newMetadata}
+                  onChange={(e) => setNewMetadata(e.target.value)}
+                  required
+                />
+              </label>
+              <button
+                disabled={disableButtons || !newMetadata || !createdTokenId}
+                onClick={() => {
+                  modalWrapper(async () => {
+                    if (!dAppConnector) throw new Error('DAppConnector is required')
+                    if (!selectedSigner) throw new Error('Selected signer is required')
+                    return handleUpdateToken()
+                  })
+                }}
+              >
+                Update Token
+              </button>
+            </fieldset>
+          </div>
+        </section>
         <Modal title="Send Request" isOpen={isModalOpen} onClose={() => setModalOpen(false)}>
           {isModalLoading ? (
             <div className="loading">
@@ -899,28 +1115,21 @@ const V1App: React.FC = () => {
   )
 }
 
-
 const App: React.FC = () => {
   const [version, setVersion] = useState<'v1' | 'v2'>('v1')
 
   return (
-      <div className="app-container">
-        <div className="version-selector">
-          <button 
-            className={version === 'v1' ? 'active' : ''} 
-            onClick={() => setVersion('v1')}
-          >
-            Version 1
-          </button>
-          <button 
-            className={version === 'v2' ? 'active' : ''} 
-            onClick={() => setVersion('v2')}
-          >
-            Version 2
-          </button>
-        </div>
-        {version === 'v1' ? <V1App /> : <V2App />}
+    <div className="app-container">
+      <div className="version-selector">
+        <button className={version === 'v1' ? 'active' : ''} onClick={() => setVersion('v1')}>
+          Version 1
+        </button>
+        <button className={version === 'v2' ? 'active' : ''} onClick={() => setVersion('v2')}>
+          Version 2
+        </button>
       </div>
+      {version === 'v1' ? <V1App /> : <V2App />}
+    </div>
   )
 }
 
