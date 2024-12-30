@@ -51,3 +51,53 @@ npm install @hashgraph/hedera-wallet-connect @hashgraph/sdk @hashgraph/proto @ha
 ```bash
 yarn add @hashgraph/hedera-wallet-connect @hashgraph/sdk @hashgraph/proto @hashgraph/hedera-wallet-connect @walletconnect/modal @walletconnect/qrcode-modal @walletconnect/utils  @walletconnect/modal-core
 ```
+
+## React Native Compatibility
+
+React Native is based on [JavaScriptCore](https://developer.apple.com/documentation/javascriptcore) (part of WebKit) and does not use Node.js or the common Web and DOM APIs. As such, there are many operations missing that a normal web environment or Node.js instance would provide.
+
+For this reason, the additional packages polyfil and shim must be installed to ensure compatibility with hedera-wallet-connect, @hashgraph/sdk and other dependencies:
+
+### Using npm
+
+```bash
+npm install @walletconnect/react-native-compat react-native-polyfill-globals @ethersproject/shims
+```
+
+### Using yarn
+
+```bash
+yarn add @walletconnect/react-native-compat react-native-polyfill-globals @ethersproject/shims
+```
+
+### Setup shims and polyfills
+
+Create a polyfills.js file with the following contents:
+
+```js
+import "@ethersproject/shims";
+import '@walletconnect/react-native-compat';
+import { polyfill } from 'react-native-polyfill-globals/src/encoding';
+
+polyfill();
+
+// mock for matchMedia in @walletconnect/modal-core
+window.matchMedia = window.matchMedia || (function () {
+    return {
+        matches: true,
+        addListener: function () { },
+        removeListener: function () { }
+    };
+});
+```
+
+And connect it as early as possible before importing hedera-wallet-connect, for example in global _layout.jsx:
+```js
+import "polyfills.js";
+...
+import { Wallet } from "@hashgraph/hedera-wallet-connect";
+
+export default function RootLayout() {
+  ...
+}
+```
