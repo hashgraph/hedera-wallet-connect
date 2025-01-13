@@ -9,7 +9,8 @@
 
 # Protection Rules for Github Configuration Files and Actions Workflows
 /.github/                                               @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
-/.github/workflows/                                     @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
+/.github/workflows/                                     @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/release-engineering-managers
+/.github/CODEOWNERS                                     @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/release-engineering-managers
 
 # NPM and typescript protections
 **/.npmignore                                           @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
