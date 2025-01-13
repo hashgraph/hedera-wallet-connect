@@ -39,6 +39,7 @@ jobs:
           npm version prerelease --preid="canary.$(git rev-parse --short HEAD)" --no-git-tag-version
 
       - name: Publish
+        if: ${{ github.ref == 'refs/heads/main' }}
         run: npm publish --tag canary --public
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
