@@ -208,19 +208,19 @@ export class DAppConnector {
   /**
    * Initiates the WalletConnect connection flow using a QR code.
    * @param pairingTopic - The pairing topic for the connection (optional).
-   * @param showErrorOnReject - Whether to show an error when the user rejects the pairing (default: false).
+   * @param throwErrorOnReject - Whether to show an error when the user rejects the pairing (default: false).
    * @returns {Promise<SessionTypes.Struct>} - A Promise that resolves when the connection process is complete.
    */
   public async openModal(
     pairingTopic?: string,
-    showErrorOnReject: boolean = false,
+    throwErrorOnReject: boolean = false,
   ): Promise<SessionTypes.Struct> {
     try {
       const { uri, approval } = await this.connectURI(pairingTopic)
       this.walletConnectModal.openModal({ uri })
 
       const session = await new Promise<SessionTypes.Struct>(async (resolve, reject) => {
-        if (showErrorOnReject) {
+        if (throwErrorOnReject) {
           this.walletConnectModal.subscribeModal((state: { open: boolean }) => {
             // the modal was closed so reject the promise
             if (!state.open) {

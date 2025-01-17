@@ -41,6 +41,8 @@ import {
   verifySignerSignature,
   transactionToTransactionBody,
   SignTransactionParams,
+  base64StringToSignatureMap,
+  Uint8ArrayToBase64String,
   extractFirstSignature,
 } from '../../../dist'
 
@@ -208,8 +210,7 @@ const App: React.FC = () => {
         message,
       }
 
-      const signMessageResult = await dAppConnector!.signMessage(params)
-      const signatureMap = signMessageResult.result.signatureMap
+      const { signatureMap } = await dAppConnector!.signMessage(params)
       const accountPublicKey = PublicKey.fromString(publicKey)
       const verified = verifyMessageSignature(message, signatureMap, accountPublicKey)
       console.log('SignatureMap: ', signatureMap)
@@ -260,8 +261,7 @@ const App: React.FC = () => {
         query: queryToBase64String(query),
       }
 
-      const execution = await dAppConnector!.signAndExecuteQuery(params)
-      const response = execution.result.response
+      const { response } = await dAppConnector!.signAndExecuteQuery(params)
       const bytes = Buffer.from(response, 'base64')
       const accountInfo = AccountInfo.fromBytes(bytes)
       console.log('AccountInfo: ', accountInfo)
@@ -586,7 +586,7 @@ const App: React.FC = () => {
       let session: SessionTypes.Struct
       setIsLoading(true)
       if (extensionId) session = await dAppConnector.connectExtension(extensionId)
-      // Open modal with showErrorOnReject set to true
+      // Open modal with throwErrorOnReject set to true
       else session = await dAppConnector.openModal(undefined, true)
 
       setNewSession(session)
