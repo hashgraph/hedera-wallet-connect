@@ -34,20 +34,16 @@ export class WalletConnectProvider extends EventEmitter implements IUniversalPro
   public dappConnector: DAppConnector
   private chainId: string
 
+  static async init(metadata: SignClientTypes.Metadata, network: LedgerId, projectId: string) {
+    const provider = new WalletConnectProvider(metadata, network, projectId)
+    await provider.initialize()
+    return provider
+  }
+
   constructor(metadata: SignClientTypes.Metadata, network: LedgerId, projectId: string) {
     super()
     this.dappConnector = new DAppConnector(metadata, network, projectId)
     this.chainId = `hedera:${network}`
-    // Initialize the DAppConnector
-    this.dappConnector
-      .init()
-      .then(() => {
-        this.client = this.dappConnector.walletConnectClient!
-        this.emit('client_initialized')
-      })
-      .catch((error) => {
-        console.error('Failed to initialize DAppConnector:', error)
-      })
   }
 
   get extensions() {
@@ -221,7 +217,13 @@ export class WalletConnectProvider extends EventEmitter implements IUniversalPro
 
   async initialize(): Promise<void> {
     // DAppConnector handles initialization
-    await this.dappConnector.init()
+    try {
+      await this.dappConnector.init()
+      this.client = this.dappConnector.walletConnectClient!
+      this.emit('client_initialized')
+    } catch (error) {
+      console.error('Failed to initialize DAppConnector:', error)
+    }
   }
 
   async createClient(params?: SignClientTypes.Options): Promise<SignClient> {

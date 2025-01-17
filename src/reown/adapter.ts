@@ -1,6 +1,7 @@
 import { AdapterBlueprint } from '@reown/appkit/adapters'
 import {
   ConnectionControllerClient,
+  CoreHelperUtil,
   NetworkControllerClient,
   type ConnectorType,
   type Provider,
@@ -17,24 +18,18 @@ import { HederaNetworkControllerClient } from './controllers/HederaNetworkContro
 export interface HederaAdapterOptions extends AppKitOptions {
   projectId: string
   chainId: LedgerId
-}
-
-export const HashPackConnector: Connector = {
-  id: 'hashpack',
-  name: 'HashPack',
-  type: 'WALLET_CONNECT',
-  chain: 'hedera',
+  provider?: WalletConnectProvider
 }
 
 export class HederaAdapter extends AdapterBlueprint {
   // @ts-ignore
   public provider?: WalletConnectProvider
+  public networkControllerClient?: NetworkControllerClient
+  public connectionControllerClient?: ConnectionControllerClient
   private chainId: LedgerId
   private extensions: ExtensionData[] = []
   private extensionCheckInterval: NodeJS.Timeout | null = null
   private hasCalledExtensionCallback = false
-  protected networkControllerClient?: NetworkControllerClient
-  protected connectionControllerClient?: ConnectionControllerClient
 
   private isSupportedChainId(chainId: string): boolean {
     const supportedIds = ['eip155:295', 'eip155:296']
@@ -47,11 +42,11 @@ export class HederaAdapter extends AdapterBlueprint {
       networks: [mainnetConfig, testnetConfig],
       projectId: options.projectId,
     })
-
+    this.provider = options.provider
     this.chainId = options.chainId
   }
 
-  public syncConnectors(options: AppKitOptions, appKit: AppKit) {
+  public async syncConnectors(options: AppKitOptions, appKit: AppKit) {
     if (!options.projectId) {
       throw new Error('Project ID is required')
     }
@@ -64,7 +59,9 @@ export class HederaAdapter extends AdapterBlueprint {
       throw new Error('Please configure a namespace')
     }
 
-    this.provider = new WalletConnectProvider(options.metadata, this.chainId, options.projectId)
+    this.provider =
+      this.provider ??
+      (await WalletConnectProvider.init(options.metadata, this.chainId, options.projectId))
 
     const networkControllerClient = new HederaNetworkControllerClient(this)
     const connectionControllerClient = new HederaConnectionController(this)
@@ -129,7 +126,7 @@ export class HederaAdapter extends AdapterBlueprint {
         ...discoveredExtensions.filter((ext) => !this.extensions.some((e) => e.id === ext.id)),
       ]
 
-      this.provider?.logger.info('Extensions:', allExtensions, this.provider)
+      // this.provider?.logger.info('Extensions:', allExtensions, this.provider)
       const availableExtensions = allExtensions.filter((ext) => ext.available)
 
       if (availableExtensions.length > 0 && !this.hasCalledExtensionCallback) {
@@ -264,6 +261,29 @@ export class HederaAdapter extends AdapterBlueprint {
       type: 'WALLET_CONNECT',
       chainId: targetChainId,
     })
+  }
+
+  async getAccounts(
+    params: AdapterBlueprint.GetAccountsParams,
+  ): Promise<AdapterBlueprint.GetAccountsResult> {
+    console.log('getAccounts')
+
+    const session = this.provider?.session
+    if (!session || !params.namespace) {
+      return {
+        accounts: [],
+      }
+    }
+
+    const addresses = session.namespaces[params.namespace]?.accounts
+
+    const accounts = addresses?.map((address) =>
+      CoreHelperUtil.createAccount(params.namespace, address, 'eoa'),
+    )
+
+    return {
+      accounts: accounts || [],
+    }
   }
 
   async getBalance(

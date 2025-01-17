@@ -1,9 +1,9 @@
 import { AppKit, createAppKit } from '@reown/appkit'
-import { HederaAdapter } from '../../../src/reown'
+import { HederaAdapter, WalletConnectProvider } from '../../../src/reown'
 import { LedgerId } from '@hashgraph/sdk'
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { hedera, hederaTestnet } from '@reown/appkit/networks'
-import { AccountController } from '@reown/appkit'
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { testnetConfig } from '../../../src/reown/utils/chains'
+import { UniversalProvider, UniversalProviderOpts } from '@walletconnect/universal-provider'
 
 const projectId = process.env.PROJECT_ID || 'bfd9ad3ea26e2c73eb21e8f9c750c166'
 
@@ -18,22 +18,51 @@ const AppKitContext = createContext<AppKit | undefined>(undefined)
 
 export default function V2App() {
   const [appKit, setAppKit] = useState<AppKit>()
-  const [account, setAccount] = useState<string | null>(null)
+  const [hederaAdapter, setHederaAdapter] = useState<HederaAdapter>()
+
+  const sessions = useMemo(
+    () => hederaAdapter?.provider?.client?.session.getAll(),
+    [hederaAdapter?.provider?.client?.session],
+  )
 
   useEffect(() => {
-    const adapter = new HederaAdapter({
+    // @ts-expect-error - only HederaAdapter is used as the eip155 adapter in this demo
+    setHederaAdapter(appKit?.chainAdapters?.eip155 as HederaAdapter)
+  }, [appKit?.chainAdapters?.eip155])
+
+  const getAppKit = async () => {
+    const walletConnectProvider = await WalletConnectProvider.init(
+      metadata,
+      LedgerId.TESTNET,
       projectId,
+    )
+
+    const hederaAdapter = new HederaAdapter({
+      projectId,
+      provider: walletConnectProvider,
       chainId: LedgerId.TESTNET,
       metadata,
-      networks: [hederaTestnet],
-      defaultNetwork: hederaTestnet,
+      networks: [testnetConfig],
+      defaultNetwork: testnetConfig,
     })
 
-    const kit = createAppKit({
+    /**
+     * UniversalProvider instance with SignClient from WalletConnectProvider to be used by AppKit.
+     * AppKit will generate its own instance by default in none provided
+     */
+    const universalProvider = await UniversalProvider.init({
       projectId,
-      networks: [hederaTestnet],
       metadata,
-      adapters: [adapter],
+      client: walletConnectProvider.client as unknown as UniversalProviderOpts['client'],
+    })
+
+    const appKit = createAppKit({
+      projectId,
+      networks: [testnetConfig],
+      defaultNetwork: testnetConfig,
+      universalProvider,
+      metadata,
+      adapters: [hederaAdapter],
       showWallets: true,
       features: {
         swaps: false,
@@ -43,48 +72,42 @@ export default function V2App() {
         allWallets: false,
       },
     })
+    return appKit
+  }
 
-    adapter.syncConnectors(
-      {
-        projectId,
-        metadata,
-        networks: [hederaTestnet],
-      },
-      kit,
-    )
-
-    AccountController.subscribeKey('address', (address: string | undefined) => {
-      if (address) {
-        setAccount(address)
-      }
-    })
-
-    setAppKit(kit)
+  useEffect(() => {
+    getAppKit().then(setAppKit).catch(console.error)
 
     return () => {
-      kit.disconnect().catch(console.error)
+      console.log('Disconnect')
+      appKit?.disconnect().catch(console.error)
     }
   }, [])
-
-  if (!appKit) {
-    return <div>Loading AppKit...</div>
-  }
 
   return (
     <AppKitContext.Provider value={appKit}>
       <div className="container">
-        <h2>Hedera WalletConnect V2 Demo</h2>
-        <div className="content">
-          {account ? (
-            <>
-              <p>Connected Account: {account}</p>
-              <button onClick={() => appKit.disconnect()}>Disconnect</button>
-            </>
-          ) : (
-            <button onClick={() => appKit.open()}>Connect Wallet</button>
-          )}
-        </div>
+      <h2>Hedera WalletConnect V2 Demo</h2>
+      <div className="content">
+        {sessions?.length > 0 ? (
+          <>
+            <legend>Connected Wallets</legend>
+            <ul>
+              {sessions.map((session, index) => (
+                <li key={index}>
+                  <p>Session ID: {session.topic}</p>
+                  <p>Wallet Name: {session.peer.metadata.name}</p>
+                  <p>Account IDs: {session.namespaces?.hedera?.accounts?.join(' | ')}</p>
+                </li>
+              ))}
+            </ul>
+            <button onClick={() => appKit.disconnect()}>Disconnect</button>
+          </>
+        ) : (
+          <button onClick={() => appKit.open()}>Connect Wallet</button>
+        )}
       </div>
+    </div>
     </AppKitContext.Provider>
   )
 }
