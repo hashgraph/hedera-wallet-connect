@@ -17,7 +17,7 @@ Use `ECDSA` keys if you need to use MetaMask or other EVM developer tools. These
 
 :::tip ECDSA Keys Recommended 
 
-For full EVM compatibility with the Hedera network via WalletConnect (Reown), it is recommended that dapps use **ECDSA** keys when creating accounts if EVM compatibility is important.
+For full EVM compatibility with the Hedera network via WalletConnect (Reown), it is recommended that wallets use **ECDSA** keys when creating accounts if EVM compatibility is important.
 
 :::
 
