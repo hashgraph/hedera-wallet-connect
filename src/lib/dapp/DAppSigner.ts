@@ -59,6 +59,7 @@ import {
   extensionOpen,
   Uint8ArrayToBase64String,
   Uint8ArrayToString,
+  getAccountPublicKey,
 } from '../shared'
 import { DefaultLogger, ILogger, LogLevel } from '../shared/logger'
 import { SessionNotFoundError } from './SessionNotFoundError'
@@ -150,6 +151,10 @@ export class DAppSigner implements Signer {
 
   getAccountKey(): Key {
     throw new Error('Method not implemented.')
+  }
+
+  async getAccountKeyAsync(): Promise<Key | null> {
+    return getAccountPublicKey(this.ledgerId, this.accountId)
   }
 
   getLedgerId(): LedgerId {
