@@ -586,7 +586,8 @@ const App: React.FC = () => {
       let session: SessionTypes.Struct
       setIsLoading(true)
       if (extensionId) session = await dAppConnector.connectExtension(extensionId)
-      else session = await dAppConnector.openModal()
+      // Open modal with throwErrorOnReject set to true
+      else session = await dAppConnector.openModal(undefined, true)
 
       setNewSession(session)
     } finally {
