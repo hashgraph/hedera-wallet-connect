@@ -1,2 +1,3 @@
 export * from './adapter'
-export * from './providers/WalletConnectProvider'
+export * from './providers'
+export * from './utils'
