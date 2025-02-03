@@ -23,7 +23,8 @@ import { EngineTypes, SessionTypes, SignClientTypes } from '@walletconnect/types
 import QRCodeModal from '@walletconnect/qrcode-modal'
 import { WalletConnectModal } from '@walletconnect/modal'
 import SignClient from '@walletconnect/sign-client'
-import { getSdkError } from '@walletconnect/utils'
+import { getSdkError, isOnline } from '@walletconnect/utils'
+import { RELAYER_EVENTS } from '@walletconnect/core'
 import { DefaultLogger, ILogger, LogLevel } from '../shared/logger'
 import {
   HederaJsonRpcMethod,
@@ -74,6 +75,7 @@ export class DAppConnector {
   walletConnectModal: WalletConnectModal
   signers: DAppSigner[] = []
   isInitializing = false
+  private storagePrefix = 'hedera-wc/dapp-connector/'
 
   /**
    * Initializes the DAppConnector instance.
@@ -144,10 +146,16 @@ export class DAppConnector {
         metadata: this.dAppMetadata,
       })
       const existingSessions = this.walletConnectClient.session.getAll()
-
       if (existingSessions.length > 0)
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
       else this.checkIframeConnect()
+
+      //manual call after init before relayer connect event handler is attached
+      this.handleRelayConnected()
+      this.walletConnectClient.core.relayer.on(
+        RELAYER_EVENTS.connect,
+        this.handleRelayConnected.bind(this),
+      )
 
       this.walletConnectClient.on('session_event', this.handleSessionEvent.bind(this))
       this.walletConnectClient.on('session_update', this.handleSessionUpdate.bind(this))
@@ -504,6 +512,8 @@ export class DAppConnector {
       throw new Error('There is no active session. Connect to the wallet at first.')
     }
 
+    await this.verifyLastConnectedInstance()
+
     this.logger.debug(
       `Using signer: ${signer.getAccountId().toString()}: ${signer.topic} - about to request.`,
     )
@@ -734,6 +744,41 @@ export class DAppConnector {
       this.logger.error('Error disconnecting pairing:', e)
     }
     this.logger.info('Pairing deleted by wallet')
+  }
+
+  // Store the last connected randomSessionIdentifier
+  private async handleRelayConnected() {
+    if (!this.walletConnectClient) {
+      this.logger.error('walletConnectClient not found')
+      return
+    }
+    const core = this.walletConnectClient.core
+    const instanceId = core.crypto.randomSessionIdentifier
+    await core.storage.setItem(this.storagePrefix + 'last-connected-instance', instanceId)
+  }
+
+  // In the event of another tab being connected after the current one,
+  // the current tab will be forcibly reconnected to the relay so that
+  // a response to the request can be received.
+  // https://github.com/hashgraph/hedera-wallet-connect/issues/387
+  private async verifyLastConnectedInstance() {
+    if (!this.walletConnectClient) {
+      this.logger.error('walletConnectClient not found')
+      return
+    }
+
+    const core = this.walletConnectClient.core
+    const instanceId = core.crypto.randomSessionIdentifier
+
+    const isOnlineStatus = await isOnline()
+    const lastConnectedInstanceId = await core.storage.getItem(
+      this.storagePrefix + 'last-connected-instance',
+    )
+
+    if (lastConnectedInstanceId != instanceId && isOnlineStatus) {
+      this.logger.info('Forced reconnecting to the relay')
+      await core.relayer.restartTransport()
+    }
   }
 }
 

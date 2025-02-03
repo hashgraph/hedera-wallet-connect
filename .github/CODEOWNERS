@@ -8,31 +8,32 @@
 # NOTE: Must be placed last to ensure enforcement over all other rules
 
 # Protection Rules for Github Configuration Files and Actions Workflows
-/.github/                                               @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
-/.github/workflows/                                     @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
+/.github/                                               @hashgraph/platform-ci @hashgraph/platform-ci-committers @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
+/.github/workflows/                                     @hashgraph/platform-ci @hashgraph/platform-ci-committers @hashgraph/release-engineering-managers
+/.github/CODEOWNERS                                     @hashgraph/platform-ci @hashgraph/platform-ci-committers @hashgraph/release-engineering-managers
 
 # NPM and typescript protections
-**/.npmignore                                           @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
-**/package.json                                         @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
-**/package-lock.json                                    @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
-**/tsconfig.json                                        @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
-**/typedoc.json                                         @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
-**/jest.config.ts                                       @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
+**/.npmignore                                           @hashgraph/platform-ci @hashgraph/platform-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
+**/package.json                                         @hashgraph/platform-ci @hashgraph/platform-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
+**/package-lock.json                                    @hashgraph/platform-ci @hashgraph/platform-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
+**/tsconfig.json                                        @hashgraph/platform-ci @hashgraph/platform-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
+**/typedoc.json                                         @hashgraph/platform-ci @hashgraph/platform-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
+**/jest.config.ts                                       @hashgraph/platform-ci @hashgraph/platform-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
 
 # Rules for prettier
-**/.prettierignore                                      @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
-**/.prettierrc                                          @hashgraph/devops-ci @hashgraph/devops-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
+**/.prettierignore                                      @hashgraph/platform-ci @hashgraph/platform-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
+**/.prettierrc                                          @hashgraph/platform-ci @hashgraph/platform-ci-committers @hashgraph/developer-advocates @hashgraph/hgraph-io-hedera
 
 # Self-protection for root CODEOWNERS files (this file should not exist and should definitely require approval)
 /CODEOWNERS                                             @hashgraph/release-engineering-managers
 
 # Protect the repository root files
-/README.md                                              @hashgraph/devops-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
+/README.md                                              @hashgraph/platform-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
 **/LICENSE                                              @hashgraph/release-engineering-managers
 
 # CodeCov configuration
-**/codecov.yml                                          @hashgraph/devops-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
+**/codecov.yml                                          @hashgraph/platform-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
 
 # Git Ignore definitions
-**/.gitignore                                           @hashgraph/devops-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
-**/.gitignore.*                                         @hashgraph/devops-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
+**/.gitignore                                           @hashgraph/platform-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
+**/.gitignore.*                                         @hashgraph/platform-ci @hashgraph/release-engineering-managers @hashgraph/hgraph-io-hedera
