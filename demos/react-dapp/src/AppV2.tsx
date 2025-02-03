@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Modal from './components/Modal'
 import { Buffer } from 'buffer'
 import {
@@ -7,7 +7,6 @@ import {
   AccountInfoQuery,
   Client,
   Hbar,
-  LedgerId,
   PublicKey,
   TransactionId,
   TransferTransaction,
@@ -23,13 +22,10 @@ import {
   TransactionReceiptQuery,
   Transaction,
 } from '@hashgraph/sdk'
-import { SessionTypes, SignClientTypes } from '@walletconnect/types'
+import { SignClientTypes } from '@walletconnect/types'
 import * as nacl from 'tweetnacl'
 import {
-  useDisconnect,
   useAppKitAccount,
-  useAppKitNetworkCore,
-  useAppKitState,
   useAppKitProvider,
   useWalletInfo,
   getAppKit,
@@ -38,13 +34,10 @@ import { AppKit, createAppKit } from '@reown/appkit'
 import {
   HederaAdapter,
   HederaWalletConnectProvider,
-  hederaMainnetEvm,
   hederaMainnetNative,
   hederaNamespace,
-  hederaTestnetEvm,
   hederaTestnetNative,
 } from '../../../src/reown'
-import { UniversalProvider, UniversalProviderOpts } from '@walletconnect/universal-provider'
 import {
   queryToBase64String,
   verifyMessageSignature,
@@ -58,12 +51,10 @@ import {
   verifySignerSignature,
   transactionToTransactionBody,
   SignTransactionParams,
-  base64StringToSignatureMap,
-  Uint8ArrayToBase64String,
   extractFirstSignature,
 } from '../../../src/lib'
 import { AppKitNetwork } from '@reown/appkit/networks'
-
+    
 export default function V2App() {
   const [projectId, setProjectId] = useState('')
   const [name, setName] = useState('')
@@ -116,8 +107,6 @@ export default function V2App() {
     }
 
     const networks = [
-      // hederaMainnetEvm,
-      // hederaTestnetEvm,
       hederaMainnetNative,
       hederaTestnetNative,
     ] as [AppKitNetwork, ...AppKitNetwork[]]
@@ -127,12 +116,6 @@ export default function V2App() {
       networks: [hederaMainnetNative, hederaTestnetNative],
       namespace: hederaNamespace,
     })
-
-    // const eip155HederaAdapter = new HederaAdapter({
-    //   projectId,
-    //   networks: [hederaMainnetEvm, hederaTestnetEvm],
-    //   namespace: 'eip155',
-    // })
 
     const universalProvider = await HederaWalletConnectProvider.init({
       projectId,
@@ -157,7 +140,8 @@ export default function V2App() {
         email: false,
       },
     })
-    console.log({ appKit });
+
+    console.log({ appKit })
     getAppKit(appKit)
     setTimeout(() => {
        setAppKit(appKit)
@@ -747,13 +731,8 @@ function V2AppWithAppKit({ parentClearData, appKit }: { parentClearData: () => v
 
   const disableButtons = !appKit || !walletProvider;
 
-  // useEffect(() => {
-  //   setSessions(dAppConnector?.walletConnectClient?.session.getAll() ?? [])
-  //   console.log({ session: dAppConnector?.walletConnectClient?.session })
-  // }, [dAppConnector?.walletConnectClient?.session])
   const { isConnected } = useAppKitAccount()
   const { walletInfo } = useWalletInfo()
-  const { disconnect } = useDisconnect()
 
   return (
     <>
@@ -775,7 +754,7 @@ function V2AppWithAppKit({ parentClearData, appKit }: { parentClearData: () => v
                 </ul>
               </>
             )}
-            <appkit-button />
+            <appkit-button balance="hide"/>
           </fieldset>
         </div>
       </section>

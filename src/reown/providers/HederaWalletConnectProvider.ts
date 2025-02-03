@@ -97,11 +97,13 @@ export class HederaWalletConnectProvider extends UniversalProvider {
     if (!this.session || !this.namespaces) {
       throw new Error('Please call connect() before request()')
     }
-    const chainId = chain ?? this.namespaces.eip155.chains[0]
+    let chainId = chain
     if (Object.values(HederaJsonRpcMethod).includes(args.method as HederaJsonRpcMethod)) {
       if (!this.nativeProvider) {
         throw new Error('nativeProvider not initialized. Please call connect()')
       }
+      chainId = chainId ?? this.namespaces.hedera?.chains[0]
+
       return this.nativeProvider?.request({
         request: {
           ...args,
@@ -114,6 +116,7 @@ export class HederaWalletConnectProvider extends UniversalProvider {
       if (!this.eip155Provider) {
         throw new Error('eip155Provider not initialized')
       }
+      chainId = chainId ?? this.namespaces.eip155?.chains[0]
 
       return this.eip155Provider?.request({
         request: {

@@ -36,7 +36,7 @@ export class HederaAdapter extends AdapterBlueprint {
       new HederaWalletConnectConnector({
         provider: universalProvider,
         caipNetworks: this.caipNetworks || [],
-        namespace: this.namespace as ChainNamespace,
+        namespace: this.namespace as 'hedera' | 'eip155',
       }),
     )
   }
@@ -290,6 +290,18 @@ export class HederaAdapter extends AdapterBlueprint {
     const { caipNetwork } = params
     const connector = this.getWalletConnectConnector()
     connector.provider.setDefaultChain(caipNetwork.caipNetworkId)
+  }
+
+  protected override getWalletConnectConnector(): ReturnType<
+    AdapterBlueprint['getWalletConnectConnector']
+  > {
+    const connector = this.connectors.find((c) => c.type == 'WALLET_CONNECT')
+
+    if (!connector) {
+      throw new Error('WalletConnectConnector not found')
+    }
+
+    return connector as any
   }
 
   public getWalletConnectProvider() {
