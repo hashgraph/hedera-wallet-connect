@@ -275,7 +275,6 @@ const V1App: React.FC = () => {
     const hbarAmount = new Hbar(Number(amount))
 
     const transaction = new TransferTransaction()
-      .setTransactionId(TransactionId.generate(accountId!))
       .addHbarTransfer(accountId, hbarAmount.negated())
       .addHbarTransfer(receiver, hbarAmount)
 

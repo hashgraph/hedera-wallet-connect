@@ -384,6 +384,12 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
     body: Transaction,
     signer: HederaWallet,
   ): Promise<void> {
+    // check transaction is incomplete (HIP-745)
+    if (!body.isFrozen()) {
+      // set multiple nodeAccountIds and transactionId if not present
+      await body.freezeWithSigner(signer)
+    }
+
     const signedTransaction = await signer.signTransaction(body)
 
     const response: SignAndExecuteTransactionResponse = {
