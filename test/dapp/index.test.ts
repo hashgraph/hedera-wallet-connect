@@ -18,7 +18,14 @@
  *
  */
 
-import { AccountId, AccountInfoQuery, LedgerId, TopicCreateTransaction } from '@hashgraph/sdk'
+import {
+  AccountInfoQuery,
+  LedgerId,
+  TopicCreateTransaction,
+  PublicKey,
+  PrivateKey,
+  Client,
+} from '@hashgraph/sdk'
 import {
   DAppConnector,
   ExecuteTransactionParams,
@@ -30,9 +37,11 @@ import {
   SignTransactionParams,
   queryToBase64String,
   transactionToBase64String,
-  transactionToTransactionBody,
-  transactionBodyToBase64String,
   DAppSigner,
+  ledgerIdToCAIPChainId,
+  base64StringToUint8Array,
+  Uint8ArrayToBase64String,
+  extractFirstSignature,
 } from '../../src'
 import {
   projectId,
@@ -41,13 +50,15 @@ import {
   prepareTestTransaction,
   testUserAccountId,
 } from '../_helpers'
-import Client, { SignClient } from '@walletconnect/sign-client'
-import { SessionTypes } from '@walletconnect/types'
+import { SignClient } from '@walletconnect/sign-client'
+import { ISignClient, SessionTypes } from '@walletconnect/types'
 import { networkNamespaces } from '../../src/lib/shared'
+import * as nacl from 'tweetnacl'
+import { proto } from '@hashgraph/proto'
 
 describe('DAppConnector', () => {
   let connector: DAppConnector
-  let mockSignClient: Client
+  let mockSignClient: SignClient
   const fakeSession = useJsonFixture('fakeSession') as SessionTypes.Struct
   const mockTopic = '1234567890abcdef'
 
@@ -88,7 +99,7 @@ describe('DAppConnector', () => {
       connector = new DAppConnector(dAppMetadata, LedgerId.TESTNET, projectId, methods, events)
 
       expect(connector.dAppMetadata).toBe(dAppMetadata)
-      expect(connector.network).toBe(LedgerId.TESTNET)
+      expect(connector.network).toBe(LedgerId.TESTNET, 'off')
       expect(connector.projectId).toBe(projectId)
       expect(connector.supportedMethods).toEqual(methods)
       expect(connector.supportedEvents).toEqual(events)
@@ -98,7 +109,7 @@ describe('DAppConnector', () => {
       connector = new DAppConnector(dAppMetadata, LedgerId.TESTNET, projectId)
 
       expect(connector.dAppMetadata).toBe(dAppMetadata)
-      expect(connector.network).toBe(LedgerId.TESTNET)
+      expect(connector.network).toBe(LedgerId.TESTNET, 'off')
       expect(connector.projectId).toBe(projectId)
       expect(connector.supportedMethods).toEqual(Object.values(HederaJsonRpcMethod))
       expect(connector.supportedEvents).toEqual([])
@@ -109,7 +120,7 @@ describe('DAppConnector', () => {
     it('should init SignClient correctly', async () => {
       await connector.init({ logger: 'error' })
 
-      expect(connector.walletConnectClient).toBeInstanceOf(Client)
+      expect(connector.walletConnectClient).toBeInstanceOf(SignClient)
       expect(connector.walletConnectClient?.metadata).toBe(dAppMetadata)
       expect(connector.walletConnectClient?.core.projectId).toBe(projectId)
       expect(connector.walletConnectClient?.core.relayUrl).toBe('wss://relay.walletconnect.com')
@@ -183,7 +194,13 @@ describe('DAppConnector', () => {
       })
 
       connector.signers = [
-        new DAppSigner(testUserAccountId, mockSignClient, fakeSession.topic, LedgerId.TESTNET),
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          fakeSession.topic,
+          LedgerId.TESTNET,
+          'off',
+        ),
       ]
 
       lastSignerRequestMock = jest.spyOn(connector.signers[0], 'request')
@@ -306,26 +323,220 @@ describe('DAppConnector', () => {
     describe('signTransaction', () => {
       const transaction = prepareTestTransaction(new TopicCreateTransaction(), { freeze: true })
       const params: SignTransactionParams = {
-        signerAccountId: testUserAccountId.toString(),
-        transactionBody: transactionBodyToBase64String(
-          transactionToTransactionBody(transaction, AccountId.fromString('0.0.3'))!,
-        ),
+        signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+        transactionBody: transaction,
       }
 
-      it('should throw an error if there is no any signer', async () => {
+      it('should throw an error if there is no signer', async () => {
         connector.signers = []
         await expect(connector.signTransaction(params)).rejects.toThrow(
-          'Signer not found for account ID: 0.0.12345. Did you use the correct format? e.g hedera:<network>:<address>',
+          `No signer found for account ${testUserAccountId.toString()}`,
         )
       })
 
-      it('should invoke last signer request with correct params', async () => {
+      it('should throw an error if no transaction is provided', async () => {
+        // @ts-ignore
+        const invalidParams = {
+          signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+          transactionBody: undefined,
+        } as SignTransactionParams
+
+        await expect(connector.signTransaction(invalidParams)).rejects.toThrow(
+          'Transaction sent in incorrect format. Ensure transaction body is either a base64 transaction body or Transaction object.',
+        )
+      })
+
+      it('should throw an error if signerAccountId is malformed', async () => {
+        const invalidParams = {
+          signerAccountId: undefined,
+          transactionBody: transaction,
+        }
+
+        await expect(connector.signTransaction(invalidParams)).rejects.toThrow(
+          'No signer found for account undefined',
+        )
+      })
+
+      it('should invoke signer.signTransaction with the transaction', async () => {
+        const mockSigner = {
+          getAccountId: () => testUserAccountId,
+          signTransaction: jest.fn().mockResolvedValue({
+            _signedTransactions: new Map([
+              [0, { sigMap: { sigPair: [{ ed25519: new Uint8Array([1, 2, 3]) }] } }],
+            ]),
+          }),
+        }
+        connector.signers = [mockSigner as any]
+
         await connector.signTransaction(params)
-        expect(lastSignerRequestMock).toHaveBeenCalledWith({
+        expect(mockSigner.signTransaction).toHaveBeenCalledWith(transaction)
+      })
+
+      it('should return a signed transaction with valid signature map', async () => {
+        const mockSignedTransaction = {
+          _signedTransactions: new Map([
+            [0, { sigMap: { sigPair: [{ ed25519: new Uint8Array([1, 2, 3]) }] } }],
+          ]),
+        }
+        const mockSigner = {
+          getAccountId: () => testUserAccountId,
+          signTransaction: jest.fn().mockResolvedValue(mockSignedTransaction),
+        }
+        connector.signers = [mockSigner as any]
+
+        const result = await connector.signTransaction(params)
+        const sigMap = result._signedTransactions.get(0)?.sigMap
+        expect(sigMap).toBeDefined()
+        expect(sigMap.sigPair[0].ed25519).toEqual(new Uint8Array([1, 2, 3]))
+      })
+
+      it('should handle base64 string transaction body', async () => {
+        const mockRequest = jest
+          .fn()
+          .mockResolvedValue({ signedTransaction: 'mocked-signed-transaction' })
+        // @ts-ignore - accessing private method for testing
+        connector.request = mockRequest
+
+        const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
+          freeze: true,
+        })
+        const base64Body = transactionToBase64String(transaction)
+        const base64Params = {
+          signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+          transactionBody: base64Body,
+        }
+
+        const result = await connector.signTransaction(base64Params)
+        expect(result).toEqual({ signedTransaction: 'mocked-signed-transaction' })
+        expect(mockRequest).toHaveBeenCalledWith({
           method: HederaJsonRpcMethod.SignTransaction,
-          params,
+          params: base64Params,
         })
       })
+
+      it('should throw an error if transaction body is neither string nor Transaction', async () => {
+        const invalidParams = {
+          signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+          transactionBody: 123, // number instead of string or Transaction
+        } as unknown as SignTransactionParams
+
+        await expect(connector.signTransaction(invalidParams)).rejects.toThrow(
+          'Transaction sent in incorrect format. Ensure transaction body is either a base64 transaction body or Transaction object.',
+        )
+      })
+    })
+  })
+
+  describe('signature verification', () => {
+    let mockSigner: DAppSigner
+    const privateKey = PrivateKey.generateED25519()
+    const publicKey = privateKey.publicKey
+
+    beforeEach(() => {
+      // Create a real signer that can actually sign transactions
+      mockSigner = new DAppSigner(
+        testUserAccountId,
+        mockSignClient,
+        fakeSession.topic,
+        LedgerId.TESTNET,
+      )
+
+      // Mock the request method to simulate actual signing with our private key
+      jest
+        .spyOn(mockSigner as any, 'request')
+        .mockImplementation(async ({ method, params }) => {
+          if (method === HederaJsonRpcMethod.SignTransaction) {
+            // Convert the base64 transaction body back to bytes
+            const bodyBytes = base64StringToUint8Array(params.transactionBody)
+
+            // Create a signature using our private key
+            const signature = privateKey.sign(bodyBytes)
+
+            // Create a signature map
+            const signatureMap = {
+              sigPair: [
+                {
+                  pubKeyPrefix: publicKey.toBytes(),
+                  ed25519: signature,
+                },
+              ],
+            }
+
+            return {
+              signatureMap: Uint8ArrayToBase64String(
+                proto.SignatureMap.encode(signatureMap).finish(),
+              ),
+            }
+          }
+          return {}
+        })
+
+      connector.signers = [mockSigner]
+    })
+
+    it('should verify signatures using real signing', async () => {
+      // Create a test transaction
+      const transaction = prepareTestTransaction(new TopicCreateTransaction(), { freeze: true })
+
+      // Sign with connector
+      const connectorParams: SignTransactionParams = {
+        signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+        transactionBody: transaction,
+      }
+
+      const connectorSigned = await connector.signTransaction(connectorParams)
+      const connectorSigMap = connectorSigned._signedTransactions.get(0)!.sigMap
+      const connectorSignature = extractFirstSignature(connectorSigMap)
+      const bytesToVerify = connectorSigned._signedTransactions.get(0)!.bodyBytes!
+
+      // Sign directly with private key for comparison
+      const directSigned = await transaction.sign(privateKey)
+      const directSigMap = directSigned._signedTransactions.get(0)!.sigMap
+      const directSignature = extractFirstSignature(directSigMap)
+
+      // Verify both signatures with real verification
+      const publicKeyBytes = publicKey.toBytes()
+
+      const connectorVerified = nacl.sign.detached.verify(
+        bytesToVerify,
+        connectorSignature,
+        publicKeyBytes,
+      )
+
+      const directVerified = nacl.sign.detached.verify(
+        bytesToVerify,
+        directSignature,
+        publicKeyBytes,
+      )
+
+      expect(connectorVerified).toBe(true)
+      expect(directVerified).toBe(true)
+
+      // Both signatures should be identical since they're signed with the same key
+      expect(Buffer.from(connectorSignature)).toEqual(Buffer.from(directSignature))
+    })
+
+    it('should fail verification with wrong public key', async () => {
+      // Create a test transaction
+      const transaction = prepareTestTransaction(new TopicCreateTransaction(), { freeze: true })
+
+      const params: SignTransactionParams = {
+        signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+        transactionBody: transaction,
+      }
+
+      const signed = await connector.signTransaction(params)
+      const sigMap = signed._signedTransactions.get(0)!.sigMap
+      const signature = extractFirstSignature(sigMap)
+      const bytesToVerify = signed._signedTransactions.get(0)!.bodyBytes!
+
+      // Use a different key for verification
+      const wrongKey = PrivateKey.generateED25519().publicKey
+      const wrongKeyBytes = wrongKey.toBytes()
+
+      const verified = nacl.sign.detached.verify(bytesToVerify, signature, wrongKeyBytes)
+
+      expect(verified).toBe(false)
     })
   })
 
@@ -369,29 +580,17 @@ describe('DAppConnector', () => {
   })
 
   describe('event handlers', () => {
-    beforeEach(async () => {
+    beforeEach(() => {
+      connector = new DAppConnector(
+        dAppMetadata,
+        LedgerId.TESTNET,
+        projectId,
+        undefined,
+        undefined,
+        undefined,
+        'off',
+      )
       connector.walletConnectClient = mockSignClient
-
-      // Mock session.get to return a valid session
-      const mockSession = {
-        ...fakeSession,
-        topic: mockTopic,
-        namespaces: {
-          hedera: {
-            accounts: [`hedera:testnet:${testUserAccountId.toString()}`],
-            methods: Object.values(HederaJsonRpcMethod),
-            events: [],
-          },
-        },
-      }
-      jest.spyOn(mockSignClient.session, 'get').mockReturnValue(mockSession)
-
-      // Mock createSigners to return a valid signer
-      jest
-        .spyOn(connector as any, 'createSigners')
-        .mockReturnValue([
-          new DAppSigner(testUserAccountId, mockSignClient, mockTopic, LedgerId.TESTNET),
-        ])
     })
 
     it('should handle session event', () => {
@@ -403,9 +602,11 @@ describe('DAppConnector', () => {
 
       // Call handler directly
       connector['handleSessionEvent']({
+        id: 1,
         topic: mockTopic,
         params: {
           event: { name: 'chainChanged', data: {} },
+          chainId: ledgerIdToCAIPChainId(LedgerId.TESTNET).toString(),
         },
       })
 
@@ -440,7 +641,7 @@ describe('DAppConnector', () => {
 
       // Add initial signer
       connector.signers = [
-        new DAppSigner(testUserAccountId, mockSignClient, mockTopic, LedgerId.TESTNET),
+        new DAppSigner(testUserAccountId, mockSignClient, mockTopic, LedgerId.TESTNET, 'off'),
       ]
 
       // Call handler directly
@@ -451,12 +652,23 @@ describe('DAppConnector', () => {
     })
 
     it('should handle pairing delete', () => {
+      // Setup
       const disconnectSpy = jest.spyOn(connector, 'disconnect')
-      disconnectSpy.mockImplementation(async () => true)
+      disconnectSpy.mockImplementation(async () => {
+        connector.signers = []
+        return true
+      })
 
       // Add initial signer
       connector.signers = [
-        new DAppSigner(testUserAccountId, mockSignClient, mockTopic, LedgerId.TESTNET),
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
       ]
 
       // Call handler directly
@@ -465,58 +677,421 @@ describe('DAppConnector', () => {
       expect(disconnectSpy).toHaveBeenCalledWith(mockTopic)
       expect(connector.signers.length).toBe(0)
     })
+
+    it('should handle empty signers array', () => {
+      connector.signers = []
+      expect(connector.signers.length).toBe(0)
+
+      // @ts-ignore
+      connector.handlePairingDelete({ topic: mockTopic })
+
+      expect(connector.signers.length).toBe(0)
+    })
+
+    it('should handle undefined topic gracefully', () => {
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handlePairingDelete({ topic: undefined as any })
+
+      expect(connector.signers.length).toBe(1)
+    })
+
+    it('should handle null topic gracefully', () => {
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handlePairingDelete({ topic: null as any })
+
+      expect(connector.signers.length).toBe(1)
+    })
+
+    it('should handle empty string topic gracefully', () => {
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handlePairingDelete({ topic: '' })
+
+      expect(connector.signers.length).toBe(1)
+    })
   })
 
   describe('validateSession', () => {
+    beforeEach(() => {
+      const getMock = jest.fn() as jest.MockedFunction<typeof mockSignClient.session.get>
+      mockSignClient = {
+        session: {
+          get: getMock,
+        },
+      } as unknown as ISignClient
+
+      connector = new DAppConnector(
+        dAppMetadata,
+        LedgerId.TESTNET,
+        projectId,
+        undefined,
+        undefined,
+        undefined,
+        'off',
+      )
+      connector.walletConnectClient = mockSignClient
+    })
+
     it('should return false when walletConnectClient is not initialized', () => {
       connector.walletConnectClient = undefined
-      // @ts-ignore - accessing private method for testing
+      // @ts-ignore
+      expect(connector.validateSession(mockTopic)).toBe(false)
+    })
+
+    it('should return false when session.get throws error', () => {
+      mockSignClient.session.get.mockImplementation(() => {
+        throw new Error('Session error')
+      })
+      // @ts-ignore
       expect(connector.validateSession(mockTopic)).toBe(false)
     })
 
     it('should return false when session does not exist', () => {
-      connector.walletConnectClient = mockSignClient
-      jest.spyOn(connector.walletConnectClient.session, 'get').mockImplementation(() => {
-        throw new Error('Session not found')
-      })
-      // @ts-ignore - accessing private method for testing
+      mockSignClient.session.get.mockReturnValue(null)
+      // @ts-ignore
       expect(connector.validateSession(mockTopic)).toBe(false)
     })
 
-    it('should return true when session exists', () => {
-      connector.walletConnectClient = mockSignClient
-      // @ts-ignore - accessing private method for testing
+    it('should return false when session exists but topic does not match', () => {
+      mockSignClient.session.get.mockReturnValue({
+        topic: 'different-topic',
+      } as SessionTypes.Struct)
+      // @ts-ignore
+      expect(connector.validateSession(mockTopic)).toBe(false)
+    })
+
+    it('should return true when session exists with matching topic', () => {
+      mockSignClient.session.get.mockReturnValue({
+        topic: mockTopic,
+      } as SessionTypes.Struct)
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+      // @ts-ignore
       expect(connector.validateSession(mockTopic)).toBe(true)
+    })
+
+    it('should return false when topic is undefined', () => {
+      // @ts-ignore
+      expect(connector.validateSession(undefined as any)).toBe(false)
+    })
+
+    it('should return false when topic is null', () => {
+      // @ts-ignore
+      expect(connector.validateSession(null as any)).toBe(false)
+    })
+
+    it('should return false when topic is empty string', () => {
+      // @ts-ignore
+      expect(connector.validateSession('')).toBe(false)
+    })
+
+    it('should return false when session exists but no signer', () => {
+      mockSignClient.session.get.mockReturnValue({
+        topic: mockTopic,
+      } as SessionTypes.Struct)
+      connector.signers = []
+      // @ts-ignore
+      expect(connector.validateSession(mockTopic)).toBe(false)
+    })
+
+    it('should return true when session and signer exist', () => {
+      mockSignClient.session.get.mockReturnValue({
+        topic: mockTopic,
+      } as SessionTypes.Struct)
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+      // @ts-ignore
+      expect(connector.validateSession(mockTopic)).toBe(true)
+    })
+
+    it('should call handleSessionDelete when session does not exist but signer exists', () => {
+      // Mock session.get to return null (session doesn't exist)
+      mockSignClient.session.get.mockReturnValue(null)
+
+      // Create a signer with the topic
+      const topic = 'non-existent-session-topic'
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          topic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+
+      // Spy on handleSessionDelete
+      const handleSessionDeleteSpy = jest.spyOn(connector as any, 'handleSessionDelete')
+
+      // Call validateSession
+      // @ts-ignore
+      expect(connector.validateSession(topic)).toBe(false)
+
+      // Verify handleSessionDelete was called with correct topic
+      expect(handleSessionDeleteSpy).toHaveBeenCalledWith({ topic })
+      expect(handleSessionDeleteSpy).toHaveBeenCalledTimes(1)
+
+      // Verify signer was removed
+      expect(connector.signers.length).toBe(0)
     })
   })
 
-  describe('validateAndRefreshSigners', () => {
-    it('should remove invalid signers', () => {
-      const validTopic = 'valid-topic'
-      const invalidTopic = 'invalid-topic'
-
+  describe('handleSessionDelete', () => {
+    beforeEach(() => {
+      connector = new DAppConnector(
+        dAppMetadata,
+        LedgerId.TESTNET,
+        projectId,
+        undefined,
+        undefined,
+        undefined,
+        'off',
+      )
+      connector.walletConnectClient = mockSignClient
       connector.signers = [
-        new DAppSigner(testUserAccountId, mockSignClient, validTopic, LedgerId.TESTNET),
-        new DAppSigner(testUserAccountId, mockSignClient, invalidTopic, LedgerId.TESTNET),
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
       ]
+    })
 
-      // Mock validateSession to return true for validTopic and false for invalidTopic
-      // @ts-ignore - accessing private method for testing
-      jest
-        .spyOn(connector, 'validateSession')
-        .mockImplementation((topic) => topic === validTopic)
+    it('should remove signer when session is deleted', () => {
+      expect(connector.signers.length).toBe(1)
 
-      // @ts-ignore - accessing private method for testing
-      connector.validateAndRefreshSigners()
+      // @ts-ignore
+      connector.handleSessionDelete({ topic: mockTopic })
+
+      expect(connector.signers.length).toBe(0)
+    })
+
+    it('should ignore session deletion for different topic', () => {
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handleSessionDelete({ topic: 'different-topic' })
 
       expect(connector.signers.length).toBe(1)
-      expect(connector.signers[0].topic).toBe(validTopic)
+    })
+
+    it('should handle session deletion when no signers exist', () => {
+      connector.signers = []
+      expect(connector.signers.length).toBe(0)
+
+      // @ts-ignore
+      connector.handleSessionDelete({ topic: mockTopic })
+
+      expect(connector.signers.length).toBe(0)
+    })
+
+    it('should handle undefined topic gracefully', () => {
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handleSessionDelete({ topic: undefined as any })
+
+      expect(connector.signers.length).toBe(1)
+    })
+
+    it('should handle null topic gracefully', () => {
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handleSessionDelete({ topic: null as any })
+
+      expect(connector.signers.length).toBe(1)
+    })
+
+    it('should handle empty topic string gracefully', () => {
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handleSessionDelete({ topic: '' })
+
+      expect(connector.signers.length).toBe(1)
+    })
+  })
+
+  describe('handlePairingDelete', () => {
+    beforeEach(() => {
+      connector = new DAppConnector(
+        dAppMetadata,
+        LedgerId.TESTNET,
+        projectId,
+        undefined,
+        undefined,
+        undefined,
+        'off',
+      )
+      connector.walletConnectClient = mockSignClient
+    })
+
+    it('should handle pairing deletion when topic matches', () => {
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handlePairingDelete({ topic: mockTopic })
+
+      expect(connector.signers.length).toBe(0)
+    })
+
+    it('should ignore pairing deletion for different topic', () => {
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handlePairingDelete({ topic: 'different-topic' })
+
+      expect(connector.signers.length).toBe(1)
+    })
+
+    it('should handle empty signers array', () => {
+      connector.signers = []
+      expect(connector.signers.length).toBe(0)
+
+      // @ts-ignore
+      connector.handlePairingDelete({ topic: mockTopic })
+
+      expect(connector.signers.length).toBe(0)
+    })
+
+    it('should handle undefined topic gracefully', () => {
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handlePairingDelete({ topic: undefined as any })
+
+      expect(connector.signers.length).toBe(1)
+    })
+
+    it('should handle null topic gracefully', () => {
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handlePairingDelete({ topic: null as any })
+
+      expect(connector.signers.length).toBe(1)
+    })
+
+    it('should handle empty string topic gracefully', () => {
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          mockTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+      expect(connector.signers.length).toBe(1)
+
+      // @ts-ignore
+      connector.handlePairingDelete({ topic: '' })
+
+      expect(connector.signers.length).toBe(1)
     })
   })
 
   describe('connect and connectExtension', () => {
     it('should connect using URI and handle extension ID', async () => {
       const mockUri = 'wc:1234...'
+      const extensionId = 'test-extension'
       const mockSession = {
         topic: mockTopic,
         namespaces: {
@@ -526,9 +1101,8 @@ describe('DAppConnector', () => {
             events: [],
           },
         },
-      }
-      const extensionId = 'test-extension'
-
+        sessionProperties: { extensionId },
+      } as unknown as SessionTypes.Struct
       // Initialize walletConnectClient
       connector.walletConnectClient = mockSignClient
 
@@ -543,11 +1117,11 @@ describe('DAppConnector', () => {
       mockSignClient.session.update = updateSpy
 
       const launchCallback = jest.fn()
-      await connector.connect(launchCallback, undefined, extensionId)
+      await connector.connect(launchCallback, undefined, 'test-extension')
 
       expect(launchCallback).toHaveBeenCalledWith(mockUri)
       expect(updateSpy).toHaveBeenCalledWith(mockTopic, {
-        sessionProperties: { extensionId },
+        sessionProperties: { extensionId: 'test-extension' },
       })
     })
 
@@ -626,7 +1200,6 @@ describe('DAppConnector', () => {
         mockSignClient,
         'existing-topic',
         LedgerId.TESTNET,
-        'ext1',
       )
 
       const newSession = {
@@ -638,8 +1211,7 @@ describe('DAppConnector', () => {
             events: [],
           },
         },
-        sessionProperties: { extensionId: 'ext1' },
-      } as SessionTypes.Struct
+      } as unknown as SessionTypes.Struct
 
       connector.signers = [existingSigner]
       connector.walletConnectClient = mockSignClient
@@ -811,6 +1383,177 @@ describe('DAppConnector', () => {
       await connector.openModal(pairingTopic)
 
       expect(connectURISpy).toHaveBeenCalledWith(pairingTopic)
+    })
+  })
+
+  describe('validateAndRefreshSigners', () => {
+    beforeEach(() => {
+      mockSignClient = {
+        session: {
+          get: jest.fn(),
+        },
+      } as unknown as ISignClient
+
+      connector = new DAppConnector(
+        dAppMetadata,
+        LedgerId.TESTNET,
+        projectId,
+        undefined,
+        undefined,
+        undefined,
+        'off',
+      )
+      connector.walletConnectClient = mockSignClient
+    })
+
+    it('should remove signers with invalid sessions', () => {
+      // Create two signers with different topics
+      const validTopic = 'valid-topic'
+      const invalidTopic = 'invalid-topic'
+
+      // Mock session.get to return valid session for one topic and null for the other
+      mockSignClient.session.get.mockImplementation((topic: string) => {
+        if (topic === validTopic) {
+          return { topic: validTopic } as SessionTypes.Struct
+        }
+        return null
+      })
+
+      // Set up signers
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          validTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          invalidTopic,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+
+      // Call private method
+      // @ts-ignore - accessing private method for testing
+      connector.validateAndRefreshSigners()
+
+      // Verify only valid signer remains
+      expect(connector.signers.length).toBe(1)
+      expect(connector.signers[0].topic).toBe(validTopic)
+    })
+
+    it('should keep all signers when all sessions are valid', () => {
+      // Create multiple signers with valid topics
+      const topic1 = 'topic-1'
+      const topic2 = 'topic-2'
+
+      // Mock session.get to return valid sessions for all topics
+      mockSignClient.session.get.mockReturnValue({ topic: 'valid' } as SessionTypes.Struct)
+
+      // Set up signers
+      const signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          topic1,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          topic2,
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+      connector.signers = signers
+
+      // Call private method
+      // @ts-ignore - accessing private method for testing
+      connector.validateAndRefreshSigners()
+
+      // Verify all signers remain
+      expect(connector.signers.length).toBe(2)
+      expect(connector.signers).toEqual(signers)
+    })
+
+    it('should remove all signers when all sessions are invalid', () => {
+      // Mock session.get to return null for all topics
+      mockSignClient.session.get.mockReturnValue(null)
+
+      // Set up signers
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          'topic1',
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          'topic2',
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+
+      // Call private method
+      // @ts-ignore - accessing private method for testing
+      connector.validateAndRefreshSigners()
+
+      // Verify all signers are removed
+      expect(connector.signers.length).toBe(0)
+    })
+
+    it('should handle empty signers array', () => {
+      // Set up empty signers array
+      connector.signers = []
+
+      // Call private method
+      // @ts-ignore - accessing private method for testing
+      connector.validateAndRefreshSigners()
+
+      // Verify no errors and signers remain empty
+      expect(connector.signers.length).toBe(0)
+    })
+
+    it('should handle errors in session validation', () => {
+      // Mock session.get to throw an error
+      mockSignClient.session.get.mockImplementation(() => {
+        throw new Error('Session validation error')
+      })
+
+      // Set up signers
+      connector.signers = [
+        new DAppSigner(
+          testUserAccountId,
+          mockSignClient,
+          'topic1',
+          LedgerId.TESTNET,
+          undefined,
+          'off',
+        ),
+      ]
+
+      // Call private method
+      // @ts-ignore - accessing private method for testing
+      connector.validateAndRefreshSigners()
+
+      // Verify signer is removed due to validation error
+      expect(connector.signers.length).toBe(0)
     })
   })
 })
