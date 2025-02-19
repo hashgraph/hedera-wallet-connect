@@ -1,1 +1,1 @@
-export * from './HederaWalletConnectConnector'
+export * from './HederaConnector'

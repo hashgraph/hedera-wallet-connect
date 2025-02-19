@@ -32,8 +32,9 @@ import type {
   SendTransactionArgs,
   WriteContractArgs,
 } from '@reown/appkit-core'
-import HIP820Provider from './HIP820Provider'
+
 import { getChainsFromApprovedSession, mergeRequiredOptionalNamespaces } from '../utils'
+import HIP820Provider from './HIP820Provider'
 import EIP155Provider from './EIP155Provider'
 
 export type HederaWalletConnectProviderConfig = {
@@ -41,7 +42,7 @@ export type HederaWalletConnectProviderConfig = {
 } & UniversalProviderOpts
 
 // Reown AppKit UniversalProvider for HIP-820 & EIP-155 version implementation of the @hashgraph/hedera-wallet-connect DAppConnector
-export class HederaWalletConnectProvider extends UniversalProvider {
+export class HederaProvider extends UniversalProvider {
   public nativeProvider?: HIP820Provider
   public eip155Provider?: EIP155Provider
 
@@ -49,7 +50,7 @@ export class HederaWalletConnectProvider extends UniversalProvider {
     super(opts)
   }
   static async init(opts: UniversalProviderOpts) {
-    const provider = new HederaWalletConnectProvider(opts)
+    const provider = new HederaProvider(opts)
 
     //@ts-expect-error - private base method
     await provider.initialize()
