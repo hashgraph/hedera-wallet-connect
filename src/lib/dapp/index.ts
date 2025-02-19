@@ -20,7 +20,6 @@
 
 import { AccountId, LedgerId, Transaction } from '@hashgraph/sdk'
 import { EngineTypes, SessionTypes, SignClientTypes } from '@walletconnect/types'
-import QRCodeModal from '@walletconnect/qrcode-modal'
 import { WalletConnectModal } from '@walletconnect/modal'
 import SignClient from '@walletconnect/sign-client'
 import { getSdkError, isOnline } from '@walletconnect/utils'
@@ -194,27 +193,6 @@ export class DAppConnector {
 
   /**
    * Initiates the WalletConnect connection flow using a QR code.
-   * @deprecated Use `openModal` instead.
-   * @param pairingTopic - The pairing topic for the connection (optional).
-   * @returns A Promise that resolves when the connection process is complete.
-   */
-  public async connectQR(pairingTopic?: string): Promise<void> {
-    return this.abortableConnect(async () => {
-      try {
-        const { uri, approval } = await this.connectURI(pairingTopic)
-        if (!uri) throw new Error('URI is not defined')
-        QRCodeModal.open(uri, () => {
-          throw new Error('User rejected pairing')
-        })
-        await this.onSessionConnected(await approval())
-      } finally {
-        QRCodeModal.close()
-      }
-    })
-  }
-
-  /**
-   * Initiates the WalletConnect connection flow using a QR code.
    * @param pairingTopic - The pairing topic for the connection (optional).
    * @param throwErrorOnReject - Whether to show an error when the user rejects the pairing (default: false).
    * @returns {Promise<SessionTypes.Struct>} - A Promise that resolves when the connection process is complete.
@@ -361,7 +339,7 @@ export class DAppConnector {
     return new Promise(async (resolve, reject) => {
       const pairTimeoutMs = 480_000
       const timeout = setTimeout(() => {
-        QRCodeModal.close()
+        this.walletConnectModal.closeModal()
         reject(new Error(`Connect timed out after ${pairTimeoutMs}(ms)`))
       }, pairTimeoutMs)
 
