@@ -1,3 +1,6 @@
+import React, { useEffect, useMemo, useState } from 'react'
+import Modal from './components/Modal'
+import V2App from './AppV2'
 import { Buffer } from 'buffer'
 import {
   AccountId,
@@ -46,19 +49,16 @@ import {
   extractFirstSignature,
 } from '../../../dist'
 
-import React, { useEffect, useMemo, useState } from 'react'
-import Modal from './components/Modal'
+const V1App: React.FC = () => {
+  // Fetch public keys from mirror node for each account
+  const fetchPublicKey = async (accountId: string) => {
+    const response = await fetch(
+      `https://testnet.mirrornode.hedera.com/api/v1/accounts/${accountId}`,
+    )
+    const data = await response.json()
+    return data.key.key
+  }
 
-// Fetch public keys from mirror node for each account
-const fetchPublicKey = async (accountId: string) => {
-  const response = await fetch(
-    `https://testnet.mirrornode.hedera.com/api/v1/accounts/${accountId}`,
-  )
-  const data = await response.json()
-  return data.key.key
-}
-
-const App: React.FC = () => {
   // Connector data states
   const [projectId, setProjectId] = useState('')
   const [name, setName] = useState('')
@@ -275,7 +275,6 @@ const App: React.FC = () => {
     const hbarAmount = new Hbar(Number(amount))
 
     const transaction = new TransferTransaction()
-      .setTransactionId(TransactionId.generate(accountId!))
       .addHbarTransfer(accountId, hbarAmount.negated())
       .addHbarTransfer(receiver, hbarAmount)
 
@@ -996,7 +995,7 @@ const App: React.FC = () => {
           </div>
         </section>
         <section>
-        <h2>Signature Verification Test</h2>
+          <h2>Signature Verification Test</h2>
           <div>
             <button
               onClick={() => {
@@ -1113,6 +1112,24 @@ const App: React.FC = () => {
         </Modal>
       </main>
     </>
+  )
+}
+
+const App: React.FC = () => {
+  const [version, setVersion] = useState<'v1' | 'v2'>('v1')
+
+  return (
+    <div className="app-container">
+      <div className="version-selector">
+        <button className={version === 'v1' ? 'active' : ''} onClick={() => setVersion('v1')}>
+          Version 1
+        </button>
+        <button className={version === 'v2' ? 'active' : ''} onClick={() => setVersion('v2')}>
+          Version 2
+        </button>
+      </div>
+      {version === 'v1' ? <V1App /> : <V2App />}
+    </div>
   )
 }
 
