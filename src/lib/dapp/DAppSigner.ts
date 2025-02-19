@@ -59,6 +59,7 @@ import {
   extensionOpen,
   Uint8ArrayToBase64String,
   Uint8ArrayToString,
+  getAccountPublicKey,
 } from '../shared'
 import { DefaultLogger, ILogger, LogLevel } from '../shared/logger'
 import { SessionNotFoundError } from './SessionNotFoundError'
@@ -67,6 +68,7 @@ const clients: Record<string, Client | null> = {}
 
 export class DAppSigner implements Signer {
   private logger: ILogger
+  private publicKey: Key | null
 
   constructor(
     private readonly accountId: AccountId,
@@ -77,6 +79,13 @@ export class DAppSigner implements Signer {
     logLevel: LogLevel = 'debug',
   ) {
     this.logger = new DefaultLogger(logLevel)
+    this.publicKey = null
+    // cache public key from mirror node
+    this.getAccountKeyAsync()
+      .then((key: Key | null) => (this.publicKey = key))
+      .catch((error: Error) =>
+        this.logger.error('Error when receiving a public key:', error.message),
+      )
   }
 
   /**
@@ -149,7 +158,14 @@ export class DAppSigner implements Signer {
   }
 
   getAccountKey(): Key {
-    throw new Error('Method not implemented.')
+    if (this.publicKey == null) {
+      throw new Error('No key was received from the mirror node')
+    }
+    return this.publicKey
+  }
+
+  async getAccountKeyAsync(): Promise<Key | null> {
+    return getAccountPublicKey(this.ledgerId, this.accountId)
   }
 
   getLedgerId(): LedgerId {
