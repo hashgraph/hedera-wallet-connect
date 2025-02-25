@@ -246,7 +246,6 @@ document.getElementById('hedera_signAndExecuteQuery')!.onsubmit = (e: SubmitEven
 // 5. hedera_signAndExecuteTransaction
 async function hedera_signAndExecuteTransaction(_: Event) {
   const transaction = new TransferTransaction()
-    .setTransactionId(TransactionId.generate(getState('sign-send-from')))
     .addHbarTransfer(getState('sign-send-from'), new Hbar(-getState('sign-send-amount')))
     .addHbarTransfer(getState('sign-send-to'), new Hbar(+getState('sign-send-amount')))
 
