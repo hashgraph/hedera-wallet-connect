@@ -35,7 +35,7 @@ export class HederaAdapter extends AdapterBlueprint {
       new HederaConnector({
         provider: universalProvider,
         caipNetworks: this.caipNetworks || [],
-        namespace: this.namespace as 'hedera' | 'eip155',
+        namespace: this.namespace as ChainNamespace,
       }),
     )
   }
@@ -85,11 +85,30 @@ export class HederaAdapter extends AdapterBlueprint {
     return Promise.resolve()
   }
 
-  public async getBalance(): Promise<AdapterBlueprint.GetBalanceResult> {
+  public async getBalance(
+    params: AdapterBlueprint.GetBalanceParams,
+  ): Promise<AdapterBlueprint.GetBalanceResult> {
+    const { address, caipNetwork } = params
+
+    if (!caipNetwork) {
+      return Promise.resolve({
+        balance: '0',
+        decimals: 0,
+        symbol: '',
+      })
+    }
+
+    const accountInfo = await getAccountInfo(
+      caipNetwork.testnet ? LedgerId.TESTNET : LedgerId.MAINNET,
+      address, // accountId or non-long-zero evmAddress
+    )
+
     return Promise.resolve({
-      balance: '0',
-      decimals: 0,
-      symbol: '',
+      balance: accountInfo?.balance
+        ? formatUnits(accountInfo.balance.balance, 8).toString()
+        : '0',
+      decimals: caipNetwork.nativeCurrency.decimals,
+      symbol: caipNetwork.nativeCurrency.symbol,
     })
   }
 
