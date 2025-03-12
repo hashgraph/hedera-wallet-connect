@@ -3,7 +3,7 @@ import { CaipNetwork, CaipNetworkId, ChainNamespace } from '@reown/appkit-common
 import { ProposalTypes } from '@walletconnect/types'
 import { defineChain } from '@reown/appkit/networks'
 import { Namespace, NamespaceConfig } from '@walletconnect/universal-provider'
-import { HederaJsonRpcMethod } from '@hashgraph/hedera-wallet-connect'
+import { HederaJsonRpcMethod } from '../..'
 import { mergeArrays, normalizeNamespaces } from '@walletconnect/utils'
 
 export const hederaNamespace = 'hedera' as ChainNamespace
@@ -32,7 +32,7 @@ export const HederaChainDefinition = {
         },
       },
       testnet: false,
-    }),
+    }) as CaipNetwork,
     Testnet: defineChain({
       id: 'testnet',
       chainNamespace: hederaNamespace,
@@ -55,7 +55,7 @@ export const HederaChainDefinition = {
         },
       },
       testnet: true,
-    }),
+    }) as CaipNetwork,
   },
   EVM: {
     Mainnet: defineChain({
@@ -80,7 +80,7 @@ export const HederaChainDefinition = {
         },
       },
       testnet: false,
-    }),
+    }) as CaipNetwork,
     Testnet: defineChain({
       id: 296,
       name: 'Hedera Testnet EVM',
@@ -103,7 +103,7 @@ export const HederaChainDefinition = {
         },
       },
       testnet: true,
-    }),
+    }) as CaipNetwork,
   },
 }
 
@@ -113,7 +113,7 @@ export function createNamespaces(caipNetworks: CaipNetwork[]): NamespaceConfig {
     const { id, chainNamespace, rpcUrls } = chain
     const rpcUrl = rpcUrls.default.http[0]
 
-    const methods =
+    const methods: string[] =
       chainNamespace == ('hedera' as ChainNamespace)
         ? Object.values(HederaJsonRpcMethod)
         : WcHelpersUtil.getMethodsByChainNamespace(chainNamespace)
@@ -122,7 +122,7 @@ export function createNamespaces(caipNetworks: CaipNetwork[]): NamespaceConfig {
       acc[chainNamespace] = {
         methods,
         events: ['accountsChanged', 'chainChanged'],
-        chains: [],
+        chains: [] as string[],
         rpcMap: {},
       } satisfies Namespace
     }

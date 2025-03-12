@@ -1,30 +1,26 @@
-import { AccountId, LedgerId, PublicKey } from '@hashgraph/sdk'
+import { LedgerId } from '@hashgraph/sdk'
+import { AccountInfo } from '.'
 
 function getMirrorNodeUrl(ledgerId: LedgerId): string {
   return `https://${ledgerId.toString()}.mirrornode.hedera.com`
 }
 
-export async function getAccountPublicKey(
+export async function getAccountInfo(
   ledgerId: LedgerId,
-  accountId: AccountId,
-): Promise<PublicKey | null> {
+  address: string,
+): Promise<AccountInfo | null> {
   const mirrorNodeApiUrl = getMirrorNodeUrl(ledgerId)
-  const url = `${mirrorNodeApiUrl}/api/v1/accounts/${accountId.toString()}`
+  const url = `${mirrorNodeApiUrl}/api/v1/accounts/${address}`
 
   const result = await fetch(url, {
     headers: {
       accept: 'application/json',
     },
   })
-  if (result.status === 404) {
-    return null
-  }
   if (result.status !== 200) {
-    throw new Error('Failed request to mirror node')
+    return null
   }
 
   const response = await result.json()
-  const keyInfo = response.key as { _type: string; key: string } | null
-
-  return keyInfo?.key ? PublicKey.fromString(keyInfo.key) : null
+  return response as AccountInfo
 }

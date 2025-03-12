@@ -1,4 +1,4 @@
-import { CAIPChainIdToLedgerId, DAppSigner } from '@hashgraph/hedera-wallet-connect'
+import { CAIPChainIdToLedgerId, DAppSigner } from '../..'
 import { SessionNamespace, RequestParams, IProvider } from '@walletconnect/universal-provider'
 import { SessionTypes } from '@walletconnect/types'
 import { AccountId, Transaction } from '@hashgraph/sdk'

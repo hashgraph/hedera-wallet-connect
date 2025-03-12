@@ -12,7 +12,7 @@ import {
 } from '@walletconnect/universal-provider'
 import { formatJsonRpcRequest } from '@walletconnect/jsonrpc-utils'
 
-import { BUNDLER_URL, getChainId, hederaMainnetEvm, hederaTestnetEvm } from '../utils'
+import { BUNDLER_URL, getChainId, HederaChainDefinition } from '../utils'
 
 class EIP155Provider implements IProvider {
   public name = 'eip155'
@@ -50,8 +50,6 @@ class EIP155Provider implements IProvider {
       }
       case 'eth_chainId':
         return parseInt(this.getDefaultChain()) as unknown as T
-      case 'wallet_getCapabilities':
-        return (await this.getCapabilities(args)) as unknown as T
       case 'wallet_getCallsStatus':
         return (await this.getCallStatus(args)) as unknown as T
       default:
@@ -97,9 +95,8 @@ class EIP155Provider implements IProvider {
     rpcUrl?: string | undefined,
   ): JsonRpcProvider | undefined {
     if (!chainId) return undefined
-    const caipNetwork = [hederaMainnetEvm, hederaTestnetEvm].find(
-      (network) => network.id == chainId,
-    )
+    const { Testnet, Mainnet } = HederaChainDefinition.EVM
+    const caipNetwork = [Mainnet, Testnet].find((network) => network.id == chainId)
     const rpc = caipNetwork?.rpcUrls.default.http[0] || rpcUrl
     if (!rpc) {
       throw new Error(`No RPC url provided for chainId: ${chainId}`)
