@@ -46,10 +46,9 @@ You can choose **one** of these or **both**, depending on your dApp’s needs. B
 
 - **Namespace:** `hedera:mainnet` (or `hedera:testnet` in dev environments)
 - **Supported Key Types:** 
-  - Primarily **Ed25519** (though ECDSA is allowed, Ed25519 is the typical default for Hedera-native wallets).
+  - Ed25519 and ECDSA (Ed25519 has historical use in Hedera-native wallets, but ECDSA is fully supported).
 - **Wallet Compatibility:** 
   - Hedera-native wallets such as HashPack, Kabila, Blade, Dropp or other wallets that implement the Hedera namespace.  
-  - These wallets allow advanced native features like key rotation.
 - **Use Cases & Benefits:**  
   - If your dApp is built specifically for Hedera (and doesn’t require Ethereum tooling), this is the most straightforward path.
 - **Limitations & Trade-Offs:**  
@@ -66,13 +65,14 @@ You can choose **one** of these or **both**, depending on your dApp’s needs. B
 - **Wallet Compatibility:** 
   - EVM-based wallets like MetaMask, Coinbase Wallet, or any wallet that supports standard Ethereum WalletConnect flows.  
   - Transactions use the Hedera JSON-RPC relay, which converts EVM calls to Hedera-native transactions under the hood.
+  - Note: EVM wallets (e.g., MetaMask) only support ECDSA keys; ensure users select an ECDSA account.
 - **Use Cases & Benefits:**  
   - If your entire dApp is built around Ethereum tooling—smart contracts, user flows with MetaMask, standard Ethereum libraries (ethers.js, web3.js), etc.  
   - You can treat Hedera nearly the same as any other EVM chain, enabling quick adoption for devs used to Ethereum, BSC, Polygon, etc.  
   - Users who already have MetaMask or other EVM wallets can plug in instantly, no need to download a dedicated Hedera wallet.
 - **Limitations & Trade-Offs:**  
-  - ECDSA accounts on Hedera often require sending HBAR to an EVM address to create an account (via the JSON-RPC relay). This can be a bit different from typical Hedera account creation.  
-  - Some complex Hedera functionality may not be fully supported in the EVM flow yet.
+  - The JSON-RPC relay translates EVM transactions into Hedera native ones but does not support all native features. These require the Hedera namespace (`hedera:mainnet`) and native APIs. ECDSA keys remain fully compatible with these features outside the relay.
+  - ECDSA accounts on Hedera often require sending HBAR to an EVM address to create an account (via the JSON-RPC relay). This can be a bit different from typical Hedera account creation.
 - **Ideal For:**
   - dApps that are EVM-focused and want to offer a familiar Ethereum-like experience on Hedera. You can connect with standard Ethereum wallets and dev tools, minimizing friction for EVM developers.
 
@@ -85,6 +85,7 @@ You can choose **one** of these or **both**, depending on your dApp’s needs. B
 - **Wallet Compatibility:** 
   - Hedera-native wallets (HashPack, Kabila, Dropp, Blade, etc.) and EVM wallets (MetaMask, etc.).  
   - Your dApp must handle connections from both sets of wallets—two different “flavors” of functionality, but typically integrated under one UI flow.
+  - Note: Ensure your dApp handles wallet-specific key support (e.g., HashPack rekeying for Ed25519 only).
 - **Use Cases & Benefits:**  
   - Users can connect with *whichever wallet they have*, whether it’s purely EVM or purely Hedera.  
   - Access native Hedera features alongside EVM-based workflows.  
@@ -110,15 +111,21 @@ Hedera supports two main key types for accounts. Your chosen key type can impact
 
 | **Attribute**           | **Ed25519**                                                                                          | **ECDSA**                                                                                           |
 |-------------------------|-------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| **Compatibility**       | Native support on Hedera. Not compatible with the JSON-RPC relay for EVM interactions.               | Fully compatible with the JSON-RPC relay, ensuring smooth EVM integrations.                          |
+| **Compatibility**       | Native support on Hedera. Not compatible with the JSON-RPC relay for EVM interactions.               | Fully compatible with both Hedera native transactions (via SDK/APIs) and the JSON-RPC relay for EVM interactions. |
 | **Usage Context**       | Ideal for Hedera’s native features and when performance and security are prioritized.                | Recommended when connecting with EVM-based tools (e.g., MetaMask) and dApps requiring EVM support.   |
 | **Common Use Case**     | Historically the most common account type on Hedera.                                                 | Preferred if you need to send HBAR to an EVM address or connect strictly via EVM tooling.            |
-| **Integration Impact**  | Provides enhanced Hedera functionality (key rotation), but limits EVM options. | Ensures dApps outside the Hedera ecosystem can connect easily through JSON-RPC.                      |
+| **Integration Impact**  | Optimized for Hedera native features (e.g., key rotation) via SDK/APIs; incompatible with JSON-RPC relay for EVM interactions. | Enables EVM compatibility via JSON-RPC relay and supports all native features via SDK/APIs, ideal for cross-ecosystem dApps. |
 | **Detection**           | Often the default in many existing Hedera accounts.                                                  | Must be explicitly chosen if your dApp or wallet is EVM-first.                                       |
+| **Key Migration**       | Can be updated to ECDSA via AccountUpdateTransaction.                                                | Can be updated to Ed25519; changing ECDSA key updates the EVM address alias.                        |
 
 :::tip ECDSA Keys Recommended for EVM dApps
 For full EVM compatibility via Hedera WalletConnect (Reown), dApp developers should verify that connecting accounts use **ECDSA** keys. This is especially important for dApps relying on JSON-RPC and other EVM-specific integrations.
 :::
+
+### Key Migration Between Ed25519 and ECDSA
+Hedera allows updating an account’s key from Ed25519 to ECDSA or vice versa using an AccountUpdateTransaction, signed with the current key. This process retains the same account ID (e.g., 0.0.123456). However, for accounts with an ECDSA key tied to an EVM address alias (a 20-byte address derived from the public key), changing the ECDSA key updates the alias to a new address, which may affect EVM-based interactions (e.g., smart contract calls). Wallets like HashPack support rekeying for Ed25519 accounts, but ECDSA rekeying support may vary by wallet.
+
+**Note:** While ECDSA keys work seamlessly with native Hedera APIs, some wallet implementations may default to Ed25519 for native features due to optimization preferences.
 
 ---
 
