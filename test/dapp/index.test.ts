@@ -63,7 +63,15 @@ describe('DAppConnector', () => {
   const mockTopic = '1234567890abcdef'
 
   beforeEach(async () => {
-    connector = new DAppConnector(dAppMetadata, LedgerId.TESTNET, projectId)
+    connector = new DAppConnector(
+      dAppMetadata,
+      LedgerId.TESTNET,
+      projectId,
+      Object.values(HederaJsonRpcMethod),
+      [],
+      [],
+      'off',
+    )
     mockSignClient = await SignClient.init({
       logger: 'error',
       relayUrl: 'wss://relay.walletconnect.com',
@@ -99,7 +107,7 @@ describe('DAppConnector', () => {
       connector = new DAppConnector(dAppMetadata, LedgerId.TESTNET, projectId, methods, events)
 
       expect(connector.dAppMetadata).toBe(dAppMetadata)
-      expect(connector.network).toBe(LedgerId.TESTNET, 'off')
+      expect(connector.network).toBe(LedgerId.TESTNET)
       expect(connector.projectId).toBe(projectId)
       expect(connector.supportedMethods).toEqual(methods)
       expect(connector.supportedEvents).toEqual(events)
@@ -109,7 +117,7 @@ describe('DAppConnector', () => {
       connector = new DAppConnector(dAppMetadata, LedgerId.TESTNET, projectId)
 
       expect(connector.dAppMetadata).toBe(dAppMetadata)
-      expect(connector.network).toBe(LedgerId.TESTNET, 'off')
+      expect(connector.network).toBe(LedgerId.TESTNET)
       expect(connector.projectId).toBe(projectId)
       expect(connector.supportedMethods).toEqual(Object.values(HederaJsonRpcMethod))
       expect(connector.supportedEvents).toEqual([])
