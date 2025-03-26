@@ -2,15 +2,16 @@ import { type ChainNamespace, isReownName } from '@reown/appkit-common'
 import { CoreHelperUtil } from '@reown/appkit-core'
 import { AdapterBlueprint } from '@reown/appkit/adapters'
 import { WcHelpersUtil } from '@reown/appkit'
-import { LedgerId } from '@hashgraph/sdk'
 import { ProviderUtil } from '@reown/appkit/store'
+import { LedgerId } from '@hashgraph/sdk'
 import { BrowserProvider, Contract, formatUnits, JsonRpcSigner, parseUnits } from 'ethers'
-import { HederaWalletConnectProvider } from './providers'
-import { HederaWalletConnectConnector } from './connectors'
+
+import { HederaProvider } from './providers'
+import { HederaConnector } from './connectors'
+import { hederaNamespace } from './utils'
+import { getAccountInfo } from '..'
 
 type UniversalProvider = Parameters<AdapterBlueprint['setUniversalProvider']>[0]
-
-const hederaNamespace = 'hedera' as ChainNamespace
 
 export class HederaAdapter extends AdapterBlueprint {
   constructor(params: AdapterBlueprint.Params) {
@@ -33,7 +34,7 @@ export class HederaAdapter extends AdapterBlueprint {
 
   public override setUniversalProvider(universalProvider: UniversalProvider): void {
     this.addConnector(
-      new HederaWalletConnectConnector({
+      new HederaConnector({
         provider: universalProvider,
         caipNetworks: this.caipNetworks || [],
         namespace: this.namespace as 'hedera' | 'eip155',
@@ -86,11 +87,30 @@ export class HederaAdapter extends AdapterBlueprint {
     return Promise.resolve()
   }
 
-  public async getBalance(): Promise<AdapterBlueprint.GetBalanceResult> {
+  public async getBalance(
+    params: AdapterBlueprint.GetBalanceParams,
+  ): Promise<AdapterBlueprint.GetBalanceResult> {
+    const { address, caipNetwork } = params
+
+    if (!caipNetwork) {
+      return Promise.resolve({
+        balance: '0',
+        decimals: 0,
+        symbol: '',
+      })
+    }
+
+    const accountInfo = await getAccountInfo(
+      caipNetwork.testnet ? LedgerId.TESTNET : LedgerId.MAINNET,
+      address, // accountId or non-long-zero evmAddress
+    )
+
     return Promise.resolve({
-      balance: '0',
-      decimals: 0,
-      symbol: '',
+      balance: accountInfo?.balance
+        ? formatUnits(accountInfo.balance.balance, 8).toString()
+        : '0',
+      decimals: caipNetwork.nativeCurrency.decimals,
+      symbol: caipNetwork.nativeCurrency.symbol,
     })
   }
 
@@ -101,7 +121,7 @@ export class HederaAdapter extends AdapterBlueprint {
     if (!provider) {
       throw new Error('Provider is undefined')
     }
-    const hederaProvider = provider as unknown as HederaWalletConnectProvider
+    const hederaProvider = provider as unknown as HederaProvider
 
     let signature = ''
 
@@ -129,7 +149,7 @@ export class HederaAdapter extends AdapterBlueprint {
     if (!provider) {
       throw new Error('Provider is undefined')
     }
-    const hederaProvider = provider as unknown as HederaWalletConnectProvider
+    const hederaProvider = provider as unknown as HederaProvider
 
     const result = await hederaProvider.eth_estimateGas(
       {
@@ -150,7 +170,7 @@ export class HederaAdapter extends AdapterBlueprint {
     if (!params.provider) {
       throw new Error('Provider is undefined')
     }
-    const hederaProvider = params.provider as unknown as HederaWalletConnectProvider
+    const hederaProvider = params.provider as unknown as HederaProvider
 
     if (this.namespace == 'eip155') {
       const tx = await hederaProvider.eth_sendTransaction(
@@ -304,11 +324,17 @@ export class HederaAdapter extends AdapterBlueprint {
     return connector as any
   }
 
-  public getWalletConnectProvider() {
+  public getWalletConnectProvider(): UniversalProvider {
     const connector = this.connectors.find((c) => c.type === 'WALLET_CONNECT')
 
     const provider = connector?.provider as UniversalProvider
 
     return provider
+  }
+
+  public override async walletGetAssets(
+    _params: AdapterBlueprint.WalletGetAssetsParams,
+  ): Promise<AdapterBlueprint.WalletGetAssetsResponse> {
+    return Promise.resolve({})
   }
 }

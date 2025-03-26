@@ -20,7 +20,7 @@
 
 import { Buffer } from 'buffer'
 import { Core } from '@walletconnect/core'
-import { Web3Wallet, Web3WalletTypes } from '@walletconnect/web3wallet'
+import { WalletKit, WalletKitTypes } from '@reown/walletkit'
 import { SessionTypes } from '@walletconnect/types'
 import { buildApprovedNamespaces, getSdkError } from '@walletconnect/utils'
 import { Wallet as HederaWallet, Client, AccountId, Transaction, Query } from '@hashgraph/sdk'
@@ -54,12 +54,12 @@ export { default as WalletProvider } from './provider'
  *
  * @see {@link https://github.com/WalletConnect/walletconnect-monorepo/blob/v2.0/packages/web3wallet/src/client.ts}
  */
-export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
+export class HederaWeb3Wallet extends WalletKit implements HederaNativeWallet {
   /*
    * Set default values for chains, methods, events
    */
   constructor(
-    opts: Web3WalletTypes.Options,
+    opts: WalletKitTypes.Options,
     public chains: HederaChainId[] | string[] = Object.values(HederaChainId),
     public methods: string[] = Object.values(HederaJsonRpcMethod),
     public sessionEvents: HederaSessionEvent[] | string[] = Object.values(HederaSessionEvent),
@@ -70,7 +70,7 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
   // wrapper to reduce needing to instantiate Core object on client, also add hedera sensible defaults
   static async create(
     projectId: string,
-    metadata: Web3WalletTypes.Metadata,
+    metadata: WalletKitTypes.Metadata,
     chains?: HederaChainId[],
     methods?: string[],
     sessionEvents?: HederaSessionEvent[] | string[],
@@ -116,7 +116,7 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
    */
   public async buildAndApproveSession(
     accounts: string[],
-    { id, params }: Web3WalletTypes.SessionProposal,
+    { id, params }: WalletKitTypes.SessionProposal,
   ): Promise<SessionTypes.Struct> {
     // filter to get unique chains
     const chains = accounts
@@ -153,7 +153,7 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
   }
 
   public parseSessionRequest(
-    event: Web3WalletTypes.SessionRequest,
+    event: WalletKitTypes.SessionRequest,
     // optional arg to throw error if request is invalid, call with shouldThrow = false when calling from rejectSessionRequest as we only need id and top to send reject response
     shouldThrow = true,
   ): {
@@ -246,7 +246,7 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
   }
 
   public async executeSessionRequest(
-    event: Web3WalletTypes.SessionRequest,
+    event: WalletKitTypes.SessionRequest,
     hederaWallet: HederaWallet,
   ): Promise<void> {
     const { method, id, topic, body } = this.parseSessionRequest(event)
@@ -256,7 +256,7 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
 
   // https://docs.walletconnect.com/web3wallet/wallet-usage#responding-to-session-requests
   public async rejectSessionRequest(
-    event: Web3WalletTypes.SessionRequest,
+    event: WalletKitTypes.SessionRequest,
     error: { code: number; message: string },
   ): Promise<void> {
     const { id, topic } = this.parseSessionRequest(event, false)

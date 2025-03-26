@@ -1,13 +1,12 @@
 import type { SessionTypes } from '@walletconnect/types'
 import { CaipNetwork, ChainNamespace, ConstantsUtil } from '@reown/appkit-common'
-import { AdapterBlueprint, ChainAdapterConnector } from '@reown/appkit/adapters'
+import { AdapterBlueprint, type ChainAdapterConnector } from '@reown/appkit/adapters'
 import { PresetsUtil } from '@reown/appkit-utils'
-// import UniversalProvider from '@walletconnect/universal-provider'
 import { createNamespaces } from '../utils'
 
 type UniversalProvider = Parameters<AdapterBlueprint['setUniversalProvider']>[0]
 
-export class HederaWalletConnectConnector implements ChainAdapterConnector {
+export class HederaConnector implements ChainAdapterConnector {
   public readonly id = ConstantsUtil.CONNECTOR_ID.WALLET_CONNECT
   public readonly name = PresetsUtil.ConnectorNamesMap[
     ConstantsUtil.CONNECTOR_ID.WALLET_CONNECT
@@ -20,7 +19,7 @@ export class HederaWalletConnectConnector implements ChainAdapterConnector {
 
   protected caipNetworks: CaipNetwork[]
 
-  constructor({ provider, caipNetworks, namespace }: HederaWalletConnectConnector.Options) {
+  constructor({ provider, caipNetworks, namespace }: HederaConnector.Options) {
     this.caipNetworks = caipNetworks
     this.provider = provider
     this.chain = namespace as ChainNamespace
@@ -54,7 +53,7 @@ export class HederaWalletConnectConnector implements ChainAdapterConnector {
   }
 }
 
-export namespace HederaWalletConnectConnector {
+export namespace HederaConnector {
   export type Options = {
     provider: UniversalProvider
     caipNetworks: CaipNetwork[]

@@ -3,106 +3,109 @@ import { CaipNetwork, CaipNetworkId, ChainNamespace } from '@reown/appkit-common
 import { ProposalTypes } from '@walletconnect/types'
 import { defineChain } from '@reown/appkit/networks'
 import { Namespace, NamespaceConfig } from '@walletconnect/universal-provider'
-import { HederaJsonRpcMethod } from '@hashgraph/hedera-wallet-connect'
+import { HederaJsonRpcMethod } from '../..'
 import { mergeArrays, normalizeNamespaces } from '@walletconnect/utils'
 
 export const hederaNamespace = 'hedera' as ChainNamespace
 
-export const hederaMainnetNative = defineChain({
-  id: 'mainnet',
-  chainNamespace: hederaNamespace,
-  caipNetworkId: 'hedera:mainnet' as CaipNetworkId,
-  name: 'Hedera Mainnet',
-  nativeCurrency: {
-    symbol: 'ℏ',
-    name: 'HBAR',
-    decimals: 8,
+export const HederaChainDefinition = {
+  Native: {
+    Mainnet: defineChain({
+      id: 'mainnet',
+      chainNamespace: hederaNamespace,
+      caipNetworkId: 'hedera:mainnet' as CaipNetworkId,
+      name: 'Hedera Mainnet',
+      nativeCurrency: {
+        symbol: 'ℏ',
+        name: 'HBAR',
+        decimals: 8,
+      },
+      rpcUrls: {
+        default: {
+          http: ['https://mainnet.hashio.io/api'],
+        },
+      },
+      blockExplorers: {
+        default: {
+          name: 'Hashscan',
+          url: 'https://hashscan.io/mainnet',
+        },
+      },
+      testnet: false,
+    }) as CaipNetwork,
+    Testnet: defineChain({
+      id: 'testnet',
+      chainNamespace: hederaNamespace,
+      caipNetworkId: 'hedera:testnet' as CaipNetworkId,
+      name: 'Hedera Testnet',
+      nativeCurrency: {
+        symbol: 'ℏ',
+        name: 'HBAR',
+        decimals: 8,
+      },
+      rpcUrls: {
+        default: {
+          http: ['https://testnet.hashio.io/api'],
+        },
+      },
+      blockExplorers: {
+        default: {
+          name: 'Hashscan',
+          url: 'https://hashscan.io/testnet',
+        },
+      },
+      testnet: true,
+    }) as CaipNetwork,
   },
-  rpcUrls: {
-    default: {
-      http: ['https://mainnet.hashio.io/api'],
-    },
+  EVM: {
+    Mainnet: defineChain({
+      id: 295,
+      name: 'Hedera Mainnet EVM',
+      chainNamespace: 'eip155',
+      caipNetworkId: 'eip155:295',
+      nativeCurrency: {
+        symbol: 'ℏ',
+        name: 'HBAR',
+        decimals: 18,
+      },
+      rpcUrls: {
+        default: {
+          http: ['https://mainnet.hashio.io/api'],
+        },
+      },
+      blockExplorers: {
+        default: {
+          name: 'Hashscan',
+          url: 'https://hashscan.io/testnet',
+        },
+      },
+      testnet: false,
+    }) as CaipNetwork,
+    Testnet: defineChain({
+      id: 296,
+      name: 'Hedera Testnet EVM',
+      chainNamespace: 'eip155',
+      caipNetworkId: 'eip155:296',
+      nativeCurrency: {
+        symbol: 'ℏ',
+        name: 'HBAR',
+        decimals: 18,
+      },
+      rpcUrls: {
+        default: {
+          http: ['https://testnet.hashio.io/api'],
+        },
+      },
+      blockExplorers: {
+        default: {
+          name: 'Hashscan',
+          url: 'https://hashscan.io/testnet',
+        },
+      },
+      testnet: true,
+    }) as CaipNetwork,
   },
-  blockExplorers: {
-    default: {
-      name: 'Hashscan',
-      url: 'https://hashscan.io/mainnet',
-    },
-  },
-  testnet: false,
-})
-
-export const hederaTestnetNative = defineChain({
-  id: 'testnet',
-  chainNamespace: hederaNamespace,
-  caipNetworkId: 'hedera:testnet' as CaipNetworkId,
-  name: 'Hedera Testnet',
-  nativeCurrency: {
-    symbol: 'ℏ',
-    name: 'HBAR',
-    decimals: 8,
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://testnet.hashio.io/api'],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: 'Hashscan',
-      url: 'https://hashscan.io/testnet',
-    },
-  },
-  testnet: true,
-})
-
-export const hederaTestnetEvm = defineChain({
-  id: 296,
-  name: 'Hedera Testnet EVM',
-  chainNamespace: 'eip155',
-  caipNetworkId: 'eip155:296',
-  nativeCurrency: {
-    symbol: 'ℏ',
-    name: 'HBAR',
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://testnet.hashio.io/api'],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: 'Hashscan',
-      url: 'https://hashscan.io/testnet',
-    },
-  },
-  testnet: true,
-})
-
-export const hederaMainnetEvm = defineChain({
-  id: 295,
-  name: 'Hedera Mainnet EVM',
-  chainNamespace: 'eip155',
-  caipNetworkId: 'eip155:295',
-  nativeCurrency: {
-    symbol: 'ℏ',
-    name: 'HBAR',
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://mainnet.hashio.io/api'],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: 'Hashscan',
-      url: 'https://hashscan.io/testnet',
-    },
-  },
-  testnet: false,
-})
+}
 
 // Support Hedera Networks
 export function createNamespaces(caipNetworks: CaipNetwork[]): NamespaceConfig {
@@ -110,7 +113,7 @@ export function createNamespaces(caipNetworks: CaipNetwork[]): NamespaceConfig {
     const { id, chainNamespace, rpcUrls } = chain
     const rpcUrl = rpcUrls.default.http[0]
 
-    const methods =
+    const methods: string[] =
       chainNamespace == ('hedera' as ChainNamespace)
         ? Object.values(HederaJsonRpcMethod)
         : WcHelpersUtil.getMethodsByChainNamespace(chainNamespace)
@@ -119,7 +122,7 @@ export function createNamespaces(caipNetworks: CaipNetwork[]): NamespaceConfig {
       acc[chainNamespace] = {
         methods,
         events: ['accountsChanged', 'chainChanged'],
-        chains: [],
+        chains: [] as string[],
         rpcMap: {},
       } satisfies Namespace
     }
