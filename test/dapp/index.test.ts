@@ -63,7 +63,15 @@ describe('DAppConnector', () => {
   const mockTopic = '1234567890abcdef'
 
   beforeEach(async () => {
-    connector = new DAppConnector(dAppMetadata, LedgerId.TESTNET, projectId)
+    connector = new DAppConnector(
+      dAppMetadata,
+      LedgerId.TESTNET,
+      projectId,
+      undefined,
+      undefined,
+      undefined,
+      'off',
+    )
     mockSignClient = await SignClient.init({
       logger: 'error',
       relayUrl: 'wss://relay.walletconnect.com',
