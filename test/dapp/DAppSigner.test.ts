@@ -353,8 +353,6 @@ describe('DAppSigner', () => {
       // @ts-ignore - accessing private method for testing
       const result = await signer._tryExecuteTransactionRequest(mockRequest)
 
-      console.log('result is', result)
-
       expect(result.result).toBeDefined()
       expect(result.error).toBeUndefined()
     })
