@@ -33,9 +33,6 @@ describe(Wallet.name, () => {
   describe('getNodeAddresses', () => {
     it('should return array of nodes addresses', async () => {
       const wallet = await Wallet.create(projectId, walletMetadata)
-      wallet.logger.info = jest.fn() // Suppress info logs
-      wallet.logger.warn = jest.fn() // Suppress warn logs
-      wallet.logger.error = jest.fn() // Suppress info logs
 
       const hederaWallet = wallet!.getHederaWallet(
         HederaChainId.Testnet,

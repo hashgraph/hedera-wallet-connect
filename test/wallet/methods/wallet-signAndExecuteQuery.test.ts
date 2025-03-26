@@ -39,9 +39,6 @@ describe(Wallet.name, () => {
   describe('signAndExecuteQuery', () => {
     it('should sign and execute query, returning the query response', async () => {
       const wallet = await Wallet.create(projectId, walletMetadata)
-      wallet.logger.info = jest.fn() // Suppress info logs
-      wallet.logger.warn = jest.fn() // Suppress :arn logs
-      wallet.logger.error = jest.fn() // Suppress info logs
 
       const hederaWallet = wallet!.getHederaWallet(
         HederaChainId.Testnet,
