@@ -67,9 +67,9 @@ describe('DAppConnector', () => {
       dAppMetadata,
       LedgerId.TESTNET,
       projectId,
-      undefined,
-      undefined,
-      undefined,
+      Object.values(HederaJsonRpcMethod),
+      [],
+      [],
       'off',
     )
     mockSignClient = await SignClient.init({
