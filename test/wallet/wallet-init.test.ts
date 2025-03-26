@@ -33,6 +33,9 @@ describe(Wallet.name, () => {
 
     beforeAll(async () => {
       wallet = await Wallet.create(projectId, walletMetadata)
+      wallet.logger.info = jest.fn() // Suppress info logs
+      wallet.logger.warn = jest.fn() // Suppress warn logs
+      wallet.logger.error = jest.fn() // Suppress info logs
     })
 
     it('should create Wallet instance with a projectId and walletMetadata', async () => {

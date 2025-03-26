@@ -46,6 +46,9 @@ describe(Wallet.name, () => {
       'should decode message bytes and sign with: %p',
       async (_, privateKey, expected) => {
         const wallet = await Wallet.create(projectId, walletMetadata)
+        wallet.logger.info = jest.fn() // Suppress info logs
+        wallet.logger.warn = jest.fn() // Suppress warn logs
+        wallet.logger.error = jest.fn() // Suppress info logs
 
         const id = 1
         const topic = 'test-topic'
