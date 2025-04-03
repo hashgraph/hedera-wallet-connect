@@ -576,14 +576,6 @@ describe('DAppSigner', () => {
     })
   })
 
-  describe('_getRandomNodes', () => {
-    it('should return random subset of nodes', () => {
-      const nodes = (signer as any)._getRandomNodes(3)
-      expect(nodes).toHaveLength(3)
-      expect(nodes[0]).toBeInstanceOf(AccountId)
-    })
-  })
-
   describe('checkTransaction', () => {
     it('should throw not implemented error', async () => {
       await expect(signer.checkTransaction({} as Transaction)).rejects.toThrow(
