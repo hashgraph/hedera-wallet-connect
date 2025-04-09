@@ -30,44 +30,15 @@ import {
 import { ProposalTypes, SessionTypes } from '@walletconnect/types'
 import { proto } from '@hashgraph/proto'
 
-/**
- * Freezes a transaction if it is not already frozen. Transactions must
- * be frozen before they can be converted to bytes.
- *
- * @param transaction - Any instance of a class that extends `Transaction`
- */
-export function freezeTransaction<T extends Transaction>(transaction: T): void {
-  if (!transaction.isFrozen()) transaction.freeze()
-}
-
-/**
- * Sets default consensus nodes that a transaction will be submitted to. Node Account ID(s)
- * must be set before a transaction can be frozen. If they have already been set, this
- * function will not modify the transaction.
- * @param transaction - any instance of a class that extends `Transaction`
- *
- * @see {@link https://docs.hedera.com/hedera/networks/testnet/testnet-nodes | Full list of Testnet-nodes}
- * @see {@link https://docs.hedera.com/hedera/networks/mainnet/mainnet-nodes | Full list of Mainnet-nodes}
- */
-export function setDefaultNodeAccountIds<T extends Transaction>(transaction: T): void {
-  const isNodeAccountIdNotSet =
-    !transaction.nodeAccountIds || transaction.nodeAccountIds.length === 0
-
-  if (!transaction.isFrozen() && isNodeAccountIdNotSet)
-    transaction.setNodeAccountIds([new AccountId(3), new AccountId(4), new AccountId(5)])
-}
 
 /**
  * Converts `Transaction` to a Base64-string.
  *
- * First converts a transaction to bytes and then encodes it as a Base64-string. Will attempt
- * to set default Node Account ID and freeze the transaction before converting.
+ * Converts a transaction to bytes and then encodes it as a Base64-string. Allow uncompleted transaction (HIP-745).
  * @param transaction - Any instance of a class that extends `Transaction`
  * @returns Base64 encoded representation of the input `Transaction` object
  */
 export function transactionToBase64String<T extends Transaction>(transaction: T): string {
-  setDefaultNodeAccountIds(transaction)
-  freezeTransaction(transaction)
   const transactionBytes = transaction.toBytes()
   return Buffer.from(transactionBytes).toString('base64')
 }
@@ -98,13 +69,10 @@ export function base64StringToTransaction<T extends Transaction>(transactionByte
  * @param transaction - a base64 encoded string of proto.TransactionBody.encode().finish()
  * @returns `string`
  * */
-export function transactionToTransactionBody<T extends Transaction>(
-  transaction: T,
-  nodeAccountId: AccountId,
-) {
+export function transactionToTransactionBody<T extends Transaction>(transaction: T) {
   // This is a private function, though provides the capabilities to construct a proto.TransactionBody
   //@ts-ignore
-  return transaction._makeTransactionBody(nodeAccountId)
+  return transaction._makeTransactionBody(null)
 }
 
 export function transactionBodyToBase64String(transactionBody: proto.ITransactionBody): string {

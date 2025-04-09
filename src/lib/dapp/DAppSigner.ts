@@ -59,6 +59,7 @@ import {
   extensionOpen,
   Uint8ArrayToBase64String,
   Uint8ArrayToString,
+  getAccountInfo,
 } from '../shared'
 import { DefaultLogger, ILogger, LogLevel } from '../shared/logger'
 import { SessionNotFoundError } from './SessionNotFoundError'
@@ -67,6 +68,7 @@ const clients: Record<string, Client | null> = {}
 
 export class DAppSigner implements Signer {
   private logger: ILogger
+  private publicKey: Key | null
 
   constructor(
     private readonly accountId: AccountId,
@@ -77,6 +79,13 @@ export class DAppSigner implements Signer {
     logLevel: LogLevel = 'debug',
   ) {
     this.logger = new DefaultLogger(logLevel)
+    this.publicKey = null
+    // cache public key from mirror node
+    this.getAccountKeyAsync()
+      .then((key: Key | null) => (this.publicKey = key))
+      .catch((error: Error) =>
+        this.logger.error('Error when receiving a public key:', error.message),
+      )
   }
 
   /**
@@ -100,20 +109,6 @@ export class DAppSigner implements Signer {
 
   private get _signerAccountId() {
     return `${ledgerIdToCAIPChainId(this.ledgerId)}:${this.accountId.toString()}`
-  }
-
-  private _getRandomNodes(numberOfNodes: number) {
-    const allNodes = Object.values(this._getHederaClient().network).map((o) =>
-      typeof o === 'string' ? AccountId.fromString(o) : o,
-    )
-
-    // shuffle nodes
-    for (let i = allNodes.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[allNodes[i], allNodes[j]] = [allNodes[j], allNodes[i]]
-    }
-
-    return allNodes.slice(0, numberOfNodes)
   }
 
   request<T>(request: { method: string; params: any }): Promise<T> {
@@ -149,7 +144,16 @@ export class DAppSigner implements Signer {
   }
 
   getAccountKey(): Key {
-    throw new Error('Method not implemented.')
+    if (this.publicKey == null) {
+      throw new Error('No key was received from the mirror node')
+    }
+    return this.publicKey
+  }
+
+  async getAccountKeyAsync(): Promise<Key | null> {
+    const accountInfo = await getAccountInfo(this.ledgerId, this.accountId.toString())
+    if (!accountInfo?.key) return null
+    return PublicKey.fromString(accountInfo.key.key)
   }
 
   getLedgerId(): LedgerId {
@@ -225,7 +229,6 @@ export class DAppSigner implements Signer {
 
   async populateTransaction<T extends Transaction>(transaction: T): Promise<T> {
     return transaction
-      .setNodeAccountIds(this._getRandomNodes(10)) // allow retrying on up to 10 nodes
       .setTransactionId(TransactionId.generate(this.getAccountId()))
   }
 
@@ -238,11 +241,7 @@ export class DAppSigner implements Signer {
    * @returns transaction - `Transaction` object with signature
    */
   async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
-    let nodeAccountId: AccountId
-    if (!transaction.nodeAccountIds || transaction.nodeAccountIds.length === 0)
-      nodeAccountId = this._getRandomNodes(1)[0]
-    else nodeAccountId = transaction.nodeAccountIds[0]
-    const transactionBody = transactionToTransactionBody(transaction, nodeAccountId)
+    const transactionBody = transactionToTransactionBody(transaction)
     if (!transactionBody) throw new Error('Failed to serialize transaction body')
     const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
 
@@ -406,8 +405,6 @@ export class DAppSigner implements Signer {
     if (queryResult.result) {
       return queryResult.result
     }
-
-    // TODO: make this error more usable
 
     if (isReceiptQuery) {
       throw new Error(
