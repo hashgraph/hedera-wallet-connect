@@ -27,8 +27,6 @@ import {
 } from '@hashgraph/sdk'
 import {
   transactionToBase64String,
-  freezeTransaction,
-  setDefaultNodeAccountIds,
   base64StringToTransaction,
   base64StringToUint8Array,
   Uint8ArrayToBase64String,
@@ -46,51 +44,6 @@ import {
 } from '../src'
 import { prepareTestTransaction, testUserAccountId, useJsonFixture } from './_helpers'
 
-describe(freezeTransaction.name, () => {
-  it('should freeze an unfrozen transaction', () => {
-    const txn = prepareTestTransaction(new TopicCreateTransaction())
-
-    expect(txn.isFrozen()).toBe(false)
-
-    freezeTransaction(txn)
-
-    expect(txn.isFrozen()).toBe(true)
-  })
-
-  it('should have no effect on a frozen transaction', () => {
-    const txn = prepareTestTransaction(new TopicCreateTransaction())
-    txn.freeze()
-
-    expect(txn.isFrozen()).toBe(true)
-
-    freezeTransaction(txn)
-
-    expect(txn.isFrozen()).toBe(true)
-  })
-})
-
-describe(setDefaultNodeAccountIds.name, () => {
-  it('should set default node account ids if none are set', () => {
-    const txn = new TopicCreateTransaction()
-
-    expect(txn.nodeAccountIds).toBeNull()
-
-    setDefaultNodeAccountIds(txn)
-    const result = txn.nodeAccountIds?.map((id) => id.toString())
-
-    expect(result).toEqual(['0.0.3', '0.0.4', '0.0.5'])
-  })
-
-  it('should do nothing if node account ids are already set', () => {
-    const txn = new TopicCreateTransaction()
-    txn.setNodeAccountIds([new AccountId(4)])
-
-    setDefaultNodeAccountIds(txn)
-    const result = txn.nodeAccountIds?.map((id) => id.toString())
-
-    expect(result).toEqual(['0.0.4'])
-  })
-})
 
 describe(transactionToBase64String.name, () => {
   it('should convert a transaction to a base64 encoded string', () => {

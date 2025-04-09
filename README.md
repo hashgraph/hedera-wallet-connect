@@ -1,70 +1,129 @@
 # Overview
 
-This library is the result of Hedera community collaboration to bring Hedera into the
-WalletConnect ecosystem and vice versa.
+Hedera is a public distributed ledger that is EVM compatible. This library provides tools to
+integrate Hedera using Reown's AppKit and WalletKit.
 
-The goal of this repository is to be a reference for wallets and dApps integrating the
-WalletConnect <> Hedera JSON-RPC reference. Additionally, this library is meant to be included
-in projects supporting WalletConnect and Hedera, providing utility functions useful to
-validating requests and resposes in both the WalletConnect JSON-RPC context as well as the
-Hedera context.
+There are 2 distict paths to integrate Hedera. Hedera natively operates using a gRPC based API
+for write transactions and a REST API for read transactions. To acheive EVM compatibility, there
+is a software middlelayer called the Hedera JSON-RPC Relay that translates Ethereum JSON-RPC
+compatible API calls into the Hedera gRPC and REST API calls.
 
-A few useful resources include:
+When integrating, app developers can choose to use the Hedera native approach and send
+transactions to wallets over the WalletConnect relays using the JSON-RPC spec defined for Hedera
+native transactions or use Ethereum JSON-RPC calls sent to a Hedera JSON-RPC provider which then
+communicates with Hedera consensus and mirror nodes.
 
-- [HIP-820](https://hips.hedera.com/hip/hip-820)
-- [WalletConnect <> Hedera JSON-RPC spec](https://specs.walletconnect.com/2.0/blockchain-rpc/hedera-rpc).
+In short, JSON-RPC is a type of API stucture, such as SOAP, gRPC, REST, GraphQL, etc. In the
+Hedera ecosystem, there are distinct concepts regarding JSON-RPC APIs to consider:
 
-> WalletConnect brings the ecosystem together by enabling wallets and apps to securely connect
-> and interact.
->
-> -- <cite> https://walletconnect.com
+- Ethereum JSON-RPC spec defines how to interact with Ethereum compatible networks
+- Hedera JSON-RPC Relay implements the Ethereum JSON-RPC spec for Hedera
+- Wallets in the Hedera ecosystem support a separate JSON-RPC spec that defines how to send
+  transactions to wallets over the WalletConnect relays. This is a Hedera specific spec that is
+  not compatible with the Ethereum JSON-RPC spec, rather is used to interact with the Hedera
+  network without the JSON-RPC Relay.
 
-Hedera aims to be:
+For more information see:
 
-> The open source public ledger for everyone
->
-> -- <cite> https://hedera.com
+- [Ethereum JSON-RPC Specification ](https://ethereum.github.io/execution-apis/api-documentation/)
+- [Hedera EVM: JSON-RPC relay](https://docs.hedera.com/hedera/core-concepts/smart-contracts/json-rpc-relay)
+- [Hedera Native: JSON-RPC spec](https://docs.reown.com/advanced/multichain/rpc-reference/hedera-rpc).
+- [@hashgraph/sdk](https://www.npmjs.com/package/@hashgraph/sdk)
 
----
+## Getting started
 
-This package managed by the Hedera community and is intended to be a standard for ecosystem
-wallets and dApp providers utilizing [WalletConnect](https://walletconnect.com) as a their
-communications protocol. It utilizes the
-[`@hashgraph/sdk`](https://www.npmjs.com/package/@hashgraph/sdk) and provides functions to
-facilitate implementing the
-[WalletConnect <> Hedera JSON-RPC spec](https://specs.walletconnect.com/2.0/blockchain-rpc/hedera-rpc)
-which has been defined through the collaborative HIP process in
-[HIP-820](https://hips.hedera.com/hip/hip-820).
+1. Follow one of the quickstart instructions at
+   https://docs.reown.com/appkit/overview#quickstart
 
-This library facilitates the implementation of the **WalletConnect <> Hedera Spec** which allows
-wallets and dApps to natively integrate with Hedera. It provides additional, out of network
-functionality with the `hedera_signMessage` function.
+2. Add Hedera dependencies to your project:
 
-In short, it uses the Hedera javascript SDK to build transactions, serialize them, send to
-wallets for processing and return responses back to dApps.
+```sh
+npm install file:../../hedera-wallet-connect @hashgraph/sdk @walletconnect/universal-provider
+```
 
-_Please note, this is distinct from the
-[Implementation of Ethereum JSON-RPC APIs for Hedera](https://github.com/hashgraph/hedera-json-rpc-relay).
-At the time of this writing, "the Hedera JSON-RPC relay implementation is in beta, offers
-limited functionality today, and is only available to developers."_
+3. Update `createAppKit` with adapters and a universal provider for Hedera. Note the
+   HederaAdapter will need to come before the WagmiAdapter in the adapters array.
 
-_The relay and this library have different intentions and serve different purposes - namely
-native Hedera integration vs. Ethereum compatability layers to ease developer onboarding for
-those more familiar with the Ethereum ecosystem._
+```typescript
+import type UniversalProvider from '@walletconnect/universal-provider'
 
-# Documentation
+import {
+  HederaProvider,
+  HederaAdapter,
+  HederaChainDefinition,
+  hederaNamespace,
+} from '@hashgraph/hedera-wallet-connect'
 
-WalletConnect <> Hedera docs are fully hosted on [https://hwc-docs.hgraph.app/](https://hwc-docs.hgraph.app/)
+const metadata = {
+  name: 'AppKit w/ Hedera',
+  description: 'Hedera AppKit Example',
+  url: 'https://example.com', // origin must match your domain & subdomain
+  icons: ['https://avatars.githubusercontent.com/u/179229932']
+}
 
-- [Installation](/docs/docs/installation.md)
-- [dApp Guide](/docs/docs/dapp-guide.md)
-- [Wallet Guide](/docs/docs/wallet-guide.md)
-- [Signing Messages](/docs/docs/sign-messages.md)
-- [Demos](/docs/docs/demos.md)
+const hederaEVMAdapter = new HederaAdapter({
+  projectId,
+  networks: [
+    HederaChainDefinition.EVM.Mainnet,
+    HederaChainDefinition.EVM.Testnet,
+],
+  namespace: 'eip155',
+})
 
-# Accessing the docs locally
+const universalProvider = (await HederaProvider.init({
+  projectId: "YOUR_PROJECT_ID"
+  metadata,
+})) as unknown as UniversalProvider, // avoid type mismatch error due to missing of private properties in HederaProvider
 
-- `cd docs`
-- `npm install`
-- `npm run docs`
-- Navigating to `localhost:3000`
+// ...
+createAppKit({
+  adapters: [ hederaEVMAdapter ],
+  //@ts-expect-error expected type error
+  universalProvider,
+  projectId,
+  metadata,
+  networks: [
+    // EVM
+    HederaChainDefinition.EVM.Mainnet,
+    HederaChainDefinition.EVM.Testnet,
+  ],
+})
+
+// ...
+```
+
+4. Recommended: Add Hedera Native WalletConnect Adapter
+
+```typescript
+import { HederaChainDefinition, hederaNamespace } from '@hashgraph/hedera-wallet-connect'
+
+// ...
+
+const hederaNativeAdapter = new HederaAdapter({
+  projectId,
+  networks: [HederaChainDefinition.Native.Mainnet, HederaChainDefinition.Native.Testnet],
+  namespace: hederaNamespace, // 'hedera' as CaipNamespace,
+})
+
+// ...
+
+createAppKit({
+  adapters: [hederaEVMAdapter, hederaNativeAdapter],
+  projectId,
+  metadata,
+  networks: [
+    // EVM
+    HederaChainDefinition.EVM.Mainnet,
+    HederaChainDefinition.EVM.Testnet,
+    // Native
+    HederaChainDefinition.Native.Mainnet,
+    HederaChainDefinition.Native.Testnet,
+  ],
+})
+```
+
+## Examples and Demos
+
+- [Example App by Hgraph](https://github.com/hgraph-io/hedera-app)
+- [Example Wallet by Hgraph](https://github.com/hgraph-io/hedera-wallet)
+- [Hashgraph React Wallets by Buidler Labs](https://github.com/buidler-labs/hashgraph-react-wallets)

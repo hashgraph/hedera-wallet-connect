@@ -25,6 +25,7 @@ import {
   PublicKey,
   PrivateKey,
   Client,
+  Transaction,
 } from '@hashgraph/sdk'
 import {
   DAppConnector,
@@ -49,10 +50,11 @@ import {
   useJsonFixture,
   prepareTestTransaction,
   testUserAccountId,
+  testNodeAccountId,
 } from '../_helpers'
 import { SignClient } from '@walletconnect/sign-client'
 import { ISignClient, SessionTypes } from '@walletconnect/types'
-import { networkNamespaces } from '../../src/lib/shared'
+import { networkNamespaces, transactionBodyToBase64String, transactionToTransactionBody } from '../../src/lib/shared'
 import * as nacl from 'tweetnacl'
 import { proto } from '@hashgraph/proto'
 
@@ -129,7 +131,7 @@ describe('DAppConnector', () => {
       await connector.init({ logger: 'error' })
 
       expect(connector.walletConnectClient).toBeInstanceOf(SignClient)
-      expect(connector.walletConnectClient?.metadata).toBe(dAppMetadata)
+      expect(connector.walletConnectClient?.metadata).toStrictEqual(dAppMetadata)
       expect(connector.walletConnectClient?.core.projectId).toBe(projectId)
       expect(connector.walletConnectClient?.core.relayUrl).toBe('wss://relay.walletconnect.com')
     })
@@ -439,7 +441,7 @@ describe('DAppConnector', () => {
     let mockSigner: DAppSigner
     const privateKey = PrivateKey.generateED25519()
     const publicKey = privateKey.publicKey
-
+    
     beforeEach(() => {
       // Create a real signer that can actually sign transactions
       mockSigner = new DAppSigner(
@@ -484,7 +486,10 @@ describe('DAppConnector', () => {
 
     it('should verify signatures using real signing', async () => {
       // Create a test transaction
-      const transaction = prepareTestTransaction(new TopicCreateTransaction(), { freeze: true })
+      const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
+        freeze: false,
+        setNodeAccountIds: false
+      })
 
       // Sign with connector
       const connectorParams: SignTransactionParams = {
@@ -498,9 +503,10 @@ describe('DAppConnector', () => {
       const bytesToVerify = connectorSigned._signedTransactions.get(0)!.bodyBytes!
 
       // Sign directly with private key for comparison
-      const directSigned = await transaction.sign(privateKey)
-      const directSigMap = directSigned._signedTransactions.get(0)!.sigMap
-      const directSignature = extractFirstSignature(directSigMap)
+      const transactionBody = transactionToTransactionBody(transaction)
+      const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
+      const bodyBytes = base64StringToUint8Array(transactionBodyBase64)
+      const directSignature = privateKey.sign(bodyBytes)
 
       // Verify both signatures with real verification
       const publicKeyBytes = publicKey.toBytes()
