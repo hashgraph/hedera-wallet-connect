@@ -228,8 +228,7 @@ export class DAppSigner implements Signer {
   }
 
   async populateTransaction<T extends Transaction>(transaction: T): Promise<T> {
-    return transaction
-      .setTransactionId(TransactionId.generate(this.getAccountId()))
+    return transaction.setTransactionId(TransactionId.generate(this.getAccountId()))
   }
 
   /**

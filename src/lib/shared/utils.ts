@@ -30,7 +30,6 @@ import {
 import { ProposalTypes, SessionTypes } from '@walletconnect/types'
 import { proto } from '@hashgraph/proto'
 
-
 /**
  * Converts `Transaction` to a Base64-string.
  *
