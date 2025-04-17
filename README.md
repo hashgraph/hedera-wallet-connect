@@ -232,5 +232,5 @@ While minimal, the main breaking changes are:
 - remove setting node id's within this library for transactions
 
   - initially, a transaction created by the Hedera javascript SDK needed to have a node id or
-    set of node id's set to be able to serialize into bytes to be passed sent over a network and
+    set of node ids set to be able to serialize into bytes to be passed sent over a network and
     deserialized by the SDK.
