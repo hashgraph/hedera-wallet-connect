@@ -59,7 +59,7 @@ network without requiring interaction with a [Wallet](#hedera-wallets) when inte
 for the first time. We also recommend reviewing the
 [Reown docs](https://docs.reown.com/overview).
 
-## Using this library and WalletConnect libraries directly
+## Using this library and underlying WalletConnect libraries directly
 
 1. Add Hedera dependencies to your project:
 
