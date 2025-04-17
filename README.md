@@ -233,4 +233,4 @@ While minimal, the main breaking changes are:
 
   - initially, a transaction created by the Hedera Javascript SDK needed to have one or more
     consensus node ids set to be able to serialize into bytes, sent over a network, and
-    deserialized by the SDK.
+    deserialized by the SDK
