@@ -1,7 +1,5 @@
 # Background
 
-## Overview
-
 This library provides tools and recommendations on how to integrate Hedera into an application
 that requires communication with a wallet that supports Hedera. There are 2 different paths to
 integrate Hedera in this context. Both approaches use the
