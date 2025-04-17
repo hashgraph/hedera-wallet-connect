@@ -1,36 +1,117 @@
-# Overview
+# Background
 
-Hedera is a public distributed ledger that is EVM compatible. This library provides tools to
-integrate Hedera using Reown's AppKit and WalletKit.
+## Overview
 
-There are 2 distict paths to integrate Hedera. Hedera natively operates using a gRPC based API
-for write transactions and a REST API for read transactions. To acheive EVM compatibility, there
-is a software middlelayer called the Hedera JSON-RPC Relay that translates Ethereum JSON-RPC
-compatible API calls into the Hedera gRPC and REST API calls.
+This library provides tools and recommendations on how to integrate Hedera into an application
+that requires communication with a wallet that supports Hedera. There are 2 different paths to
+integrate Hedera in this context. Both approaches use the
+[WalletConnect](https://walletconnect.network/) network to send messages from apps to wallets.
+
+## Hedera APIs
+
+Hedera natively operates using a gRPC API for write transactions and by default, a REST API for
+read transactions. Hedera implements EVM compatible smart contracts using
+[Hyperledger Besu](https://besu.hyperledger.org/) under the hood.
+
+Ethereum developers and toolsets often expect to interact with Ethereum compatible chains using
+the [Ethereum JSON-RPC](https://ethereum.org/en/developers/docs/apis/json-rpc/). To acheive
+compatibility with this API,
+[Hedera JSON-RPC Providers](https://docs.hedera.com/hedera/core-concepts/smart-contracts/json-rpc-relay#community-hosted-json-rpc-relays)
+operate a software middlelayer that translates Ethereum JSON-RPC compatible API calls into
+Hedera gRPC and REST API calls.
+
+## Ethereum JSON-RPC vs. Hedera JSON-RPC vs. Hedera JSON-RPC Relay
 
 When integrating, app developers can choose to use the Hedera native approach and send
 transactions to wallets over the WalletConnect relays using the JSON-RPC spec defined for Hedera
-native transactions or use Ethereum JSON-RPC calls sent to a Hedera JSON-RPC provider which then
-communicates with Hedera consensus and mirror nodes.
+native transactions or use Ethereum JSON-RPC calls sent to a Hedera JSON-RPC Relay provider
+which then communicates with Hedera consensus and mirror nodes.
 
-In short, JSON-RPC is a type of API stucture, such as SOAP, gRPC, REST, GraphQL, etc. In the
-Hedera ecosystem, there are distinct concepts regarding JSON-RPC APIs to consider:
+On a high level, JSON-RPC is a type of API stucture, such as SOAP, gRPC, REST, GraphQL, etc. In
+the Hedera ecosystem, there are distinct concepts regarding JSON-RPC APIs to consider:
 
 - Ethereum JSON-RPC spec defines how to interact with Ethereum compatible networks
 - Hedera JSON-RPC Relay implements the Ethereum JSON-RPC spec for Hedera
-- Wallets in the Hedera ecosystem support a separate JSON-RPC spec that defines how to send
-  transactions to wallets over the WalletConnect relays. This is a Hedera specific spec that is
-  not compatible with the Ethereum JSON-RPC spec, rather is used to interact with the Hedera
-  network without the JSON-RPC Relay.
+- Wallets in the Hedera ecosystem also support a separate specification that defines how to send
+  transactions and messages to wallets over the WalletConnect network without relying on a
+  Hedera JSON-RPC Relay provider. This is a Hedera specific specification defined for utilizing
+  the WalletConnect network distict from other JSON-RPC specs such as the one defined by the
+  Ethereum network.
 
 For more information see:
 
 - [Ethereum JSON-RPC Specification ](https://ethereum.github.io/execution-apis/api-documentation/)
-- [Hedera EVM: JSON-RPC relay](https://docs.hedera.com/hedera/core-concepts/smart-contracts/json-rpc-relay)
-- [Hedera Native: JSON-RPC spec](https://docs.reown.com/advanced/multichain/rpc-reference/hedera-rpc)
+- [Hedera JSON-RPC relay](https://docs.hedera.com/hedera/core-concepts/smart-contracts/json-rpc-relay)
+- [Hedera Native JSON-RPC spec for WalletConnect](https://docs.reown.com/advanced/multichain/rpc-reference/hedera-rpc)
 - [@hashgraph/sdk](https://www.npmjs.com/package/@hashgraph/sdk)
 
-## Getting started
+# Getting started
+
+In addition to choosing between the Hedera native JSON-RPC spec and the Ethereum JSON-RPC spec,
+when building with javascript/typescript, there are 2 supported options to utilize the
+WalletConnect network to send information from apps to wallets and back.
+
+This README assumes a basic understanding of how to create transactions on Hedera and focusses
+on how to send a payload to a wallet for processing and presentation to an end user that is a
+Hedera account holder. We recommend reviewing the [Hedera Docs](https://docs.hedera.com/) and
+first submitting transactions directly to the Hedera network without requiring interaction with
+a [Wallet](#hedera-wallets) when integrating Hedera for the first time.
+
+## Using this library and WalletConnect libraries directly
+
+1. Add Hedera dependencies to your project:
+
+```sh
+npm install @hashgraph/hedera-wallet-connect@2.0.0-canary.811af2f.0 @hashgraph/sdk @walletconnect/modal
+```
+
+2. Initialize dApp Connector
+
+```typescript
+import {
+  HederaSessionEvent,
+  HederaJsonRpcMethod,
+  DAppConnector,
+  HederaChainId,
+} from '@hashgraph/hedera-wallet-connect'
+import { LedgerId } from '@hashgraph/sdk'
+
+const metadata = {
+  name: 'Hedera Integration using Hedera DAppConnector - v1 approach',
+  description: 'Hedera dAppConnector Example',
+  url: 'https://example.com', // origin must match your domain & subdomain
+  icons: ['https://avatars.githubusercontent.com/u/31002956'],
+}
+
+const dAppConnector = new DAppConnector(
+  metadata,
+  LedgerId.Mainnet,
+  projectId,
+  Object.values(HederaJsonRpcMethod),
+  [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
+  [HederaChainId.Mainnet, HederaChainId.Testnet],
+)
+
+await dAppConnector.init({ logger: 'error' })
+```
+
+3. Connect to a wallet
+
+```typescript
+await dAppConnector.openModal()
+```
+
+4. Handle sessions, events, and payloads.
+
+- See: [DAppConnector](./src/lib/dapp/index.ts)
+
+### Examples, demos, and tools
+
+- [Hashgraph React Wallets by Buidler Labs](https://github.com/buidler-labs/hashgraph-react-wallets)
+- [Hashgraph Online's WalletConnect SDK](https://github.com/hashgraph-online/hashinal-wc)
+- <em>[Add an example, demo, or tool here](https://github.com/hashgraph/hedera-wallet-connect/pulls)</em>
+
+## Using Reown's AppKit
 
 1. Follow one of the quickstart instructions at
    https://docs.reown.com/appkit/overview#quickstart
@@ -122,8 +203,34 @@ createAppKit({
 })
 ```
 
-## Examples and Demos
+### Examples, demos, and tools
 
-- [Example App by Hgraph](https://github.com/hgraph-io/hedera-app)
-- [Example Wallet by Hgraph](https://github.com/hgraph-io/hedera-wallet)
-- [Hashgraph React Wallets by Buidler Labs](https://github.com/buidler-labs/hashgraph-react-wallets)
+- [Hedera App Example by Hgraph](https://github.com/hgraph-io/hedera-app)
+- [Hedera Wallet Example by Hgraph](https://github.com/hgraph-io/hedera-wallet)
+- <em>[Add an example, demo, or tool here](https://github.com/hashgraph/hedera-wallet-connect/pulls)</em>
+
+# Hedera Wallets
+
+- [Hashpack](https://hashpack.app/)
+- [Kabila](https://wallet.kabila.app/)
+- [Blade](https://bladewallet.io/)
+- [Dropp](https://dropp.cc/)
+
+# Upgrading from v1 to v2
+
+Upgrading from v1 to v2 should be fairly straightforward. We have maintained compatibility with
+the v1 structure, while deprecating a few methods marked as deprecated. The v1 library did not
+explicitly offer support for Ethereum JSON-RPC function calls, so the only breaking changes
+refer to how to send transactions to wallets using the `hedera:(mainnet|testnet)` namespace.
+While minimal, the main breaking changes are:
+
+- remove WalletConnect v1 modals
+
+  - these are very old, though in the spirit of semver, we kept the dependency until this
+    library's v2 release
+
+- remove setting node id's within this library for transactions
+
+  - initially, a transaction created by the Hedera javascript SDK needed to have a node id or
+    set of node id's set to be able to serialize into bytes to be passed sent over a network and
+    deserialized by the SDK.
