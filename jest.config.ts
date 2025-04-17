@@ -30,7 +30,7 @@ const config: Config = {
   transform: {
     '^.+\\.(t|j)sx?$': '@swc/jest',
   },
-  transformIgnorePatterns: ['node_modules/(?!@walletconnect)'],
+  transformIgnorePatterns: ['node_modules/(?!@walletconnect|@reown|lit|@lit)'],
   testEnvironment: 'node',
   coverageDirectory: 'coverage',
   collectCoverageFrom: [

@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - introduce-v2
 
 jobs:
   publish-canary:
