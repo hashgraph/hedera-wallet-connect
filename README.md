@@ -22,9 +22,9 @@ Hedera gRPC and REST API calls.
 ## Ethereum JSON-RPC vs. Hedera JSON-RPC vs. Hedera JSON-RPC Relay
 
 When integrating, app developers can choose to use the Hedera native approach and send
-transactions to wallets over the WalletConnect network using the JSON-RPC spec defined for Hedera
-native transactions or use Ethereum JSON-RPC calls sent to a Hedera JSON-RPC Relay provider
-which then communicates with Hedera consensus and mirror nodes.
+transactions to wallets over the WalletConnect network using the JSON-RPC spec defined for
+Hedera native transactions or use Ethereum JSON-RPC calls sent to a Hedera JSON-RPC Relay
+provider which then communicates with Hedera consensus and mirror nodes.
 
 On a high level, JSON-RPC is a type of API stucture, such as SOAP, gRPC, REST, GraphQL, etc. In
 the Hedera ecosystem, there are distinct concepts regarding JSON-RPC APIs to consider:
@@ -50,14 +50,12 @@ In addition to choosing between the Hedera native JSON-RPC spec and the Ethereum
 when building with javascript/typescript, there are 2 supported options to utilize the
 WalletConnect network to send information from apps to wallets and back.
 
-This README assumes a basic understanding of how to create transactions on Hedera as well as
-handling sessions, payloads, and other transport layer details on the WalletConnect network and
-focusses on how to send a payload to a wallet for processing and presentation to an end user
-that is a Hedera account holder. We recommend reviewing the
-[Hedera Docs](https://docs.hedera.com/) and first submitting transactions directly to the Hedera
-network without requiring interaction with a [Wallet](#hedera-wallets) when integrating Hedera
-for the first time. We also recommend reviewing the
-[Reown docs](https://docs.reown.com/overview).
+This README assumes an understanding of Hedera as well as the WalletConnect network and focusses
+on how to send a payload to a wallet for processing and presentation to an end user that is a
+Hedera account holder. We recommend reviewing the [Hedera Docs](https://docs.hedera.com/) and
+first submitting transactions directly to the Hedera network without requiring interaction with
+a [Wallet](#hedera-wallets) when integrating Hedera for the first time. We also recommend
+reviewing the [Reown docs](https://docs.reown.com/overview).
 
 ## Using this library and underlying WalletConnect libraries directly
 
