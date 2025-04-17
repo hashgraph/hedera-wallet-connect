@@ -3,7 +3,8 @@
 This library provides tools and recommendations on how to integrate Hedera into an application
 that requires communication with a wallet that supports Hedera. There are 2 different paths to
 integrate Hedera in this context. Both approaches use the
-[WalletConnect](https://walletconnect.network/) network to send messages from apps to wallets.
+[WalletConnect](https://walletconnect.network/) network to send messages from apps to wallets
+and back.
 
 ## Hedera APIs
 
@@ -49,11 +50,14 @@ In addition to choosing between the Hedera native JSON-RPC spec and the Ethereum
 when building with javascript/typescript, there are 2 supported options to utilize the
 WalletConnect network to send information from apps to wallets and back.
 
-This README assumes a basic understanding of how to create transactions on Hedera and focusses
-on how to send a payload to a wallet for processing and presentation to an end user that is a
-Hedera account holder. We recommend reviewing the [Hedera Docs](https://docs.hedera.com/) and
-first submitting transactions directly to the Hedera network without requiring interaction with
-a [Wallet](#hedera-wallets) when integrating Hedera for the first time.
+This README assumes a basic understanding of how to create transactions on Hedera as well as
+handling sessions, payloads, and other transport layer details on the WalletConnect network and
+focusses on how to send a payload to a wallet for processing and presentation to an end user
+that is a Hedera account holder. We recommend reviewing the
+[Hedera Docs](https://docs.hedera.com/) and first submitting transactions directly to the Hedera
+network without requiring interaction with a [Wallet](#hedera-wallets) when integrating Hedera
+for the first time. We also recommend reviewing the
+[Reown docs](https://docs.reown.com/overview).
 
 ## Using this library and WalletConnect libraries directly
 
