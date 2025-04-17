@@ -42,7 +42,7 @@ For more information see:
 - [Ethereum JSON-RPC Specification ](https://ethereum.github.io/execution-apis/api-documentation/)
 - [Hedera JSON-RPC relay](https://docs.hedera.com/hedera/core-concepts/smart-contracts/json-rpc-relay)
 - [Hedera Native JSON-RPC spec for WalletConnect](https://docs.reown.com/advanced/multichain/rpc-reference/hedera-rpc)
-- [@hashgraph/sdk](https://www.npmjs.com/package/@hashgraph/sdk)
+- [Hedera Javascript SDK](https://www.npmjs.com/package/@hashgraph/sdk)
 - [Reown Docs](https://docs.reown.com/overview)
 - [WalletConnect Network](https://walletconnect.network/)
 
