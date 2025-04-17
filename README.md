@@ -22,7 +22,7 @@ Hedera gRPC and REST API calls.
 ## Ethereum JSON-RPC vs. Hedera JSON-RPC vs. Hedera JSON-RPC Relay
 
 When integrating, app developers can choose to use the Hedera native approach and send
-transactions to wallets over the WalletConnect relays using the JSON-RPC spec defined for Hedera
+transactions to wallets over the WalletConnect network using the JSON-RPC spec defined for Hedera
 native transactions or use Ethereum JSON-RPC calls sent to a Hedera JSON-RPC Relay provider
 which then communicates with Hedera consensus and mirror nodes.
 
