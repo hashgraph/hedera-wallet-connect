@@ -42,6 +42,7 @@ import {
   base64StringToUint8Array,
   Uint8ArrayToBase64String,
   extractFirstSignature,
+  SignTransactionsParams,
 } from '../../src'
 import {
   projectId,
@@ -49,6 +50,7 @@ import {
   useJsonFixture,
   prepareTestTransaction,
   testUserAccountId,
+  testPrivateKeyED25519,
 } from '../_helpers'
 import { SignClient } from '@walletconnect/sign-client'
 import { ISignClient, SessionTypes } from '@walletconnect/types'
@@ -433,6 +435,104 @@ describe('DAppConnector', () => {
         )
       })
     })
+    //
+    describe('signTransactions', () => {
+      const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
+        freeze: false,
+        setNodeAccountIds: true,
+      })
+      const params: SignTransactionsParams = {
+        signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+        transaction: transaction,
+      }
+
+      it('should throw an error if there is no signer', async () => {
+        connector.signers = []
+        await expect(connector.signTransactions(params)).rejects.toThrow(
+          `No signer found for account ${testUserAccountId.toString()}`,
+        )
+      })
+
+      it('should throw an error if no transaction is provided', async () => {
+        // @ts-ignore
+        const invalidParams = {
+          signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+          transaction: undefined,
+        } as SignTransactionsParams
+
+        await expect(connector.signTransactions(invalidParams)).rejects.toThrow(
+          'Transaction sent in incorrect format. Ensure transaction is a transaction object.',
+        )
+      })
+
+      it('should throw an error if signerAccountId is malformed', async () => {
+        const invalidParams = {
+          signerAccountId: undefined,
+          transaction: transaction,
+        }
+
+        await expect(connector.signTransactions(invalidParams)).rejects.toThrow(
+          'No signer found for account undefined',
+        )
+      })
+
+      it('should invoke signer.signTransactions with the transaction', async () => {
+        let mockPublicKey = PrivateKey.generate().publicKey
+        let mockTransaction = prepareTestTransaction(new TopicCreateTransaction(), {
+          freeze: false,
+          setNodeAccountIds: true,
+        })
+        const mockSigner = {
+          getAccountId: () => testUserAccountId,
+          signTransactions: jest.fn().mockResolvedValue({
+            publicKey: mockPublicKey,
+            transaction: mockTransaction,
+          }),
+        }
+        connector.signers = [mockSigner as any]
+
+        await connector.signTransactions(params)
+        expect(mockSigner.signTransactions).toHaveBeenCalledWith(transaction)
+      })
+
+      it('should return a signed transaction with valid signatures', async () => {
+        let mockTransaction = prepareTestTransaction(new TopicCreateTransaction(), {
+          freeze: false,
+          setNodeAccountIds: true,
+        })
+        const testTransaction = prepareTestTransaction(new TopicCreateTransaction(), {
+          freeze: false,
+          setNodeAccountIds: true,
+        })
+        mockTransaction.sign(PrivateKey.fromStringED25519(testPrivateKeyED25519))
+        const mockSignedTransaction = {
+          transaction: mockTransaction,
+          publicKey: PrivateKey.fromStringED25519(testPrivateKeyED25519).publicKey,
+        }
+        const mockSigner = {
+          getAccountId: () => testUserAccountId,
+          signTransactions: jest.fn().mockResolvedValue(mockSignedTransaction),
+        }
+        connector.signers = [mockSigner as any]
+
+        const result = await connector.signTransactions(params)
+        const signedTransaction = result.result.signedTransaction
+        expect(signedTransaction).toBeDefined()
+        expect(signedTransaction.getSignatures()).toEqual(mockTransaction.getSignatures())
+      })
+
+      it('should throw an error if transaction body is not a Transaction', async () => {
+        const invalidParams = {
+          signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
+          transaction: 123, // number instead of string or Transaction
+        } as unknown as SignTransactionsParams
+
+        await expect(connector.signTransactions(invalidParams)).rejects.toThrow(
+          'Transaction sent in incorrect format. Ensure transaction is a transaction object.',
+        )
+      })
+    })
+    //
   })
 
   describe('signature verification', () => {

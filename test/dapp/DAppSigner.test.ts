@@ -511,6 +511,52 @@ describe('DAppSigner', () => {
     })
   })
 
+  describe('signTransactions', () => {
+    let signerRequestSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      signerRequestSpy = jest.spyOn(signer, 'request')
+    })
+
+    afterEach(() => {
+      signerRequestSpy.mockRestore()
+    })
+
+    it('should sign a transaction', async () => {
+      const mockPrivateKey = PrivateKey.generate()
+      const mockPublicKey = mockPrivateKey.publicKey
+
+      let mockTransaction = prepareTestTransaction(new AccountCreateTransaction(), {
+        freeze: true,
+        setNodeAccountIds: true,
+      })
+      const transaction = prepareTestTransaction(new AccountCreateTransaction(), {
+        freeze: true,
+        setNodeAccountIds: true,
+      })
+
+      mockTransaction = await mockTransaction.signWithSigner(signer)
+
+      signerRequestSpy.mockImplementation(() =>
+        Promise.resolve({
+          transaction: mockTransaction,
+          publicKey: mockPublicKey,
+        }),
+      )
+
+      const signedTx = await signer.signTransactions(transaction)
+
+      expect(signedTx).toBeDefined()
+      expect(signerRequestSpy).toHaveBeenCalledWith({
+        method: HederaJsonRpcMethod.SignTransactions,
+        params: expect.objectContaining({
+          signerAccountId: 'hedera:testnet:' + signer.getAccountId().toString(),
+          transaction: expect.any(Transaction),
+        }),
+      })
+    })
+  })
+
   describe('getAccountKey()', () => {
     let signerRequestSpy: jest.SpyInstance
 
@@ -820,6 +866,21 @@ describe('DAppSigner', () => {
       } as any
 
       await expect(signer.signTransaction(mockTx)).rejects.toThrow(
+        'Failed to serialize transaction body',
+      )
+    })
+  })
+
+  describe('signTransactions', () => {
+    it.skip('should throw error when transaction body serialization fails', async () => {
+      const mockTx = {
+        nodeAccountIds: [AccountId.fromString('0.0.3')],
+        _signedTransactions: {
+          current: {}, // This will cause bodyBytes to be undefined
+        },
+      } as any
+
+      await expect(signer.signTransactions(mockTx)).rejects.toThrow(
         'Failed to serialize transaction body',
       )
     })

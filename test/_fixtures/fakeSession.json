@@ -13,7 +13,8 @@
         "hedera_signMessage",
         "hedera_signAndExecuteQuery",
         "hedera_signAndExecuteTransaction",
-        "hedera_signTransaction"
+        "hedera_signTransaction",
+        "hedera_signTransactions"
       ],
       "events": ["accountsChanged", "chainChanged"],
       "accounts": ["hedera:testnet:0.0.5841839"]
@@ -30,7 +31,8 @@
         "hedera_signMessage",
         "hedera_signAndExecuteQuery",
         "hedera_signAndExecuteTransaction",
-        "hedera_signTransaction"
+        "hedera_signTransaction",
+        "hedera_signTransactions"
       ],
       "events": ["chainChanged", "accountsChanged"]
     }
