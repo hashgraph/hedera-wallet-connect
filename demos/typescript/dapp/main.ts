@@ -295,7 +295,7 @@ document.getElementById('hedera_signTransaction')!.onsubmit = (e: SubmitEvent) =
 async function hedera_signTransactions(_: Event) {
   const transaction = new TransferTransaction()
     .setTransactionId(TransactionId.generate(getState('sign-from')))
-    //TODO: Set node account ids
+    .setNodeAccountIds([AccountId.fromString('0.0.3'), AccountId.fromString('0.0.4')]) // for testing purposes
     .setMaxTransactionFee(new Hbar(1))
     .addHbarTransfer(getState('sign-from'), new Hbar(-getState('sign-amount')))
     .addHbarTransfer(getState('sign-to'), new Hbar(+getState('sign-amount')))
@@ -315,6 +315,20 @@ async function hedera_signTransactions(_: Event) {
     null,
     2,
   )
+  // figure out the public key
+  let _publicKey: PublicKey
+  try {
+    _publicKey = PublicKey.fromBytesECDSA(base64StringToUint8Array(publicKey))
+  } catch {
+    try {
+      _publicKey = PublicKey.fromBytesED25519(base64StringToUint8Array(publicKey))
+    } catch {
+      throw `Invalid public key: ${publicKey}`
+    }
+  }
+  // add the newly acquired signatures to the transaction we created
+  transaction.addSignature(_publicKey, signedTransaction.getSignatures())
+
   console.log({ params, signedTransaction, publicKey })
   console.log(base64StringToTransaction(signedTransaction).getSignatures().keys())
 }

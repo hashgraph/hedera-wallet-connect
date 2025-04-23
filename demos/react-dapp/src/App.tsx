@@ -339,15 +339,29 @@ const App: React.FC = () => {
     const accountId = selectedSigner!.getAccountId()
     const hbarAmount = new Hbar(Number(amount))
     const transaction = new TransferTransaction()
-      //TODO: Set node account ids
+      .setNodeAccountIds([AccountId.fromString("0.0.3"), AccountId.fromString("0.0.4")]) // for testing/demo purposes,
       .setTransactionId(TransactionId.generate(accountId!))
       .addHbarTransfer(accountId.toString()!, hbarAmount.negated())
       .addHbarTransfer(receiver, hbarAmount)
 
-    const { signedTransaction } = await selectedSigner!.signTransactions(transaction)
+    const { signedTransaction, publicKey } = await selectedSigner!.signTransactions(transaction)
+
+    // figure out the public key
+    let _publicKey: PublicKey
+    try {
+      _publicKey = PublicKey.fromBytesECDSA(base64StringToUint8Array(publicKey))
+    } catch {
+      try {
+        _publicKey = PublicKey.fromBytesED25519(base64StringToUint8Array(publicKey))
+      } catch {
+        throw `Invalid public key: ${publicKey}`
+      }
+    }
+    // add the newly acquired signatures to the transaction we created
+    transaction.addSignature(_publicKey, signedTransaction.getSignatures())
 
     console.log('Signed transaction: ', signedTransaction)
-    return { transaction: signedTransaction }
+    return { transaction: transaction, publicKey: publicKey }
   }
 
   // Test signature verification with different HWC versions
