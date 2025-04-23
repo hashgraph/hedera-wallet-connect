@@ -709,14 +709,14 @@ export class DAppConnector {
    *
    * @param {SignTransactionsParams} params - The parameters of type {@link SignTransactionsParams | `SignTransactionsParams`} required for `Transaction` signing.
    * @param {string} params.signerAccountId - a signer Hedera Account identifier in {@link https://hips.hedera.com/hip/hip-30 | HIP-30} (`<nework>:<shard>.<realm>.<num>`) form.
-   * @param {Transaction | string} params.transactionBody - a built Transaction object, or a base64 string of a transaction body (deprecated).
+   * @param {Transaction } params.transaction - a built Transaction object
    * @returns Promise\<{@link SignTransactionsResult}\>
    * @example
    * ```ts
    *
    * const params = {
    *  signerAccountId: '0.0.12345',
-   *  transactionList
+   *  transaction
    * }
    *
    * const result = await dAppConnector.signTransactions(params)

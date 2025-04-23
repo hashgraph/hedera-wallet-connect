@@ -43,7 +43,6 @@ import {
   SignAndExecuteTransactionResponse,
   SignTransactionResponse,
   SignTransactionsResponse,
-  transactionToBase64String,
 } from '../shared'
 import { proto } from '@hashgraph/proto'
 import Provider from './provider'
@@ -150,7 +149,7 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
 
     throw getHederaError<string>(
       'INVALID_PARAMS',
-      `Invalid paramameter value for ${name}, expected ${expectedType} but got ${typeof value}`,
+      `Invalid parameter value for ${name}, expected ${expectedType} but got ${typeof value}`,
     )
   }
 
@@ -231,9 +230,9 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
         }
         case HederaJsonRpcMethod.SignTransactions: {
           // 7
-          const { signerAccountId: _accountId, transaction } = params
+          const { signerAccountId: _accountId, transaction: transaction } = params
           this.validateParam('signerAccountId', _accountId, 'string')
-          this.validateParam('transaction', transaction, 'string')
+          this.validateParam('transaction', transaction, 'Transaction')
           signerAccountId = AccountId.fromString(_accountId.replace(chainId + ':', ''))
 
           // Convert transactionList(proto) to Transaction(sdk)
@@ -457,8 +456,8 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
         jsonrpc: '2.0',
         id,
         result: {
-          signedTransaction: transactionToBase64String(signedTransaction),
-          publicKey: signer.getAccountKey().toString(),
+          signedTransaction: signedTransaction,
+          publicKey: signer.publicKey,
         },
       },
     }

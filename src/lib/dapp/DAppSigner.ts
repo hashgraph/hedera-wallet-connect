@@ -60,7 +60,6 @@ import {
   Uint8ArrayToBase64String,
   Uint8ArrayToString,
   SignTransactionsResult,
-  base64StringToTransaction,
 } from '../shared'
 import { DefaultLogger, ILogger, LogLevel } from '../shared/logger'
 import { SessionNotFoundError } from './SessionNotFoundError'
@@ -269,56 +268,26 @@ export class DAppSigner implements Signer {
    * @returns transaction - `Transaction` object with signature(s)
    */
   async signTransactions<T extends Transaction>(transaction: T): Promise<T> {
-    let transactionBase64 = transactionToBase64String(transaction)
+    // let transactionBase64 = transactionToBase64String(transaction)
     const { signedTransaction, publicKey } = await this.request<
       SignTransactionsResult['result']
     >({
       method: HederaJsonRpcMethod.SignTransactions,
       params: {
         signerAccountId: this._signerAccountId,
-        transaction: transactionBase64,
+        transaction: transaction,
       },
     })
 
-    let _publicKey
-    try {
-      _publicKey = PublicKey.fromStringED25519(publicKey)
-    } catch (e) {
-      _publicKey = PublicKey.fromStringECDSA(publicKey)
-    }
-    let signaturesAsMap = base64StringToTransaction(signedTransaction).getSignatures()
-    transaction.addSignature(_publicKey, signaturesAsMap)
-
-    // // signatureMapMap is a node account id indexed list of signatureMap(proto)
-    // for (const [key, value] of Object.entries(signatureMapMap)) {
-    //   console.log(key, value);
-    //   const protoSignatureMap = base64StringToSignatureMap(value);
-    //   const sdkSignatureMap: SignatureMap = new SignatureMap();
-    //   for (let i=0; i < protoSignatureMap.sigPair.length; i++) {
-    //     const sigPair = protoSignatureMap.sigPair[i];
-    //     //TODO: the proto SigMap only contains prefixes
-    //     //here we use the public key returned by the wallet
-    //     //which precludes the wallet returning a multi-sig response
-    //     //the use of the proto signature map here is limiting
-    //     //using the SDK one would be best, but could introduce compatiblity issues in serialisation
-    //     let signature = sigPair.ed25519 ? sigPair.ed25519 : sigPair.ECDSASecp256k1;
-    //     if (!signature) {
-    //       //TODO: Throw exception
-    //     } else {
-    //       let _transactionId;
-    //       if (transactionId) {
-    //         // if the wallet returns a transactionId, use it. It's possible the transaction didn't have one to start with
-    //         _transactionId = TransactionId.fromString(transactionId);
-    //       } else {
-    //         _transactionId = transaction.transactionId;
-    //       }
-    //       // @ts-ignore
-    //       //TODO: ?? _transactionId could be null here
-    //       sdkSignatureMap.addSignature(AccountId.fromString(key), _transactionId, _publicKey, signature);
-    //     }
-    //     transaction.addSignature(_publicKey, sdkSignatureMap);
-    //   }
+    // let _publicKey
+    // try {
+    //   _publicKey = PublicKey.fromStringED25519(publicKey)
+    // } catch (e) {
+    //   _publicKey = PublicKey.fromStringECDSA(publicKey)
     // }
+    // let signaturesAsMap = base64StringToTransaction(signedTransaction).getSignatures()
+    transaction.addSignature(publicKey, signedTransaction.getSignatures())
+
     return transaction
   }
 
