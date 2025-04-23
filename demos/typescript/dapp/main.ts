@@ -295,6 +295,7 @@ document.getElementById('hedera_signTransaction')!.onsubmit = (e: SubmitEvent) =
 async function hedera_signTransactions(_: Event) {
   const transaction = new TransferTransaction()
     .setTransactionId(TransactionId.generate(getState('sign-from')))
+    //TODO: Set node account ids
     .setMaxTransactionFee(new Hbar(1))
     .addHbarTransfer(getState('sign-from'), new Hbar(-getState('sign-amount')))
     .addHbarTransfer(getState('sign-to'), new Hbar(+getState('sign-amount')))

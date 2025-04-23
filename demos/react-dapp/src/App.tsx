@@ -339,6 +339,7 @@ const App: React.FC = () => {
     const accountId = selectedSigner!.getAccountId()
     const hbarAmount = new Hbar(Number(amount))
     const transaction = new TransferTransaction()
+      //TODO: Set node account ids
       .setTransactionId(TransactionId.generate(accountId!))
       .addHbarTransfer(accountId.toString()!, hbarAmount.negated())
       .addHbarTransfer(receiver, hbarAmount)
