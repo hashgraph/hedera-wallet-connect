@@ -30,8 +30,8 @@
     "prettier:fix": "prettier --write ./src/"
   },
   "peerDependencies": {
-    "@hashgraph/sdk": "^2.61.0",
-    "@reown/appkit": "^1.7.1",
+    "@hashgraph/sdk": "^2.63.0",
+    "@reown/appkit": "^1.7.3",
     "@reown/walletkit": "^1.2.3",
     "@walletconnect/modal": "^2.7.0",
     "ethers": "^6.13.5"
