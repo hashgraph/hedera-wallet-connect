@@ -35,7 +35,7 @@ export class HederaAdapter extends AdapterBlueprint {
     this.addConnector(
       new HederaConnector({
         provider: universalProvider,
-        caipNetworks: this.caipNetworks || [],
+        caipNetworks: this.getCaipNetworks() || [],
         namespace: this.namespace as 'hedera' | 'eip155',
       }),
     )

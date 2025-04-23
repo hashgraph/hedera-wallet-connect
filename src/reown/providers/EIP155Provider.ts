@@ -1,6 +1,5 @@
 import { EventEmitter } from 'events'
-// import Client from '@walletconnect/sign-client'
-import Client from '@walletconnect/universal-provider/node_modules/@walletconnect/sign-client'
+import Client from '@walletconnect/sign-client'
 import { JsonRpcProvider } from '@walletconnect/jsonrpc-provider'
 import { HttpConnection } from '@walletconnect/jsonrpc-http-connection'
 import { EngineTypes, SessionTypes } from '@walletconnect/types'
