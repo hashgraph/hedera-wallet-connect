@@ -174,3 +174,30 @@ export interface SignTransactionResult extends JsonRpcResult<{ signatureMap: str
 export interface SignTransactionResponse extends EngineTypes.RespondParams {
   response: SignTransactionResult
 }
+
+/*
+ * 7. hedera_signTransactions
+ */
+
+// params
+export interface SignTransactionsParams {
+  signerAccountId: string
+  transaction: string
+}
+
+//request
+export interface SignTransactionsRequest extends EngineTypes.RequestParams {
+  request: {
+    method: HederaJsonRpcMethod.SignTransactions
+    params: SignTransactionsParams
+  }
+}
+
+// result
+export interface SignTransactionsResult
+  extends JsonRpcResult<{ signedTransaction: string; publicKey: string }> {}
+
+// response
+export interface SignTransactionsResponse extends EngineTypes.RespondParams {
+  response: SignTransactionsResult
+}

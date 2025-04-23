@@ -187,6 +187,33 @@
         </form>
         <pre id="sign-transaction-result"></pre>
       </section>
+      <section>
+        <form id="hedera_signTransactions" class="toggle">
+          <fieldset>
+            <legend>7. hedera_signTransactions</legend>
+            <label
+              >Transaction type:
+              <select name="sign-transactions-type">
+                <option value="hbar-transfer">Hbar Transfer</option>
+              </select>
+            </label>
+            <label
+              >Send to address:
+              <input name="sign-to" required />
+            </label>
+            <label
+              >Send from address:
+              <input name="sign-from" required />
+            </label>
+            <label
+              >Amount in Hbar:
+              <input name="sign-amount" required />
+            </label>
+          </fieldset>
+          <button type="submit">Submit to wallet</button>
+        </form>
+        <pre id="sign-transactions-result"></pre>
+      </section>
 
       <hr />
       <h2>Hedera &lt;&gt; WalletConnect - Signer methods:</h2>

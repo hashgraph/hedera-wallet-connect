@@ -333,6 +333,22 @@ const App: React.FC = () => {
       setIsLoading(false)
     }
   }
+
+  // 7. hedera_signTransactions
+  const handleHederaSignTransactions = async () => {
+    const accountId = selectedSigner!.getAccountId()
+    const hbarAmount = new Hbar(Number(amount))
+    const transaction = new TransferTransaction()
+      .setTransactionId(TransactionId.generate(accountId!))
+      .addHbarTransfer(accountId.toString()!, hbarAmount.negated())
+      .addHbarTransfer(receiver, hbarAmount)
+
+    const { signedTransaction } = await selectedSigner!.signTransactions(transaction)
+
+    console.log('Signed transaction: ', signedTransaction)
+    return { transaction: signedTransaction }
+  }
+
   // Test signature verification with different HWC versions
   const handleTestSignatureVerification = async () => {
     if (!selectedSigner) throw new Error('Selected signer is required')

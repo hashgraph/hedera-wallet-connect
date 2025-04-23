@@ -120,6 +120,24 @@ export function transactionListToBase64String(transactionList: proto.Transaction
   return Uint8ArrayToBase64String(encoded)
 }
 
+// /**
+//  * @param transaction - an SDK Transaction object
+//  * @returns `string` - a base64 encoded TransactionList (proto)
+//  * */
+// export function transactionToBase64TransactionListString(transaction: Transaction) {
+//   let transactions: proto.TransactionList = proto.TransactionList.create();
+//   //can't just serialise a transaction from the SDK, need to go through proto.TransactionBody
+//   for (let i=0; i < transaction._transactions.length; i++) {
+//     let oneTransaction = transaction._transactions.get(i);
+//     if (oneTransaction) {
+//       transactions.transactionList.push(oneTransaction)
+//     }
+//   }
+//
+//   const encoded = proto.TransactionList.encode(transactions).finish()
+//   return Uint8ArrayToBase64String(encoded)
+// }
+
 /**
  * Extracts the first signature from a proto.SignatureMap object.
  * @param signatureMap - a proto.SignatureMap object
@@ -170,6 +188,20 @@ export function base64StringToSignatureMap(base64string: string): proto.Signatur
   const encoded = Buffer.from(base64string, 'base64')
   return proto.SignatureMap.decode(encoded)
 }
+
+// /**
+//  * Converts a Base64-encoded string to a `proto.SignatureMap array`.
+//  * @returns `proto.SignatureMap[]`
+//  * @param base64stringArray
+//  */
+// export function base64StringToSignatureMapArray(base64stringArray: string[]): proto.SignatureMap[] {
+//   let response: proto.SignatureMap[] = [];
+//   for (let i=0; i < base64stringArray.length; i++) {
+//     const encoded = Buffer.from(base64stringArray[i], 'base64')
+//     response.push(proto.SignatureMap.decode(encoded));
+//   }
+//   return response;
+// }
 
 /**
  * Encodes the binary data represented by the `Uint8Array` to a Base64 string.

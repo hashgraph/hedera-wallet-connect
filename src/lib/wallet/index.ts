@@ -42,6 +42,8 @@ import {
   SignAndExecuteQueryResponse,
   SignAndExecuteTransactionResponse,
   SignTransactionResponse,
+  SignTransactionsResponse,
+  transactionToBase64String,
 } from '../shared'
 import { proto } from '@hashgraph/proto'
 import Provider from './provider'
@@ -225,6 +227,18 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
           this.validateParam('transactionBody', transactionBody, 'string')
           signerAccountId = AccountId.fromString(_accountId.replace(chainId + ':', ''))
           body = Buffer.from(transactionBody, 'base64')
+          break
+        }
+        case HederaJsonRpcMethod.SignTransactions: {
+          // 7
+          const { signerAccountId: _accountId, transaction } = params
+          this.validateParam('signerAccountId', _accountId, 'string')
+          this.validateParam('transaction', transaction, 'string')
+          signerAccountId = AccountId.fromString(_accountId.replace(chainId + ':', ''))
+
+          // Convert transactionList(proto) to Transaction(sdk)
+          const transactionBytes = Buffer.from(transaction, 'base64')
+          body = Transaction.fromBytes(transactionBytes)
           break
         }
         default:
@@ -420,6 +434,31 @@ export class HederaWeb3Wallet extends Web3Wallet implements HederaNativeWallet {
         id,
         result: {
           signatureMap,
+        },
+      },
+    }
+
+    return await this.respondSessionRequest(response)
+  }
+
+  // 7. hedera_signTransactions
+  public async hedera_signTransactions(
+    id: number,
+    topic: string,
+    body: Transaction,
+    signer: HederaWallet,
+  ): Promise<void> {
+    const signedTransaction = await signer.signTransaction(body)
+    //TODO: Explore returning the transaction's signatures, rather than the whole transaction
+
+    const response: SignTransactionsResponse = {
+      topic,
+      response: {
+        jsonrpc: '2.0',
+        id,
+        result: {
+          signedTransaction: transactionToBase64String(signedTransaction),
+          publicKey: signer.getAccountKey().toString(),
         },
       },
     }

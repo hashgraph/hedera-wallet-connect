@@ -49,6 +49,9 @@ import {
   extensionConnect,
   findExtensions,
   SignTransactionRequest,
+  SignTransactionsParams,
+  SignTransactionsResult,
+  SignTransactionsRequest,
 } from '../shared'
 import { DAppSigner } from './DAppSigner'
 import { JsonRpcResult } from '@walletconnect/jsonrpc-types'
@@ -633,7 +636,7 @@ export class DAppConnector {
    * ```ts
    * const params = {
    *  signerAccountId: '0.0.12345'
-   *  transaction: [transactionToBase64String(transaction)]
+   *  transactionList: [transactionToBase64String(transaction)]
    * }
    *
    * const result = await dAppConnector.signAndExecuteTransaction(params)
@@ -699,6 +702,31 @@ export class DAppConnector {
     throw new Error(
       'Transaction sent in incorrect format. Ensure transaction body is either a base64 transaction body or Transaction object.',
     )
+  }
+
+  /**
+   * Signs and executes Transactions on the Hedera network.
+   *
+   * @param {SignTransactionsParams} params - The parameters of type {@link SignTransactionsParams | `SignTransactionsParams`} required for `Transaction` signing.
+   * @param {string} params.signerAccountId - a signer Hedera Account identifier in {@link https://hips.hedera.com/hip/hip-30 | HIP-30} (`<nework>:<shard>.<realm>.<num>`) form.
+   * @param {Transaction | string} params.transactionBody - a built Transaction object, or a base64 string of a transaction body (deprecated).
+   * @returns Promise\<{@link SignTransactionsResult}\>
+   * @example
+   * ```ts
+   *
+   * const params = {
+   *  signerAccountId: '0.0.12345',
+   *  transactionList
+   * }
+   *
+   * const result = await dAppConnector.signTransactions(params)
+   * ```
+   */
+  public async signTransactions(params: SignTransactionsParams) {
+    return await this.request<SignTransactionsRequest, SignTransactionsResult>({
+      method: HederaJsonRpcMethod.SignTransactions,
+      params,
+    })
   }
 
   private handleSessionEvent(

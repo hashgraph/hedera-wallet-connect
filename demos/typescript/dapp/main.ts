@@ -52,9 +52,11 @@ import {
   HederaChainId,
   verifyMessageSignature,
   verifySignerSignature,
+  base64StringToTransaction,
 } from '@hashgraph/hedera-wallet-connect'
 
 import { saveState, loadState, getState } from '../shared'
+import { SignTransactionsParams } from '../../../src'
 
 // referenced in handlers
 var dAppConnector: DAppConnector | undefined
@@ -133,7 +135,7 @@ async function init(e: Event) {
     projectId,
     Object.values(HederaJsonRpcMethod),
     [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
-    [HederaChainId.TESTNET],
+    [HederaChainId.Testnet],
   )
 
   await dAppConnector.init({ logger: 'error' })
@@ -289,18 +291,47 @@ async function hedera_signTransaction(_: Event) {
 document.getElementById('hedera_signTransaction')!.onsubmit = (e: SubmitEvent) =>
   showErrorOrSuccess(hedera_signTransaction, e)
 
+// 7. hedera_signTransaction
+async function hedera_signTransactions(_: Event) {
+  const transaction = new TransferTransaction()
+    .setTransactionId(TransactionId.generate(getState('sign-from')))
+    .setMaxTransactionFee(new Hbar(1))
+    .addHbarTransfer(getState('sign-from'), new Hbar(-getState('sign-amount')))
+    .addHbarTransfer(getState('sign-to'), new Hbar(+getState('sign-amount')))
+
+  console.log(`transaction._transactions.length: ${transaction._transactions.length}`)
+  console.log(
+    `transaction.nodeAccountIds.length: ${transaction.nodeAccountIds ? transaction.nodeAccountIds.length : 0}`,
+  )
+
+  const params: SignTransactionsParams = {
+    signerAccountId: 'hedera:testnet:' + getState('sign-from'),
+    transaction: transactionToBase64String(transaction),
+  }
+  const { signedTransaction, publicKey } = await dAppConnector!.signTransactions(params)
+  document.getElementById('sign-transactions-result')!.innerText = JSON.stringify(
+    { params, signedTransaction, publicKey },
+    null,
+    2,
+  )
+  console.log({ params, signedTransaction, publicKey })
+  console.log(base64StringToTransaction(signedTransaction).getSignatures().keys())
+}
+document.getElementById('hedera_signTransactions')!.onsubmit = (e: SubmitEvent) =>
+  showErrorOrSuccess(hedera_signTransactions, e)
+
 /*
  * Error handling simulation
  */
 async function simulateGossipNodeError(_: Event) {
   const sender = getState('sign-send-from') || getState('send-from')
-  const recepient = getState('sign-send-to') || getState('send-to')
+  const recipient = getState('sign-send-to') || getState('send-to')
 
   const transaction = new TransferTransaction()
     .setNodeAccountIds([new AccountId(999)]) // this is invalid node id
     .setTransactionId(TransactionId.generate(sender))
     .addHbarTransfer(sender, new Hbar(-5))
-    .addHbarTransfer(recepient, new Hbar(+5))
+    .addHbarTransfer(recipient, new Hbar(+5))
 
   const params: SignAndExecuteTransactionParams = {
     transactionList: transactionToBase64String(transaction),
@@ -315,7 +346,7 @@ document.getElementById('error-gossip-node')!.onsubmit = (e: SubmitEvent) =>
 
 async function simulateTransactionExpiredError(_: Event) {
   const sender = 'hedera:testnet:' + (getState('sign-send-from') || getState('send-from'))
-  const recepient = getState('sign-send-to') || getState('send-to')
+  const recipient = getState('sign-send-to') || getState('send-to')
 
   const transaction = new TransferTransaction()
     // set valid start to 15 seconds ago
@@ -328,7 +359,7 @@ async function simulateTransactionExpiredError(_: Event) {
     // 15 seconds is a minimum valid duration otherwise there's an INVALID_TRANSACTION_DURATION error
     .setTransactionValidDuration(15)
     .addHbarTransfer(sender, new Hbar(-5))
-    .addHbarTransfer(recepient, new Hbar(+5))
+    .addHbarTransfer(recipient, new Hbar(+5))
 
   const params: SignAndExecuteTransactionParams = {
     transaction: transactionToBase64String(transaction),
