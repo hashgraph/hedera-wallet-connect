@@ -62,6 +62,7 @@ import {
   useJsonFixture,
   prepareTestTransaction,
   prepareTestQuery,
+  testPrivateKeyED25519,
 } from '../_helpers'
 import { ISignClient, SessionTypes } from '@walletconnect/types'
 import Long from 'long'
@@ -523,19 +524,22 @@ describe('DAppSigner', () => {
     })
 
     it('should sign a transaction', async () => {
-      const mockPrivateKey = PrivateKey.generate()
-      const mockPublicKey = mockPrivateKey.publicKey
+      const mockPublicKey = PrivateKey.fromStringED25519(testPrivateKeyED25519).publicKey
 
       let mockTransaction = prepareTestTransaction(new AccountCreateTransaction(), {
         freeze: true,
-        setNodeAccountIds: true,
+        setNodeAccountIds: false,
+        setMultipleNodeAccountIds: true,
       })
       const transaction = prepareTestTransaction(new AccountCreateTransaction(), {
         freeze: true,
-        setNodeAccountIds: true,
+        setNodeAccountIds: false,
+        setMultipleNodeAccountIds: true,
       })
 
-      mockTransaction = await mockTransaction.signWithSigner(signer)
+      mockTransaction = await mockTransaction.sign(
+        PrivateKey.fromStringED25519(testPrivateKeyED25519),
+      )
 
       signerRequestSpy.mockImplementation(() =>
         Promise.resolve({
@@ -866,21 +870,6 @@ describe('DAppSigner', () => {
       } as any
 
       await expect(signer.signTransaction(mockTx)).rejects.toThrow(
-        'Failed to serialize transaction body',
-      )
-    })
-  })
-
-  describe('signTransactions', () => {
-    it.skip('should throw error when transaction body serialization fails', async () => {
-      const mockTx = {
-        nodeAccountIds: [AccountId.fromString('0.0.3')],
-        _signedTransactions: {
-          current: {}, // This will cause bodyBytes to be undefined
-        },
-      } as any
-
-      await expect(signer.signTransactions(mockTx)).rejects.toThrow(
         'Failed to serialize transaction body',
       )
     })

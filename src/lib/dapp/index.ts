@@ -723,10 +723,30 @@ export class DAppConnector {
    * ```
    */
   public async signTransactions(params: SignTransactionsParams) {
-    return await this.request<SignTransactionsRequest, SignTransactionsResult>({
-      method: HederaJsonRpcMethod.SignTransactions,
-      params,
-    })
+    if (params?.transaction instanceof Transaction) {
+      const signerAccountId = params?.signerAccountId?.split(':')?.pop()
+      const accountSigner = this.signers.find(
+        (signer) => signer?.getAccountId()?.toString() === signerAccountId,
+      )
+
+      if (!accountSigner) {
+        throw new Error(`No signer found for account ${signerAccountId}`)
+      }
+
+      if (!params?.transaction) {
+        throw new Error('No transaction provided')
+      }
+
+      return await accountSigner.signTransactions(params.transaction as Transaction)
+    }
+
+    throw new Error(
+      'Transaction sent in incorrect format. Ensure transaction is a Transaction object.',
+    )
+    // return await this.request<SignTransactionsRequest, SignTransactionsResult>({
+    //   method: HederaJsonRpcMethod.SignTransactions,
+    //   params,
+    // })
   }
 
   private handleSessionEvent(

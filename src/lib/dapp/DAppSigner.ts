@@ -239,6 +239,10 @@ export class DAppSigner implements Signer {
    * @returns transaction - `Transaction` object with signature
    */
   async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
+    if (transaction.nodeAccountIds && transaction.nodeAccountIds.length > 1) {
+      // use signTransactions
+      return await this.signTransactions(transaction)
+    }
     let nodeAccountId: AccountId
     if (!transaction.nodeAccountIds || transaction.nodeAccountIds.length === 0)
       nodeAccountId = this._getRandomNodes(1)[0]
@@ -269,15 +273,18 @@ export class DAppSigner implements Signer {
    */
   async signTransactions<T extends Transaction>(transaction: T): Promise<T> {
     // let transactionBase64 = transactionToBase64String(transaction)
-    const { signedTransaction, publicKey } = await this.request<
-      SignTransactionsResult['result']
-    >({
+    // const { signedTransaction, publicKey } = await this.request<
+    const result = await this.request<SignTransactionsResult['result']>({
       method: HederaJsonRpcMethod.SignTransactions,
       params: {
         signerAccountId: this._signerAccountId,
         transaction: transaction,
       },
     })
+
+    const publicKey = result.publicKey
+    //FIXME: Not sure why result.signedTransaction is undefined here
+    const signedTransaction = result.transaction
 
     // let _publicKey
     // try {

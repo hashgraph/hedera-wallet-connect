@@ -25,6 +25,7 @@ import {
   PublicKey,
   PrivateKey,
   Client,
+  AccountId,
 } from '@hashgraph/sdk'
 import {
   DAppConnector,
@@ -51,6 +52,8 @@ import {
   prepareTestTransaction,
   testUserAccountId,
   testPrivateKeyED25519,
+  testNodeAccountIds,
+  testTransactionId,
 } from '../_helpers'
 import { SignClient } from '@walletconnect/sign-client'
 import { ISignClient, SessionTypes } from '@walletconnect/types'
@@ -438,8 +441,9 @@ describe('DAppConnector', () => {
     //
     describe('signTransactions', () => {
       const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
-        freeze: false,
-        setNodeAccountIds: true,
+        freeze: true,
+        setMultipleNodeAccountIds: true,
+        setNodeAccountIds: false,
       })
       const params: SignTransactionsParams = {
         signerAccountId: `hedera:testnet:${testUserAccountId.toString()}`,
@@ -461,7 +465,7 @@ describe('DAppConnector', () => {
         } as SignTransactionsParams
 
         await expect(connector.signTransactions(invalidParams)).rejects.toThrow(
-          'Transaction sent in incorrect format. Ensure transaction is a transaction object.',
+          'Transaction sent in incorrect format. Ensure transaction is a Transaction object.',
         )
       })
 
@@ -479,8 +483,8 @@ describe('DAppConnector', () => {
       it('should invoke signer.signTransactions with the transaction', async () => {
         let mockPublicKey = PrivateKey.generate().publicKey
         let mockTransaction = prepareTestTransaction(new TopicCreateTransaction(), {
-          freeze: false,
-          setNodeAccountIds: true,
+          setMultipleNodeAccountIds: true,
+          setNodeAccountIds: false,
         })
         const mockSigner = {
           getAccountId: () => testUserAccountId,
@@ -497,12 +501,9 @@ describe('DAppConnector', () => {
 
       it('should return a signed transaction with valid signatures', async () => {
         let mockTransaction = prepareTestTransaction(new TopicCreateTransaction(), {
-          freeze: false,
-          setNodeAccountIds: true,
-        })
-        const testTransaction = prepareTestTransaction(new TopicCreateTransaction(), {
-          freeze: false,
-          setNodeAccountIds: true,
+          freeze: true,
+          setMultipleNodeAccountIds: true,
+          setNodeAccountIds: false,
         })
         mockTransaction.sign(PrivateKey.fromStringED25519(testPrivateKeyED25519))
         const mockSignedTransaction = {
@@ -516,9 +517,39 @@ describe('DAppConnector', () => {
         connector.signers = [mockSigner as any]
 
         const result = await connector.signTransactions(params)
-        const signedTransaction = result.result.signedTransaction
-        expect(signedTransaction).toBeDefined()
-        expect(signedTransaction.getSignatures()).toEqual(mockTransaction.getSignatures())
+        // there should be as many signatures as there are nodes
+        expect(result.transaction.getSignatures().size === testNodeAccountIds.length)
+        const signatureOne = result.transaction
+          .getSignatures()
+          .get(testNodeAccountIds[0].toString())
+        const signatureTwo = result.transaction
+          .getSignatures()
+          .get(testNodeAccountIds[1].toString())
+        expect(signatureOne).toBeDefined()
+        expect(signatureTwo).toBeDefined()
+
+        // there should be two signature Pairs
+        const sigPairMapOne = signatureOne.get(testTransactionId)
+        const sigPairMapTwo = signatureTwo.get(testTransactionId)
+        expect(sigPairMapOne).toBeDefined()
+        expect(sigPairMapTwo).toBeDefined()
+
+        const pubKey =
+          PrivateKey.fromStringED25519(testPrivateKeyED25519).publicKey.toStringDer()
+        const sigOne = sigPairMapOne.get(pubKey)
+        const sigTwo = sigPairMapTwo.get(pubKey)
+
+        // and the signatures on both pairs should match those of the mock transaction
+        const mockSignatures = mockTransaction.getSignatures()
+        expect(sigOne).toEqual(
+          mockSignatures.get(testNodeAccountIds[0]).get(testTransactionId).get(pubKey),
+        )
+        expect(sigTwo).toEqual(
+          mockSignatures.get(testNodeAccountIds[1]).get(testTransactionId).get(pubKey),
+        )
+
+        // and finally, both signatures should be different (different node account ids)
+        expect(sigOne).not.toEqual(sigTwo)
       })
 
       it('should throw an error if transaction body is not a Transaction', async () => {
@@ -528,7 +559,7 @@ describe('DAppConnector', () => {
         } as unknown as SignTransactionsParams
 
         await expect(connector.signTransactions(invalidParams)).rejects.toThrow(
-          'Transaction sent in incorrect format. Ensure transaction is a transaction object.',
+          'Transaction sent in incorrect format. Ensure transaction is a Transaction object.',
         )
       })
     })

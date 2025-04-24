@@ -45,6 +45,7 @@ export const defaultAccountNumber = 12345
 export const defaultNodeId = 3
 export const testUserAccountId = new AccountId(defaultAccountNumber)
 export const testNodeAccountId = new AccountId(defaultNodeId)
+export const testNodeAccountIds = [new AccountId(3), new AccountId(4)]
 /** Fixed to a specific timestamp */
 export const testTransactionId = TransactionId.fromString(
   `0.0.${defaultAccountNumber}@1691705630.325343432`,
@@ -52,6 +53,7 @@ export const testTransactionId = TransactionId.fromString(
 
 type TransactionOptions = {
   setNodeAccountIds?: boolean
+  setMultipleNodeAccountIds?: boolean
   setTransactionId?: boolean
   freeze?: boolean
   operatorAccountId?: number
@@ -64,6 +66,7 @@ export function prepareTestTransaction<T extends Transaction = Transaction>(
     // defaults
     freeze: false,
     setNodeAccountIds: true,
+    setMultipleNodeAccountIds: false,
     setTransactionId: true,
     operatorAccountId: defaultAccountNumber,
     // overrides
@@ -71,6 +74,9 @@ export function prepareTestTransaction<T extends Transaction = Transaction>(
   }
   if (selectedOptions.setNodeAccountIds) {
     transaction.setNodeAccountIds([testNodeAccountId])
+  }
+  if (selectedOptions.setMultipleNodeAccountIds) {
+    transaction.setNodeAccountIds(testNodeAccountIds)
   }
   if (selectedOptions.setTransactionId) {
     let transactionId = testTransactionId

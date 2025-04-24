@@ -19,13 +19,7 @@
  */
 
 import { TransferTransaction, Hbar, AccountId } from '@hashgraph/sdk'
-import {
-  HederaChainId,
-  SignTransactionResponse,
-  Wallet,
-  transactionToTransactionBody,
-  SignTransactionsResponse,
-} from '../../../src'
+import { HederaChainId, Wallet, transactionToBase64String } from '../../../src'
 import {
   projectId,
   requestId,
@@ -35,7 +29,6 @@ import {
   useJsonFixture,
   walletMetadata,
 } from '../../_helpers'
-import { transactionToBase64String } from '@hashgraph/hedera-wallet-connect'
 
 describe(Wallet.name, () => {
   describe('signTransactions', () => {
