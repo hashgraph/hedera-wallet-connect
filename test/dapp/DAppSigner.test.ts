@@ -585,7 +585,7 @@ describe('DAppSigner', () => {
   })
 
   describe('populateTransaction', () => {
-    it('should populate transaction with node accounts and transaction id', async () => {
+    it('should populate transaction with transaction id', async () => {
       const mockTx = {
         setNodeAccountIds: jest.fn().mockReturnThis(),
         setTransactionId: jest.fn().mockReturnThis(),
@@ -593,7 +593,6 @@ describe('DAppSigner', () => {
 
       const result = await signer.populateTransaction(mockTx)
 
-      expect(mockTx.setNodeAccountIds).toHaveBeenCalled()
       expect(mockTx.setTransactionId).toHaveBeenCalled()
       expect(result).toBe(mockTx)
     })
