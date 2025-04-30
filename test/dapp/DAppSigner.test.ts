@@ -576,14 +576,6 @@ describe('DAppSigner', () => {
     })
   })
 
-  describe('_getRandomNodes', () => {
-    it('should return random subset of nodes', () => {
-      const nodes = (signer as any)._getRandomNodes(3)
-      expect(nodes).toHaveLength(3)
-      expect(nodes[0]).toBeInstanceOf(AccountId)
-    })
-  })
-
   describe('checkTransaction', () => {
     it('should throw not implemented error', async () => {
       await expect(signer.checkTransaction({} as Transaction)).rejects.toThrow(
@@ -593,7 +585,7 @@ describe('DAppSigner', () => {
   })
 
   describe('populateTransaction', () => {
-    it('should populate transaction with node accounts and transaction id', async () => {
+    it('should populate transaction with transaction id', async () => {
       const mockTx = {
         setNodeAccountIds: jest.fn().mockReturnThis(),
         setTransactionId: jest.fn().mockReturnThis(),
@@ -601,7 +593,6 @@ describe('DAppSigner', () => {
 
       const result = await signer.populateTransaction(mockTx)
 
-      expect(mockTx.setNodeAccountIds).toHaveBeenCalled()
       expect(mockTx.setTransactionId).toHaveBeenCalled()
       expect(result).toBe(mockTx)
     })
