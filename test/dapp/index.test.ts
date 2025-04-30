@@ -54,7 +54,11 @@ import {
 } from '../_helpers'
 import { SignClient } from '@walletconnect/sign-client'
 import { ISignClient, SessionTypes } from '@walletconnect/types'
-import { networkNamespaces, transactionBodyToBase64String, transactionToTransactionBody } from '../../src/lib/shared'
+import {
+  networkNamespaces,
+  transactionBodyToBase64String,
+  transactionToTransactionBody,
+} from '../../src/lib/shared'
 import * as nacl from 'tweetnacl'
 import { proto } from '@hashgraph/proto'
 
@@ -441,7 +445,7 @@ describe('DAppConnector', () => {
     let mockSigner: DAppSigner
     const privateKey = PrivateKey.generateED25519()
     const publicKey = privateKey.publicKey
-    
+
     beforeEach(() => {
       // Create a real signer that can actually sign transactions
       mockSigner = new DAppSigner(
@@ -488,7 +492,7 @@ describe('DAppConnector', () => {
       // Create a test transaction
       const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
         freeze: false,
-        setNodeAccountIds: false
+        setNodeAccountIds: false,
       })
 
       // Sign with connector

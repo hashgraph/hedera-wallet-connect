@@ -44,7 +44,6 @@ import {
 } from '../src'
 import { prepareTestTransaction, testUserAccountId, useJsonFixture } from './_helpers'
 
-
 describe(transactionToBase64String.name, () => {
   it('should convert a transaction to a base64 encoded string', () => {
     const txn = prepareTestTransaction(new TopicCreateTransaction())

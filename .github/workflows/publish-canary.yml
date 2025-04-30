@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - introduce-v2
+      - canary
 
 jobs:
   publish-canary:
