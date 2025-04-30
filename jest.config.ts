@@ -32,6 +32,7 @@ const config: Config = {
   },
   transformIgnorePatterns: ['node_modules/(?!@walletconnect|@reown|lit|@lit)'],
   testEnvironment: 'node',
+  setupFiles: ['./test/setup.ts'],
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
     'src/**/*.{js,ts}',
