@@ -88,6 +88,11 @@ describe('DAppSigner', () => {
   const testExtensionId = 'test-extension-id'
 
   beforeEach(() => {
+    //prevent fetch from mirror node
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      status: 500,
+    })
+
     connector = new DAppConnector(
       dAppMetadata,
       LedgerId.TESTNET,
@@ -523,7 +528,6 @@ describe('DAppSigner', () => {
     })
 
     it('should throw error as no key was received from the mirror node', () => {
-
       expect(() => signer.getAccountKey()).toThrow('No key was received from the mirror node')
     })
   })
