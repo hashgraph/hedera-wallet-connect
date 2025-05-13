@@ -91,7 +91,7 @@ export class HIP820Wallet implements HIP820WalletInterface {
     const network = chainId.split(':')[1]
     const client = Client.forName(network)
     const provider = _provider ?? new Provider(client)
-    const wallet = new HederaWallet(accountId, PrivateKey.fromStringECDSA(privateKey), provider)
+    const wallet = new HederaWallet(accountId, PrivateKey.fromString(privateKey), provider)
     return new HIP820Wallet(wallet)
   }
 
