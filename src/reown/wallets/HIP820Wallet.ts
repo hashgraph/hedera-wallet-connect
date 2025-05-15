@@ -206,7 +206,6 @@ export class HIP820Wallet implements HIP820WalletInterface {
   ): Promise<JsonRpcResult<any> | JsonRpcError> {
     const { method, id, body } = this.parseSessionRequest(event)
     const response = await this[method](id, body)
-    console.log({ response })
     return response
   }
 
@@ -229,7 +228,6 @@ export class HIP820Wallet implements HIP820WalletInterface {
     const nodes = Object.values(nodesAccountIds).map((nodeAccountId) =>
       nodeAccountId.toString(),
     )
-    console.log(nodes)
     return formatJsonRpcResult(id, {
       nodes,
     })
@@ -307,7 +305,6 @@ export class HIP820Wallet implements HIP820WalletInterface {
 
   // 5. hedera_signAndExecuteTransaction
   public async hedera_signAndExecuteTransaction(id: number, transaction: Transaction) {
-    console.log({ inputTx: JSON.parse(JSON.stringify(transaction)) })
     // check transaction is incomplete (HIP-745)
     if (!transaction.isFrozen()) {
       // set multiple nodeAccountIds and transactionId if not present

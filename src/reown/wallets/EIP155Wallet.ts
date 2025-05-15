@@ -87,8 +87,6 @@ export class EIP155Wallet implements EIP155WalletInterface {
     transaction: JsonRpcTransactionRequest,
     provider: JsonRpcProvider,
   ): Promise<string> {
-    console.log({ transaction })
-
     // Populate transaction
     const preparedTransaction = await this.connect(provider).populateTransaction(
       transaction as TransactionRequest,
@@ -142,11 +140,9 @@ export class EIP155Wallet implements EIP155WalletInterface {
           const signedMessage = await this.eth_sign(message)
           return formatJsonRpcResult(id, signedMessage)
         } catch (error) {
-          console.error(error)
           if (!(error instanceof Error)) {
             return formatJsonRpcError(id, 'Failed to sign message')
           }
-          alert(error.message)
           return formatJsonRpcError(id, error.message)
         }
 
@@ -160,11 +156,9 @@ export class EIP155Wallet implements EIP155WalletInterface {
           const signedData = await this.eth_signTypedData(domain, types, data)
           return formatJsonRpcResult(id, signedData)
         } catch (error) {
-          console.error(error)
           if (!(error instanceof Error)) {
             return formatJsonRpcError(id, 'Failed to sign typed data')
           }
-          alert(error.message)
           return formatJsonRpcError(id, error.message)
         }
       case Eip155JsonRpcMethod.SendRawTransaction:
@@ -174,15 +168,8 @@ export class EIP155Wallet implements EIP155WalletInterface {
           const sendTransaction = request.params[0]
           const txResponse = await this[request.method](sendTransaction, provider)
           const txHash = typeof txResponse === 'string' ? txResponse : txResponse?.hash
-          const txReceipt = await txResponse.wait()
-          console.log(
-            `Transaction broadcasted on chain ${chainId} , ${{
-              txHash,
-            }}, status: ${txReceipt?.status}`,
-          )
           return formatJsonRpcResult(id, txHash)
         } catch (error) {
-          console.error(error)
           return formatJsonRpcError(
             id,
             error instanceof Error ? error.message : 'Failed to send transaction',
@@ -196,11 +183,9 @@ export class EIP155Wallet implements EIP155WalletInterface {
           const signature = await this.eth_signTransaction(signTransaction, provider)
           return formatJsonRpcResult(id, signature)
         } catch (error) {
-          console.error(error)
           if (!(error instanceof Error)) {
             return formatJsonRpcError(id, 'Failed to sign transaction')
           }
-          alert(error.message)
           return formatJsonRpcError(id, error.message)
         }
       default:

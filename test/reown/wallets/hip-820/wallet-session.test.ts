@@ -18,7 +18,6 @@
  *
  */
 
-
 import { AccountId } from '@hashgraph/sdk'
 import { formatJsonRpcResult } from '@walletconnect/jsonrpc-utils'
 import { HIP820Wallet, HederaJsonRpcMethod, HederaChainId } from '../../../../src'

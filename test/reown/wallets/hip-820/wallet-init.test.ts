@@ -18,37 +18,51 @@
  *
  */
 
-
-import { Client, AccountId, PrivateKey } from '@hashgraph/sdk'
-
-import { HederaChainId, HIP820Wallet } from '../../../../src'
+import { Client, Wallet as HederaWallet, AccountId, PrivateKey } from '@hashgraph/sdk'
+import { HIP820Wallet, HederaChainId } from '../../../../src'
 import Provider from '../../../../src/lib/wallet/provider'
+import { testPrivateKeyECDSA, testUserAccountId } from '../../../_helpers'
 
-describe('HIP820Wallet.init', () => {
-  const accountId = '0.0.123'
-  const privateKey = PrivateKey.generate().toString()
+describe('HIP820Wallet', () => {
+  describe('init', () => {
+    const chainId = HederaChainId.Testnet
+    const accountId = testUserAccountId.toString()
+    const privateKey = testPrivateKeyECDSA
 
-  it('should create HIP820Wallet instance with proper HederaWallet', () => {
-    const wallet820 = HIP820Wallet.init({
-      chainId: HederaChainId.Testnet,
-      accountId,
-      privateKey,
+    it('should initialize with default provider', () => {
+      const wallet = HIP820Wallet.init({ chainId, accountId, privateKey })
+
+      expect(wallet).toBeInstanceOf(HIP820Wallet)
+      expect(wallet.getHederaWallet()).toBeInstanceOf(HederaWallet)
     })
-    expect(wallet820).toBeInstanceOf(HIP820Wallet)
-    const hederaWallet = wallet820.getHederaWallet()
-    expect(hederaWallet.accountId.toString()).toBe(accountId)
-    expect(hederaWallet.provider).toBeDefined()
-  })
 
-  it('should use provided provider when _provider arg is passed', () => {
-    const customProvider = new Provider(Client.forName('testnet'))
-    const wallet820 = HIP820Wallet.init({
-      chainId: HederaChainId.Testnet,
-      accountId,
-      privateKey,
-      _provider: customProvider,
+    it('should initialize with custom provider', () => {
+      const client = Client.forTestnet()
+      const customProvider = new Provider(client)
+      const wallet = HIP820Wallet.init({
+        chainId,
+        accountId,
+        privateKey,
+        _provider: customProvider,
+      })
+
+      expect(wallet.getHederaWallet().provider).toBe(customProvider)
     })
-    const hederaWallet = wallet820.getHederaWallet()
-    expect(hederaWallet.provider).toBe(customProvider)
+
+    it('should create wallet with correct network', () => {
+      const testnetWallet = HIP820Wallet.init({
+        chainId: HederaChainId.Testnet,
+        accountId,
+        privateKey,
+      })
+      const mainnetWallet = HIP820Wallet.init({
+        chainId: HederaChainId.Mainnet,
+        accountId,
+        privateKey,
+      })
+
+      expect(testnetWallet.getHederaWallet().provider?.getLedgerId()?.isTestnet()).toBeTruthy()
+      expect(mainnetWallet.getHederaWallet().provider?.getLedgerId()?.isMainnet()).toBeTruthy()
+    })
   })
 })

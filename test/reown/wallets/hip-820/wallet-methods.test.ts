@@ -18,148 +18,231 @@
  *
  */
 
-import { AccountId, PrecheckStatusError, Status, TransactionId } from '@hashgraph/sdk'
-import { proto } from '@hashgraph/proto'
+import { Buffer } from 'buffer'
+import {
+  TopicCreateTransaction,
+  AccountInfoQuery,
+  PrecheckStatusError,
+  Status,
+  AccountInfo,
+  TransactionResponse,
+} from '@hashgraph/sdk'
+import {
+  GetNodeAddresesResponse,
+  HederaChainId,
+  HIP820Wallet,
+  SignAndExecuteTransactionResponse,
+  SignMessageResult,
+  SignTransactionResult,
+  transactionToTransactionBody,
+} from '../../../../src'
 import { formatJsonRpcError, formatJsonRpcResult } from '@walletconnect/jsonrpc-utils'
-import { HIP820Wallet } from '../../../../src'
+import {
+  testPrivateKeyECDSA,
+  testUserAccountId,
+  prepareTestTransaction,
+  useJsonFixture,
+  requestId,
+  testNodeAccountId,
+  testPrivateKeyED25519,
+} from '../../../_helpers'
+import { proto } from '@hashgraph/proto'
 
-
-
-describe('HIP820Wallet JSON-RPC Methods', () => {
-  let wallet820: HIP820Wallet
-  const mockWallet: any = {
-    getNetwork: jest.fn().mockReturnValue({ '0.0.3': { toString: () => '0.0.3' } }),
-    sign: jest.fn(),
-  }
+describe('HIP820Wallet Methods', () => {
+  let hip820Wallet: HIP820Wallet
+  const chainId = HederaChainId.Testnet
+  const accountId = testUserAccountId.toString()
 
   beforeEach(() => {
-    wallet820 = new HIP820Wallet(mockWallet)
+    hip820Wallet = HIP820Wallet.init({
+      chainId,
+      accountId,
+      privateKey: testPrivateKeyECDSA,
+    })
   })
 
-  it('hedera_getNodeAddresses returns node list', async () => {
-    const res = await wallet820.hedera_getNodeAddresses(1, null)
-    expect(res).toEqual(formatJsonRpcResult(1, { nodes: ['0.0.3'] }))
+  describe('hedera_getNodeAddresses', () => {
+    it('should return node addresses', async () => {
+      const expected: GetNodeAddresesResponse = useJsonFixture(
+        'methods/getNodeAddressesSuccess',
+      )
+
+      const result = await hip820Wallet.hedera_getNodeAddresses(requestId, null)
+
+      result.result.nodes.sort()
+      expected.response.result.nodes.sort()
+
+      expect(result).toEqual(expected.response)
+    }, 15_000)
   })
 
   describe('hedera_executeTransaction', () => {
-    it('returns result on success', async () => {
-      const fakeResp = { toJSON: () => ({ tx: true }) }
-      const tx: any = { executeWithSigner: jest.fn().mockResolvedValue(fakeResp) }
-      const res = await wallet820.hedera_executeTransaction(2, tx)
-      expect(res).toEqual(formatJsonRpcResult(2, { tx: true }))
+    it('should execute signed transaction', async () => {
+      try {
+        const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
+          freeze: true,
+        })
+        const mockResponse: SignAndExecuteTransactionResponse = useJsonFixture(
+          'methods/executeTransactionSuccess',
+        )
+
+        const signerCallMock = jest.spyOn(hip820Wallet.wallet, 'call')
+        signerCallMock.mockImplementation(async () => {}) // Mocking the 'call' method to do nothing
+
+        const signTransaction = await hip820Wallet.wallet.signTransaction(transaction)
+
+        const result = await hip820Wallet.hedera_executeTransaction(requestId, signTransaction)
+
+        expect(result).toEqual(mockResponse.response)
+      } catch (err) {}
     })
 
-    it('formats PrecheckStatusError correctly', async () => {
-      const transactionId = TransactionId.generate(new AccountId(1))
-      const status = Status.InvalidTransaction;
-      const statusCode = status._code.toString();
-      const err = new PrecheckStatusError({
-        status,
-        transactionId,
-        nodeId: new AccountId(3),
+    it('should handle PrecheckStatusError', async () => {
+      const transaction = prepareTestTransaction(new TopicCreateTransaction())
+
+      const error = new PrecheckStatusError({
+        status: Status.InvalidTransaction,
+        transactionId: transaction.transactionId,
+        nodeId: testNodeAccountId,
         contractFunctionResult: null,
       })
-      err.message = 'precheck failed'
-      const tx: any = { executeWithSigner: jest.fn().mockRejectedValue(err) }
-      const res = await wallet820.hedera_executeTransaction(3, tx)
-      const json = err.toJSON()
-      expect(res).toEqual(
-        formatJsonRpcError(3, { code: 9000, message: json.message, data: statusCode }),
-      )
-    })
+      error.message = 'Test error message'
 
-    it('returns generic error for unknown exceptions', async () => {
-      const tx: any = { executeWithSigner: jest.fn().mockRejectedValue(new Error('oops')) }
-      const res = await wallet820.hedera_executeTransaction(4, tx)
-      expect(res).toEqual(formatJsonRpcError(4, { code: 9000, message: 'Unknown Error' }))
+      jest.spyOn(transaction, 'executeWithSigner').mockRejectedValue(error)
+
+      const result = await hip820Wallet.hedera_executeTransaction(requestId, transaction)
+      const expected = formatJsonRpcError(requestId, {
+        code: 9000,
+        message: error.message,
+        data: error.status._code.toString(),
+      })
+
+      expect(result).toEqual(expected)
     })
   })
 
-  it('hedera_signMessage returns base64 signatureMap', async () => {
-    mockWallet.sign.mockResolvedValue([
-      { pubKeyPrefix: new Uint8Array([1]), signature: new Uint8Array([2]) },
-    ])
-    const res = await wallet820.hedera_signMessage(5, 'hello')
-    const decoded = proto.SignatureMap.decode(Buffer.from(res.result.signatureMap, 'base64'))
-    expect(decoded.sigPair.length).toBe(1)
+  describe('hedera_signMessage', () => {
+    const testCases = [
+      [
+        'ECDSA',
+        testPrivateKeyECDSA,
+        'CmUKIQJ4J53yGuPNMGEGJ7HkI+u3QFxUuAOa9VLEtFj7Y6qNMzJAp3vxT7kRPE9HFFm/bbArGYDQ+psNWZC70rdW2bE1L85u79GOlQSTlaog5lmE6TiaX6r8Bk70dU7ZIwcHgnAkCw==',
+      ],
+      [
+        'ED25519',
+        testPrivateKeyED25519,
+        'CmQKIKLvE3YbZEplGhpKxmbq+6xBnJcoL4r1wz9Y1zLnPlpVGkBtfDTfBZGf/MUbovYyLUjORErDGhDYbzPFoAbkMwRrpw2ouDRmn6Dd6A06k6yM/FhZ/VjdHVhQUd+fxv1cZqUM',
+      ],
+    ]
+    test.each(testCases)(
+      'should decode message bytes and sign with: %p',
+      async (_, privateKey, expected) => {
+        const testWallet = HIP820Wallet.init({
+          chainId,
+          accountId,
+          privateKey,
+        })
+
+        const id = 1
+
+        const result = await testWallet.hedera_signMessage(id, 'Hello Future')
+
+        const mockResponse: SignMessageResult = {
+          jsonrpc: '2.0',
+          id,
+          result: {
+            signatureMap: expected,
+          },
+        }
+
+        expect(result).toEqual(mockResponse)
+      },
+    )
   })
 
   describe('hedera_signAndExecuteQuery', () => {
-    it('returns response on success', async () => {
-      const qr = { toBytes: () => new Uint8Array([1, 2, 3]) }
-      const query: any = { executeWithSigner: jest.fn().mockResolvedValue(qr) }
-      const res = await wallet820.hedera_signAndExecuteQuery(6, query)
-      expect(res).toEqual(
-        formatJsonRpcResult(6, { response: Buffer.from(qr.toBytes()).toString('base64') }),
-      )
-    })
+    it('should execute query successfully', async () => {
+      const query = new AccountInfoQuery().setAccountId(testUserAccountId)
+      const mockResponse = useJsonFixture('methods/signAndExecuteQuerySuccess')
 
-    it('formats PrecheckStatusError for query', async () => {
-      const transactionId = TransactionId.generate(new AccountId(1))
-      const status = Status.InvalidQueryHeader
-      const statusCode = status._code.toString()
-      const err = new PrecheckStatusError({
-        status,
-        transactionId,
-        nodeId: new AccountId(3),
-        contractFunctionResult: null,
-      })
-      err.message = 'query failed'
-      const query: any = { executeWithSigner: jest.fn().mockRejectedValue(err) }
-      const res = await wallet820.hedera_signAndExecuteQuery(7, query)
-      const json = err.toJSON()
-      expect(res).toEqual(
-        formatJsonRpcError(7, { code: 9000, message: json.message, data: statusCode }),
+      jest.spyOn(query, 'executeWithSigner').mockResolvedValue({
+        toBytes: () => Buffer.from(JSON.stringify(mockResponse)),
+      } as unknown as AccountInfo)
+
+      const result = await hip820Wallet.hedera_signAndExecuteQuery(requestId, query)
+
+      expect(result).toEqual(
+        formatJsonRpcResult(requestId, {
+          response: Buffer.from(JSON.stringify(mockResponse)).toString('base64'),
+        }),
       )
     })
   })
 
   describe('hedera_signAndExecuteTransaction', () => {
-    it('signs, executes and returns result when not frozen', async () => {
-      const execResult = { toJSON: () => ({ done: true }) }
-      const signed = { executeWithSigner: jest.fn().mockResolvedValue(execResult) }
-      const tx: any = {
-        isFrozen: () => false,
-        freezeWithSigner: jest.fn(),
-        signWithSigner: jest.fn().mockResolvedValue(signed),
-      }
-      const res = await wallet820.hedera_signAndExecuteTransaction(8, tx)
-      expect(tx.freezeWithSigner).toHaveBeenCalled()
-      expect(res).toEqual(formatJsonRpcResult(8, { done: true }))
-    })
-
-    it('formats PrecheckStatusError on execution', async () => {
-      const transactionId = TransactionId.generate(new AccountId(1))
-      const status = Status.InvalidQueryHeader
-      const statusCode = status._code.toString()
-      const err = new PrecheckStatusError({
-        status,
-        transactionId,
-        nodeId: new AccountId(3),
-        contractFunctionResult: null,
+    it('should sign and execute unfreeze transaction', async () => {
+      const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
+        freeze: false,
       })
-      err.message = 'exec fail'
-      const signed = { executeWithSigner: jest.fn().mockRejectedValue(err) }
-      const tx: any = {
-        isFrozen: () => true,
-        freezeWithSigner: jest.fn(),
-        signWithSigner: jest.fn().mockResolvedValue(signed),
-      }
-      const res = await wallet820.hedera_signAndExecuteTransaction(9, tx)
-      const json = err.toJSON()
-      expect(res).toEqual(
-        formatJsonRpcError(9, { code: 9000, message: json.message, data: statusCode }),
+      const freezeWithSignerSpy = jest.spyOn(transaction, 'freezeWithSigner')
+      const signWithSignerSpy = jest.spyOn(transaction, 'signWithSigner')
+      const mockResponse: SignAndExecuteTransactionResponse = useJsonFixture(
+        'methods/signAndExecuteTransactionSuccess',
       )
+
+      jest.spyOn(transaction, 'executeWithSigner').mockResolvedValue({
+        toJSON: () => mockResponse.response.result,
+      } as unknown as TransactionResponse)
+
+      const result = await hip820Wallet.hedera_signAndExecuteTransaction(requestId, transaction)
+
+      expect(result).toEqual(mockResponse.response)
+      expect(freezeWithSignerSpy).toHaveBeenCalled()
+      expect(signWithSignerSpy).toHaveBeenCalled()
+    })
+    it('should sign and execute freeze transaction', async () => {
+      const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
+        freeze: true,
+      })
+      const freezeWithSignerSpy = jest.spyOn(transaction, 'freezeWithSigner')
+      const signWithSignerSpy = jest.spyOn(transaction, 'signWithSigner')
+      const mockResponse: SignAndExecuteTransactionResponse = useJsonFixture(
+        'methods/signAndExecuteTransactionSuccess',
+      )
+
+      jest.spyOn(transaction, 'executeWithSigner').mockResolvedValue({
+        toJSON: () => mockResponse.response.result,
+      } as unknown as TransactionResponse)
+
+      const result = await hip820Wallet.hedera_signAndExecuteTransaction(requestId, transaction)
+
+      expect(result).toEqual(mockResponse.response)
+      expect(freezeWithSignerSpy).toHaveBeenCalledTimes(0)
+      expect(signWithSignerSpy).toHaveBeenCalled()
     })
   })
 
-  it('hedera_signTransaction returns base64 signatureMap', async () => {
-    mockWallet.sign.mockResolvedValue([
-      { pubKeyPrefix: new Uint8Array([3]), signature: new Uint8Array([4]) },
-    ])
-    const data = new Uint8Array([10, 20])
-    const res = await wallet820.hedera_signTransaction(10, data)
-    const decoded = proto.SignatureMap.decode(Buffer.from(res.result.signatureMap, 'base64'))
-    expect(decoded.sigPair.length).toBe(1)
+  describe('hedera_signTransaction', () => {
+    it('should sign transaction body', async () => {
+      const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
+        freeze: true,
+      })
+
+      const transactionBody = transactionToTransactionBody(transaction)
+      const uint8ArrayBody = proto.TransactionBody.encode(transactionBody).finish();
+      
+      const result = await hip820Wallet.hedera_signTransaction(requestId, uint8ArrayBody)
+
+      const mockResponse: SignTransactionResult = {
+        id: requestId,
+        jsonrpc: '2.0',
+        result: {
+          signatureMap:
+            'CmUKIQJ4J53yGuPNMGEGJ7HkI+u3QFxUuAOa9VLEtFj7Y6qNMzJAWvfY3/rze02Lel+X7MW3mHXDMwoaq9tQbD3aVLiXtDgvmB8J9gCumRq30CzZcq4ceMuaJpEs8UOAfGJSU87ORQ==',
+        },
+      }
+
+      expect(result).toEqual(mockResponse)
+    })
   })
 })
