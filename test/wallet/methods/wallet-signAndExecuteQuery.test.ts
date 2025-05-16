@@ -46,7 +46,9 @@ describe(Wallet.name, () => {
         testPrivateKeyECDSA,
       )
       const query = new AccountInfoQuery().setAccountId(testUserAccountId)
-      const respondSessionRequestSpy = jest.spyOn(wallet, 'respondSessionRequest')
+      const respondSessionRequestSpy = jest
+        .spyOn(wallet, 'respondSessionRequest')
+        .mockReturnValue(undefined)
 
       const signerCallMock = jest.spyOn(query, 'executeWithSigner')
       const toBytes = () => base64StringToUint8Array(btoa('Hello World!'))

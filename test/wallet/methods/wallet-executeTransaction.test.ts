@@ -52,7 +52,9 @@ describe(Wallet.name, () => {
 
         const signTransaction = await hederaWallet.signTransaction(transaction)
 
-        const respondSessionRequestSpy = jest.spyOn(wallet, 'respondSessionRequest')
+        const respondSessionRequestSpy = jest
+          .spyOn(wallet, 'respondSessionRequest')
+          .mockReturnValue(undefined)
 
         await wallet.hedera_executeTransaction(
           requestId,
