@@ -60,6 +60,7 @@ type BaseLogger = 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'fatal'
 
 export class DAppConnector {
   private logger: ILogger
+  readonly storagePrefix = 'hedera-wc/dapp-connector/'
   dAppMetadata: SignClientTypes.Metadata
   network: LedgerId = LedgerId.TESTNET
   projectId: string
