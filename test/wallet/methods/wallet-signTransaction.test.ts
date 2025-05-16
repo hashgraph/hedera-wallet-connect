@@ -54,22 +54,21 @@ describe(Wallet.name, () => {
           AccountId.fromString('0.0.3'),
         )
         if (!transactionBody) throw new Error('Failed to create transaction body')
-        const respondSessionRequestSpy = jest.spyOn(wallet, 'respondSessionRequest')
+        const respondSessionRequestSpy = jest
+          .spyOn(wallet, 'respondSessionRequest')
+          .mockReturnValue(undefined)
 
-        const response = await wallet.hedera_signTransaction(
+        await wallet.hedera_signTransaction(
           requestId,
           requestTopic,
           transactionBody,
           hederaWallet,
         )
-        console.log(response)
 
         const mockResponse: SignTransactionResponse = useJsonFixture(
           'methods/signTransactionSuccess',
         )
-        mockResponse.response.result
 
-        respondSessionRequestSpy
         expect(respondSessionRequestSpy).toHaveBeenCalledWith(mockResponse)
       } catch (err) {}
     }, 15_000)

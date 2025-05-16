@@ -20,7 +20,6 @@
 
 import { AccountId, LedgerId, Transaction } from '@hashgraph/sdk'
 import { EngineTypes, SessionTypes, SignClientTypes } from '@walletconnect/types'
-import QRCodeModal from '@walletconnect/qrcode-modal'
 import { WalletConnectModal } from '@walletconnect/modal'
 import SignClient from '@walletconnect/sign-client'
 import { getSdkError, isOnline } from '@walletconnect/utils'
@@ -76,6 +75,7 @@ export class DAppConnector {
   walletConnectModal: WalletConnectModal
   signers: DAppSigner[] = []
   isInitializing = false
+  private storagePrefix = 'hedera-wc/dapp-connector/'
 
   /**
    * Initializes the DAppConnector instance.
@@ -146,7 +146,6 @@ export class DAppConnector {
         metadata: this.dAppMetadata,
       })
       const existingSessions = this.walletConnectClient.session.getAll()
-
       if (existingSessions.length > 0)
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
       else this.checkIframeConnect()
@@ -191,27 +190,6 @@ export class DAppConnector {
     const signer = this.signers.find((signer) => signer.getAccountId().equals(accountId))
     if (!signer) throw new Error('Signer is not found for this accountId')
     return signer
-  }
-
-  /**
-   * Initiates the WalletConnect connection flow using a QR code.
-   * @deprecated Use `openModal` instead.
-   * @param pairingTopic - The pairing topic for the connection (optional).
-   * @returns A Promise that resolves when the connection process is complete.
-   */
-  public async connectQR(pairingTopic?: string): Promise<void> {
-    return this.abortableConnect(async () => {
-      try {
-        const { uri, approval } = await this.connectURI(pairingTopic)
-        if (!uri) throw new Error('URI is not defined')
-        QRCodeModal.open(uri, () => {
-          throw new Error('User rejected pairing')
-        })
-        await this.onSessionConnected(await approval())
-      } finally {
-        QRCodeModal.close()
-      }
-    })
   }
 
   /**
@@ -362,7 +340,7 @@ export class DAppConnector {
     return new Promise(async (resolve, reject) => {
       const pairTimeoutMs = 480_000
       const timeout = setTimeout(() => {
-        QRCodeModal.close()
+        this.walletConnectModal.closeModal()
         reject(new Error(`Connect timed out after ${pairTimeoutMs}(ms)`))
       }, pairTimeoutMs)
 
@@ -510,7 +488,7 @@ export class DAppConnector {
     })
   }
 
-  private async request<Req extends EngineTypes.RequestParams, Res extends JsonRpcResult>({
+  public async request<Req extends EngineTypes.RequestParams, Res extends JsonRpcResult>({
     method,
     params,
   }: Req['request']): Promise<Res> {
@@ -665,8 +643,7 @@ export class DAppConnector {
    *
    * @param {SignTransactionParams} params - The parameters of type {@link SignTransactionParams | `SignTransactionParams`} required for `Transaction` signing.
    * @param {string} params.signerAccountId - a signer Hedera Account identifier in {@link https://hips.hedera.com/hip/hip-30 | HIP-30} (`<nework>:<shard>.<realm>.<num>`) form.
-   * @param {Transaction | string} params.transactionBody - a built Transaction object, or a base64 string of a transaction body (deprecated).
-   * @deprecated Using string for params.transactionBody is deprecated and will be removed in a future version. Please migrate to using Transaction objects directly.
+   * @param {Transaction} params.transactionBody - a Transaction object built with the @hashgraph/sdk
    * @returns Promise\<{@link SignTransactionResult}\>
    * @example
    * ```ts

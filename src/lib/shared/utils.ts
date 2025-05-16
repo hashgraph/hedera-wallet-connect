@@ -33,8 +33,7 @@ import { proto } from '@hashgraph/proto'
 /**
  * Converts `Transaction` to a Base64-string.
  *
- * First converts a transaction to bytes and then encodes it as a Base64-string. Will attempt
- * to set default Node Account ID and freeze the transaction before converting.
+ * Converts a transaction to bytes and then encodes it as a Base64-string. Allow uncompleted transaction (HIP-745).
  * @param transaction - Any instance of a class that extends `Transaction`
  * @returns Base64 encoded representation of the input `Transaction` object
  */
