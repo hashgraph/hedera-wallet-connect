@@ -33,13 +33,13 @@ jobs:
 
       - name: Run tests (Forked PR)
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && !cancelled() && !failure() }} 
-        run: npm run test
+        run: npm run test && npm run build
 
       - name: Test
         uses: step-security/jest-coverage-report-action@ea54c69465c9b2a498770f0b962e8b4013a3b48c # v2.3.3
         if: ${{ ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || github.event_name == 'push') && !cancelled() && !failure() }}
         with:
-         test-script: npm run test
+         test-script: npm run test && npm run build
 
       - name: Upload results to Codecov
         uses: codecov/codecov-action@5c47607acb93fed5485fdbf7232e8a31425f672a # v5.0.2

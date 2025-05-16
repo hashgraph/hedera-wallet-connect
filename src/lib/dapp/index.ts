@@ -75,7 +75,6 @@ export class DAppConnector {
   walletConnectModal: WalletConnectModal
   signers: DAppSigner[] = []
   isInitializing = false
-  private storagePrefix = 'hedera-wc/dapp-connector/'
 
   /**
    * Initializes the DAppConnector instance.
