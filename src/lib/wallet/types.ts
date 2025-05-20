@@ -18,7 +18,7 @@
  *
  */
 
-import type { Web3WalletTypes } from '@walletconnect/web3wallet'
+import type { WalletKitTypes } from '@reown/walletkit'
 import type { SessionTypes } from '@walletconnect/types'
 import type { Transaction, Query, AccountId, Wallet as HederaWallet } from '@hashgraph/sdk'
 import type { HederaJsonRpcMethod, HederaChainId } from '../shared'
@@ -30,11 +30,11 @@ export interface HederaNativeWallet {
    */
   buildAndApproveSession(
     accounts: string[],
-    { id, params }: Web3WalletTypes.SessionProposal,
+    { id, params }: WalletKitTypes.SessionProposal,
   ): Promise<SessionTypes.Struct>
 
   parseSessionRequest(
-    event: Web3WalletTypes.SessionRequest,
+    event: WalletKitTypes.SessionRequest,
     shouldThrow: boolean,
   ): {
     method: HederaJsonRpcMethod
@@ -46,12 +46,12 @@ export interface HederaNativeWallet {
   }
 
   executeSessionRequest(
-    event: Web3WalletTypes.SessionRequest,
+    event: WalletKitTypes.SessionRequest,
     hederaWallet: HederaWallet,
   ): Promise<void>
 
   rejectSessionRequest(
-    event: Web3WalletTypes.SessionRequest,
+    event: WalletKitTypes.SessionRequest,
     error: { code: number; message: string },
   ): Promise<void>
 

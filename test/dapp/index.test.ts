@@ -25,6 +25,7 @@ import {
   PublicKey,
   PrivateKey,
   Client,
+  Transaction,
 } from '@hashgraph/sdk'
 import {
   DAppConnector,
@@ -49,10 +50,15 @@ import {
   useJsonFixture,
   prepareTestTransaction,
   testUserAccountId,
+  testNodeAccountId,
 } from '../_helpers'
 import { SignClient } from '@walletconnect/sign-client'
 import { ISignClient, SessionTypes } from '@walletconnect/types'
-import { networkNamespaces } from '../../src/lib/shared'
+import {
+  networkNamespaces,
+  transactionBodyToBase64String,
+  transactionToTransactionBody,
+} from '../../src/lib/shared'
 import * as nacl from 'tweetnacl'
 import { proto } from '@hashgraph/proto'
 
@@ -63,6 +69,11 @@ describe('DAppConnector', () => {
   const mockTopic = '1234567890abcdef'
 
   beforeEach(async () => {
+    //prevent fetch from mirror node
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      status: 500,
+    })
+
     connector = new DAppConnector(
       dAppMetadata,
       LedgerId.TESTNET,
@@ -73,7 +84,7 @@ describe('DAppConnector', () => {
       'off',
     )
     mockSignClient = await SignClient.init({
-      logger: 'error',
+      logger: 'fatal',
       relayUrl: 'wss://relay.walletconnect.com',
       projectId: projectId,
       metadata: dAppMetadata,
@@ -126,10 +137,10 @@ describe('DAppConnector', () => {
 
   describe('init', () => {
     it('should init SignClient correctly', async () => {
-      await connector.init({ logger: 'error' })
+      await connector.init({ logger: 'fatal' })
 
       expect(connector.walletConnectClient).toBeInstanceOf(SignClient)
-      expect(connector.walletConnectClient?.metadata).toBe(dAppMetadata)
+      expect(connector.walletConnectClient?.metadata).toStrictEqual(dAppMetadata)
       expect(connector.walletConnectClient?.core.projectId).toBe(projectId)
       expect(connector.walletConnectClient?.core.relayUrl).toBe('wss://relay.walletconnect.com')
     })
@@ -484,7 +495,10 @@ describe('DAppConnector', () => {
 
     it('should verify signatures using real signing', async () => {
       // Create a test transaction
-      const transaction = prepareTestTransaction(new TopicCreateTransaction(), { freeze: true })
+      const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
+        freeze: false,
+        setNodeAccountIds: false,
+      })
 
       // Sign with connector
       const connectorParams: SignTransactionParams = {
@@ -498,9 +512,10 @@ describe('DAppConnector', () => {
       const bytesToVerify = connectorSigned._signedTransactions.get(0)!.bodyBytes!
 
       // Sign directly with private key for comparison
-      const directSigned = await transaction.sign(privateKey)
-      const directSigMap = directSigned._signedTransactions.get(0)!.sigMap
-      const directSignature = extractFirstSignature(directSigMap)
+      const transactionBody = transactionToTransactionBody(transaction)
+      const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
+      const bodyBytes = base64StringToUint8Array(transactionBodyBase64)
+      const directSignature = privateKey.sign(bodyBytes)
 
       // Verify both signatures with real verification
       const publicKeyBytes = publicKey.toBytes()
