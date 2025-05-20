@@ -33,7 +33,7 @@ import { proto } from '@hashgraph/proto'
 /**
  * Converts `Transaction` to a Base64-string.
  *
- * Converts a transaction to bytes and then encodes it as a Base64-string. Allow uncompleted transaction (HIP-745).
+ * Converts a transaction to bytes and then encodes it as a Base64-string. Allow incomplete transaction (HIP-745).
  * @param transaction - Any instance of a class that extends `Transaction`
  * @returns Base64 encoded representation of the input `Transaction` object
  */
