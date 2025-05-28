@@ -31,9 +31,9 @@ describe('DefaultLogger', () => {
       logger.info('test')
       logger.debug('test')
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] test')
-      expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN] test')
-      expect(consoleInfoSpy).toHaveBeenCalledWith('[INFO] test')
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR - Logger] test')
+      expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN - Logger] test')
+      expect(consoleInfoSpy).toHaveBeenCalledWith('[INFO - Logger] test')
       expect(consoleDebugSpy).not.toHaveBeenCalled()
     })
 
@@ -44,10 +44,10 @@ describe('DefaultLogger', () => {
       logger.info('test')
       logger.debug('test')
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] test')
-      expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN] test')
-      expect(consoleInfoSpy).toHaveBeenCalledWith('[INFO] test')
-      expect(consoleDebugSpy).toHaveBeenCalledWith('[DEBUG] test')
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR - Logger] test')
+      expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN - Logger] test')
+      expect(consoleInfoSpy).toHaveBeenCalledWith('[INFO - Logger] test')
+      expect(consoleDebugSpy).toHaveBeenCalledWith('[DEBUG - Logger] test')
     })
   })
 
@@ -63,7 +63,7 @@ describe('DefaultLogger', () => {
       logger.info('test')
       logger.debug('test')
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] test')
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR - Logger] test')
       expect(consoleWarnSpy).not.toHaveBeenCalled()
       expect(consoleInfoSpy).not.toHaveBeenCalled()
       expect(consoleDebugSpy).not.toHaveBeenCalled()
@@ -82,7 +82,7 @@ describe('DefaultLogger', () => {
         logger.info('test info')
         logger.debug('test debug')
 
-        expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] test error')
+        expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR - Logger] test error')
         expect(consoleWarnSpy).not.toHaveBeenCalled()
         expect(consoleInfoSpy).not.toHaveBeenCalled()
         expect(consoleDebugSpy).not.toHaveBeenCalled()
@@ -93,7 +93,7 @@ describe('DefaultLogger', () => {
         logger.error('test error', { details: 'more info' }, error)
 
         expect(consoleErrorSpy).toHaveBeenCalledWith(
-          '[ERROR] test error',
+          '[ERROR - Logger] test error',
           { details: 'more info' },
           error,
         )
@@ -111,8 +111,8 @@ describe('DefaultLogger', () => {
         logger.info('test info')
         logger.debug('test debug')
 
-        expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] test error')
-        expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN] test warn')
+        expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR - Logger] test error')
+        expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN - Logger] test warn')
         expect(consoleInfoSpy).not.toHaveBeenCalled()
         expect(consoleDebugSpy).not.toHaveBeenCalled()
       })
@@ -129,9 +129,9 @@ describe('DefaultLogger', () => {
         logger.info('test info')
         logger.debug('test debug')
 
-        expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] test error')
-        expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN] test warn')
-        expect(consoleInfoSpy).toHaveBeenCalledWith('[INFO] test info')
+        expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR - Logger] test error')
+        expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN - Logger] test warn')
+        expect(consoleInfoSpy).toHaveBeenCalledWith('[INFO - Logger] test info')
         expect(consoleDebugSpy).not.toHaveBeenCalled()
       })
     })
@@ -147,10 +147,10 @@ describe('DefaultLogger', () => {
         logger.info('test info')
         logger.debug('test debug')
 
-        expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] test error')
-        expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN] test warn')
-        expect(consoleInfoSpy).toHaveBeenCalledWith('[INFO] test info')
-        expect(consoleDebugSpy).toHaveBeenCalledWith('[DEBUG] test debug')
+        expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR - Logger] test error')
+        expect(consoleWarnSpy).toHaveBeenCalledWith('[WARN - Logger] test warn')
+        expect(consoleInfoSpy).toHaveBeenCalledWith('[INFO - Logger] test info')
+        expect(consoleDebugSpy).toHaveBeenCalledWith('[DEBUG - Logger] test debug')
       })
     })
   })
