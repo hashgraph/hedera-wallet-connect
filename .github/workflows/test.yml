@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install dependencies
-        run: npm install --log-level=error
+        run: npm ci
 
       - name: Run tests (Forked PR)
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && !cancelled() && !failure() }} 
