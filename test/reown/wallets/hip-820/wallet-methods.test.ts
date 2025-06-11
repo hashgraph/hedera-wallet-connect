@@ -26,6 +26,7 @@ import {
   Status,
   AccountInfo,
   TransactionResponse,
+  PrivateKey,
 } from '@hashgraph/sdk'
 import {
   GetNodeAddresesResponse,
@@ -57,7 +58,7 @@ describe('HIP820Wallet Methods', () => {
     hip820Wallet = HIP820Wallet.init({
       chainId,
       accountId,
-      privateKey: testPrivateKeyECDSA,
+      privateKey: PrivateKey.fromStringECDSA(testPrivateKeyECDSA),
     })
   })
 
@@ -125,12 +126,12 @@ describe('HIP820Wallet Methods', () => {
     const testCases = [
       [
         'ECDSA',
-        testPrivateKeyECDSA,
+        PrivateKey.fromStringECDSA(testPrivateKeyECDSA),
         'CmUKIQJ4J53yGuPNMGEGJ7HkI+u3QFxUuAOa9VLEtFj7Y6qNMzJAp3vxT7kRPE9HFFm/bbArGYDQ+psNWZC70rdW2bE1L85u79GOlQSTlaog5lmE6TiaX6r8Bk70dU7ZIwcHgnAkCw==',
       ],
       [
         'ED25519',
-        testPrivateKeyED25519,
+        PrivateKey.fromStringED25519(testPrivateKeyED25519),
         'CmQKIKLvE3YbZEplGhpKxmbq+6xBnJcoL4r1wz9Y1zLnPlpVGkBtfDTfBZGf/MUbovYyLUjORErDGhDYbzPFoAbkMwRrpw2ouDRmn6Dd6A06k6yM/FhZ/VjdHVhQUd+fxv1cZqUM',
       ],
     ]
@@ -229,8 +230,8 @@ describe('HIP820Wallet Methods', () => {
       })
 
       const transactionBody = transactionToTransactionBody(transaction)
-      const uint8ArrayBody = proto.TransactionBody.encode(transactionBody).finish();
-      
+      const uint8ArrayBody = proto.TransactionBody.encode(transactionBody).finish()
+
       const result = await hip820Wallet.hedera_signTransaction(requestId, uint8ArrayBody)
 
       const mockResponse: SignTransactionResult = {

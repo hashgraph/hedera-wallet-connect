@@ -27,7 +27,7 @@ describe('HIP820Wallet', () => {
   describe('init', () => {
     const chainId = HederaChainId.Testnet
     const accountId = testUserAccountId.toString()
-    const privateKey = testPrivateKeyECDSA
+    const privateKey = PrivateKey.fromStringECDSA(testPrivateKeyECDSA)
 
     it('should initialize with default provider', () => {
       const wallet = HIP820Wallet.init({ chainId, accountId, privateKey })
