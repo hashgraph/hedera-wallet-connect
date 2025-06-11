@@ -239,7 +239,7 @@ export class HIP820Wallet implements HIP820WalletInterface {
     signedTransaction: Transaction,
   ): Promise<ExecuteTransactionResult | JsonRpcError> {
     try {
-      const response = await signedTransaction.executeWithSigner(this.wallet)
+      const response = await this.wallet.call(signedTransaction)
       return formatJsonRpcResult(id, response.toJSON())
     } catch (e) {
       if (e instanceof PrecheckStatusError) {

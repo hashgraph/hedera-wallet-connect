@@ -108,7 +108,7 @@ describe('HIP820Wallet Methods', () => {
       })
       error.message = 'Test error message'
 
-      jest.spyOn(transaction, 'executeWithSigner').mockRejectedValue(error)
+      jest.spyOn(hip820Wallet.wallet, 'call').mockRejectedValue(error)
 
       const result = await hip820Wallet.hedera_executeTransaction(requestId, transaction)
       const expected = formatJsonRpcError(requestId, {
