@@ -50,12 +50,7 @@
   },
   "scripts": {
     "build": "rimraf dist && tsc",
-    "build:ts-demo": "node scripts/demos/typescript/build.mjs",
-    "build:react-demo": "node scripts/demos/react/build.mjs",
     "watch": "nodemon --watch src/lib/ --ext ts --exec \"npm run build\"",
-    "dev": "npm run dev:ts-demo",
-    "dev:ts-demo": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/demos/typescript/dev.mjs\"",
-    "dev:react-demo": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/demos/react/dev.mjs\"",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:connect": "jest --testMatch '**/DAppConnector.test.ts' --verbose",
