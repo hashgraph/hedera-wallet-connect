@@ -40,7 +40,9 @@ describe(Wallet.name, () => {
         testPrivateKeyECDSA,
       )
 
-      const respondSessionRequestSpy = jest.spyOn(wallet, 'respondSessionRequest')
+      const respondSessionRequestSpy = jest
+        .spyOn(wallet, 'respondSessionRequest')
+        .mockReturnValue(undefined)
 
       try {
         await wallet.hedera_getNodeAddresses(requestId, requestTopic, null, hederaWallet)
