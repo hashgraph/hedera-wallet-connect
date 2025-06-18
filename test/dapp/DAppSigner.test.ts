@@ -516,6 +516,22 @@ describe('DAppSigner', () => {
     })
   })
 
+  describe('getAccountKey()', () => {
+    let signerRequestSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      signerRequestSpy = jest.spyOn(signer, 'request')
+    })
+
+    afterEach(() => {
+      signerRequestSpy.mockRestore()
+    })
+
+    it('should throw error as no key was received from the mirror node', () => {
+      expect(() => signer.getAccountKey()).toThrow('No key was received from the mirror node')
+    })
+  })
+
   describe('network configuration', () => {
     let signerRequestSpy: jest.SpyInstance
 
