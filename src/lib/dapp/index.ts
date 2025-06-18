@@ -20,10 +20,10 @@
 
 import { AccountId, LedgerId, Transaction } from '@hashgraph/sdk'
 import { EngineTypes, SessionTypes, SignClientTypes } from '@walletconnect/types'
-import QRCodeModal from '@walletconnect/qrcode-modal'
 import { WalletConnectModal } from '@walletconnect/modal'
 import SignClient from '@walletconnect/sign-client'
-import { getSdkError } from '@walletconnect/utils'
+import { getSdkError, isOnline } from '@walletconnect/utils'
+import { RELAYER_EVENTS } from '@walletconnect/core'
 import { DefaultLogger, ILogger, LogLevel } from '../shared/logger'
 import {
   HederaJsonRpcMethod,
@@ -60,6 +60,7 @@ type BaseLogger = 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'fatal'
 
 export class DAppConnector {
   private logger: ILogger
+  readonly storagePrefix = 'hedera-wc/dapp-connector/'
   dAppMetadata: SignClientTypes.Metadata
   network: LedgerId = LedgerId.TESTNET
   projectId: string
@@ -144,10 +145,16 @@ export class DAppConnector {
         metadata: this.dAppMetadata,
       })
       const existingSessions = this.walletConnectClient.session.getAll()
-
       if (existingSessions.length > 0)
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
       else this.checkIframeConnect()
+
+      //manual call after init before relayer connect event handler is attached
+      this.handleRelayConnected()
+      this.walletConnectClient.core.relayer.on(
+        RELAYER_EVENTS.connect,
+        this.handleRelayConnected.bind(this),
+      )
 
       this.walletConnectClient.on('session_event', this.handleSessionEvent.bind(this))
       this.walletConnectClient.on('session_update', this.handleSessionUpdate.bind(this))
@@ -182,27 +189,6 @@ export class DAppConnector {
     const signer = this.signers.find((signer) => signer.getAccountId().equals(accountId))
     if (!signer) throw new Error('Signer is not found for this accountId')
     return signer
-  }
-
-  /**
-   * Initiates the WalletConnect connection flow using a QR code.
-   * @deprecated Use `openModal` instead.
-   * @param pairingTopic - The pairing topic for the connection (optional).
-   * @returns A Promise that resolves when the connection process is complete.
-   */
-  public async connectQR(pairingTopic?: string): Promise<void> {
-    return this.abortableConnect(async () => {
-      try {
-        const { uri, approval } = await this.connectURI(pairingTopic)
-        if (!uri) throw new Error('URI is not defined')
-        QRCodeModal.open(uri, () => {
-          throw new Error('User rejected pairing')
-        })
-        await this.onSessionConnected(await approval())
-      } finally {
-        QRCodeModal.close()
-      }
-    })
   }
 
   /**
@@ -353,7 +339,7 @@ export class DAppConnector {
     return new Promise(async (resolve, reject) => {
       const pairTimeoutMs = 480_000
       const timeout = setTimeout(() => {
-        QRCodeModal.close()
+        this.walletConnectModal.closeModal()
         reject(new Error(`Connect timed out after ${pairTimeoutMs}(ms)`))
       }, pairTimeoutMs)
 
@@ -501,7 +487,7 @@ export class DAppConnector {
     })
   }
 
-  private async request<Req extends EngineTypes.RequestParams, Res extends JsonRpcResult>({
+  public async request<Req extends EngineTypes.RequestParams, Res extends JsonRpcResult>({
     method,
     params,
   }: Req['request']): Promise<Res> {
@@ -525,6 +511,8 @@ export class DAppConnector {
     if (!signer) {
       throw new Error('There is no active session. Connect to the wallet at first.')
     }
+
+    await this.verifyLastConnectedInstance()
 
     this.logger.debug(
       `Using signer: ${signer.getAccountId().toString()}: ${signer.topic} - about to request.`,
@@ -654,8 +642,7 @@ export class DAppConnector {
    *
    * @param {SignTransactionParams} params - The parameters of type {@link SignTransactionParams | `SignTransactionParams`} required for `Transaction` signing.
    * @param {string} params.signerAccountId - a signer Hedera Account identifier in {@link https://hips.hedera.com/hip/hip-30 | HIP-30} (`<nework>:<shard>.<realm>.<num>`) form.
-   * @param {Transaction | string} params.transactionBody - a built Transaction object, or a base64 string of a transaction body (deprecated).
-   * @deprecated Using string for params.transactionBody is deprecated and will be removed in a future version. Please migrate to using Transaction objects directly.
+   * @param {Transaction} params.transactionBody - a Transaction object built with the @hashgraph/sdk
    * @returns Promise\<{@link SignTransactionResult}\>
    * @example
    * ```ts
@@ -756,6 +743,41 @@ export class DAppConnector {
       this.logger.error('Error disconnecting pairing:', e)
     }
     this.logger.info('Pairing deleted by wallet')
+  }
+
+  // Store the last connected randomSessionIdentifier
+  private async handleRelayConnected() {
+    if (!this.walletConnectClient) {
+      this.logger.error('walletConnectClient not found')
+      return
+    }
+    const core = this.walletConnectClient.core
+    const instanceId = core.crypto.randomSessionIdentifier
+    await core.storage.setItem(this.storagePrefix + 'last-connected-instance', instanceId)
+  }
+
+  // In the event of another tab being connected after the current one,
+  // the current tab will be forcibly reconnected to the relay so that
+  // a response to the request can be received.
+  // https://github.com/hashgraph/hedera-wallet-connect/issues/387
+  private async verifyLastConnectedInstance() {
+    if (!this.walletConnectClient) {
+      this.logger.error('walletConnectClient not found')
+      return
+    }
+
+    const core = this.walletConnectClient.core
+    const instanceId = core.crypto.randomSessionIdentifier
+
+    const isOnlineStatus = await isOnline()
+    const lastConnectedInstanceId = await core.storage.getItem(
+      this.storagePrefix + 'last-connected-instance',
+    )
+
+    if (lastConnectedInstanceId != instanceId && isOnlineStatus) {
+      this.logger.info('Forced reconnecting to the relay')
+      await core.relayer.restartTransport()
+    }
   }
 }
 

@@ -34,7 +34,7 @@ describe(Wallet.name, () => {
       [
         'ECDSA',
         testPrivateKeyECDSA,
-        'CmUKIQJ4J53yGuPNMGEGJ7HkI+u3QFxUuAOa9VLEtFj7Y6qNMzJAp3vxT7kRPE9HFFm/bbArGYDQ+psNWZC70rdW2bE1L86REC5xavtsalXfGaZ7FsdkWwPg4GBUKuzmr1eFTcYdNg==',
+        'CmUKIQJ4J53yGuPNMGEGJ7HkI+u3QFxUuAOa9VLEtFj7Y6qNMzJAp3vxT7kRPE9HFFm/bbArGYDQ+psNWZC70rdW2bE1L85u79GOlQSTlaog5lmE6TiaX6r8Bk70dU7ZIwcHgnAkCw==',
       ],
       [
         'ED25519',
@@ -54,7 +54,9 @@ describe(Wallet.name, () => {
           testUserAccountId.toString(),
           privateKey,
         )
-        const respondSessionRequestSpy = jest.spyOn(wallet, 'respondSessionRequest')
+        const respondSessionRequestSpy = jest
+          .spyOn(wallet, 'respondSessionRequest')
+          .mockReturnValue(undefined)
 
         try {
           await wallet.hedera_signMessage(id, topic, 'Hello Future', hederaWallet)

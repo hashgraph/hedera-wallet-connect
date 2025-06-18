@@ -56,7 +56,9 @@ describe(Wallet.name, () => {
           freeze: true,
         })
 
-        const respondSessionRequestSpy = jest.spyOn(wallet, 'respondSessionRequest')
+        const respondSessionRequestSpy = jest
+          .spyOn(wallet, 'respondSessionRequest')
+          .mockReturnValue(undefined)
 
         await wallet.hedera_signAndExecuteTransaction(
           requestId,
