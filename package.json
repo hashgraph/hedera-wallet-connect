@@ -42,18 +42,14 @@
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "tweetnacl": "^1.0.3",
-    "typedoc": "^0.27.6",
-    "typedoc-theme-hierarchy": "^5.0.0",
     "typescript": "^5.2.2"
   },
   "scripts": {
     "build": "rimraf dist && tsc",
     "build:ts-demo": "node scripts/demos/typescript/build.mjs",
     "build:react-demo": "node scripts/demos/react/build.mjs",
-    "build:docs": "typedoc --options typedoc.json",
     "watch": "nodemon --watch src/lib/ --ext ts --exec \"npm run build\"",
     "dev": "npm run dev:ts-demo",
-    "dev:docs": "cd docs && npm run start",
     "dev:ts-demo": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/demos/typescript/dev.mjs\"",
     "dev:react-demo": "rimraf dist && npm run build && concurrently --raw \"npm run watch\" \"node scripts/demos/react/dev.mjs\"",
     "test": "jest",
@@ -63,7 +59,6 @@
     "prepublishOnly": "rm -Rf dist && npm run build",
     "prettier:check": "prettier --check ./src/",
     "prettier:fix": "prettier --write ./src/",
-    "prod:docs-docker": "sh docker-run.sh",
     "test:sigMap": "jest --testMatch '**/SignatureMapHelpers.test.ts' --verbose",
     "test:coverage": "jest --coverage",
     "test:coverage:html": "jest --coverage --coverageReporters='text-summary' --coverageReporters='html'"
