@@ -102,6 +102,20 @@ export class DAppSigner implements Signer {
     return `${ledgerIdToCAIPChainId(this.ledgerId)}:${this.accountId.toString()}`
   }
 
+  private _getRandomNodes(numberOfNodes: number) {
+    const allNodes = Object.values(this._getHederaClient().network).map((o) =>
+      typeof o === 'string' ? AccountId.fromString(o) : o,
+    )
+
+    // shuffle nodes
+    for (let i = allNodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[allNodes[i], allNodes[j]] = [allNodes[j], allNodes[i]]
+    }
+
+    return allNodes.slice(0, numberOfNodes)
+  }
+
   request<T>(request: { method: string; params: any }): Promise<T> {
     // Avoid a wallet call if the session is no longer valid
     if (!this?.signClient?.session?.get(this.topic)) {
@@ -210,7 +224,9 @@ export class DAppSigner implements Signer {
   }
 
   async populateTransaction<T extends Transaction>(transaction: T): Promise<T> {
-    return transaction.setTransactionId(TransactionId.generate(this.getAccountId()))
+    return transaction
+      .setNodeAccountIds(this._getRandomNodes(10)) // allow retrying on up to 10 nodes
+      .setTransactionId(TransactionId.generate(this.getAccountId()))
   }
 
   /**
@@ -222,7 +238,11 @@ export class DAppSigner implements Signer {
    * @returns transaction - `Transaction` object with signature
    */
   async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
-    const transactionBody = transactionToTransactionBody(transaction)
+    let nodeAccountId: AccountId
+    if (!transaction.nodeAccountIds || transaction.nodeAccountIds.length === 0)
+      nodeAccountId = this._getRandomNodes(1)[0]
+    else nodeAccountId = transaction.nodeAccountIds[0]
+    const transactionBody = transactionToTransactionBody(transaction, nodeAccountId)
     if (!transactionBody) throw new Error('Failed to serialize transaction body')
     const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
 
