@@ -527,8 +527,8 @@ describe('DAppSigner', () => {
       signerRequestSpy.mockRestore()
     })
 
-    it('should throw error as no key was received from the mirror node', () => {
-      expect(() => signer.getAccountKey()).toThrow('No key was received from the mirror node')
+    it('should throw error as method is not implemented', () => {
+      expect(() => signer.getAccountKey()).toThrow('Method not implemented.')
     })
   })
 

@@ -152,7 +152,7 @@ export interface SignAndExecuteTransactionResponse extends EngineTypes.RespondPa
 // params
 export interface SignTransactionParams {
   signerAccountId: string
-  transactionBody: Transaction
+  transactionBody: Transaction | string
 }
 
 //request
