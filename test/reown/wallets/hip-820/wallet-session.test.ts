@@ -38,7 +38,7 @@ describe('HIP820Wallet Session Handling', () => {
       expect(() => wallet820.validateParam('str', 'hello', 'string')).not.toThrow()
     })
     it('throws for incorrect types', () => {
-      expect(() => wallet820.validateParam('num', 'not a number', 'number')).toThrowError()
+      expect(() => wallet820.validateParam('num', 'not a number', 'number')).toThrow()
     })
   })
 
@@ -75,7 +75,7 @@ describe('HIP820Wallet Session Handling', () => {
           chainId: HederaChainId.Testnet,
         },
       }
-      expect(() => wallet820.parseSessionRequest(event)).toThrowError()
+      expect(() => wallet820.parseSessionRequest(event)).toThrow()
     })
 
     it('parses SignMessage request', () => {
