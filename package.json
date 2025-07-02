@@ -14,11 +14,9 @@
     "walletconnect",
     "reown",
     "hashgraph",
-    "evm",
-    "ethereum",
-    "smart contracts",
     "hbar",
-    "ethers"
+    "evm",
+    "smart contracts"
   ],
   "license": "Apache-2.0",
   "scripts": {
