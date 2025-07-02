@@ -25,6 +25,7 @@ import {
   PublicKey,
   PrivateKey,
   Client,
+  Transaction,
 } from '@hashgraph/sdk'
 import {
   DAppConnector,
@@ -49,6 +50,7 @@ import {
   useJsonFixture,
   prepareTestTransaction,
   testUserAccountId,
+  testNodeAccountId,
 } from '../_helpers'
 import { SignClient } from '@walletconnect/sign-client'
 import { ISignClient, SessionTypes } from '@walletconnect/types'
@@ -67,6 +69,11 @@ describe('DAppConnector', () => {
   const mockTopic = '1234567890abcdef'
 
   beforeEach(async () => {
+    //prevent fetch from mirror node
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      status: 500,
+    })
+
     connector = new DAppConnector(
       dAppMetadata,
       LedgerId.TESTNET,
@@ -77,7 +84,7 @@ describe('DAppConnector', () => {
       'off',
     )
     mockSignClient = await SignClient.init({
-      logger: 'error',
+      logger: 'fatal',
       relayUrl: 'wss://relay.walletconnect.com',
       projectId: projectId,
       metadata: dAppMetadata,
@@ -130,10 +137,10 @@ describe('DAppConnector', () => {
 
   describe('init', () => {
     it('should init SignClient correctly', async () => {
-      await connector.init({ logger: 'error' })
+      await connector.init({ logger: 'fatal' })
 
       expect(connector.walletConnectClient).toBeInstanceOf(SignClient)
-      expect(connector.walletConnectClient?.metadata).toBe(dAppMetadata)
+      expect(connector.walletConnectClient?.metadata).toStrictEqual(dAppMetadata)
       expect(connector.walletConnectClient?.core.projectId).toBe(projectId)
       expect(connector.walletConnectClient?.core.relayUrl).toBe('wss://relay.walletconnect.com')
     })

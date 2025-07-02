@@ -387,8 +387,6 @@ export class DAppSigner implements Signer {
       return queryResult.result
     }
 
-    // TODO: make this error more usable
-
     if (isReceiptQuery) {
       throw new Error(
         'Error executing receipt query: \n' +
