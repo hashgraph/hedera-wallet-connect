@@ -22,7 +22,7 @@
   "scripts": {
     "build": "rimraf dist && tsc",
     "watch": "nodemon --watch src/ --ext ts --exec \"npm run build\"",
-    "test": "jest",
+    "test": "jest --coverage",
     "prepublishOnly": "rm -Rf dist && npm run test && npm run build",
     "prettier:check": "prettier --check ./src/",
     "prettier:fix": "prettier --write ./src/"
