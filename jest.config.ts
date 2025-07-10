@@ -38,12 +38,12 @@ const config: Config = {
     'src/**/*.{js,ts}',
     '!src/**/*.d.ts',
     '!src/**/*.test.{js,ts}',
-    '!src/**/*.config.{js,ts}',
+    '!src/**/*.config.{js,ts}'
   ],
   coverageReporters: ['text-summary', 'html'],
   coverageThreshold: {
     global: {
-      branches: 40,
+      branches: 60,
       functions: 50,
       lines: 50,
       statements: 50,
