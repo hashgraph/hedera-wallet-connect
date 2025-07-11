@@ -11,6 +11,7 @@ import {
   base64StringToTransactionBody,
   transactionListToBase64String,
   accountAndLedgerFromSession,
+  extractFirstSignature,
 } from '../../src'
 import { proto } from '@hashgraph/proto'
 import {
@@ -96,5 +97,27 @@ describe('additional utils', () => {
     expect(result[0].network.toString()).toBe('testnet')
     expect(result[0].account.toString()).toBe('0.0.123')
     expect(() => accountAndLedgerFromSession({ namespaces: {} } as any)).toThrow()
+  })
+})
+
+describe('error branches', () => {
+  it('verifyMessageSignature throws when signature missing', () => {
+    const sigMap = proto.SignatureMap.create({ sigPair: [{ pubKeyPrefix: new Uint8Array([0]) }] })
+    const base64 = signatureMapToBase64String(sigMap)
+    const key = PrivateKey.generateED25519()
+    expect(() => verifyMessageSignature('m', base64, key.publicKey)).toThrow('Signature not found')
+  })
+
+  it('verifySignerSignature throws when signature missing', () => {
+    const key = PrivateKey.generateED25519()
+    const signer = new SignerSignature({ accountId: new AccountId(0), publicKey: key.publicKey, signature: undefined as any })
+    expect(() => verifySignerSignature('m', signer, key.publicKey)).toThrow('Signature not found')
+  })
+
+  it('extractFirstSignature throws when empty', () => {
+    const empty = proto.SignatureMap.create({})
+    const base64 = signatureMapToBase64String(empty)
+    const decoded = base64StringToSignatureMap(base64)
+    expect(() => extractFirstSignature(decoded)).toThrow('No signatures found')
   })
 })

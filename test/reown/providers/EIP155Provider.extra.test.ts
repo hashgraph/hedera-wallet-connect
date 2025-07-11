@@ -92,4 +92,40 @@ describe('EIP155Provider extra branches', () => {
     expect(provider['isChainApproved'](296)).toBe(true)
     expect(provider['isChainApproved'](1)).toBe(false)
   })
+
+
+  it('switchChain requests wallet when method allowed', async () => {
+    const provider = createProvider()
+    const requestSpy = jest.spyOn(mockClient, 'request').mockResolvedValue(null as any)
+    provider['isChainApproved'] = jest.fn().mockReturnValue(false)
+    provider.namespace.methods = ['wallet_switchEthereumChain']
+    jest.spyOn(provider as any, 'createHttpProvider').mockReturnValue({} as any)
+    await provider['switchChain']({
+      topic: 't',
+      request: { method: 'wallet_switchEthereumChain', params: [{ chainId: '0x129' }] },
+      chainId: 'eip155:296',
+    } as any)
+    expect(requestSpy).toHaveBeenCalled()
+    expect(provider.chainId).toBe(0x129)
+  })
+
+  it('getCallStatus falls back to client request', async () => {
+    const provider = createProvider()
+    mockClient.session.get.mockReturnValueOnce({ sessionProperties: {} })
+    const reqSpy = jest.spyOn(mockClient, 'request').mockResolvedValue('rpc')
+    const res = await provider['getCallStatus']({
+      topic: 't',
+      request: { method: 'wallet_getCallsStatus', params: ['0x1'] },
+      chainId: 'eip155:296',
+    } as any)
+    expect(reqSpy).toHaveBeenCalled()
+    expect(res).toBe('rpc')
+  })
+
+  it('getUserOperationReceipt handles fetch errors', async () => {
+    const provider = createProvider()
+    const fetchMock = jest.spyOn(global, 'fetch' as any).mockResolvedValue({ ok: false, status: 500 } as any)
+    await expect((provider as any).getUserOperationReceipt('https://b', { request: { params: ['0x1'] } } as any)).rejects.toThrow('Failed to fetch user operation receipt - 500')
+    fetchMock.mockRestore()
+  })
 })
