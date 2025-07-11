@@ -116,4 +116,10 @@ describe('HederaProvider remaining lines', () => {
     const res = provider.rpcProviders
     expect(res).toEqual({ hedera: provider.nativeProvider, eip155: provider.eip155Provider })
   })
+
+  test('rpcProviders setter is callable', () => {
+    provider.rpcProviders = { hedera: {} as any, eip155: {} as any }
+    // getter should still return the original providers since setter is a no-op
+    expect(provider.rpcProviders).toEqual({ hedera: provider.nativeProvider, eip155: provider.eip155Provider })
+  })
 })
