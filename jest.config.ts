@@ -40,7 +40,7 @@ const config: Config = {
     '!src/**/*.test.{js,ts}',
     '!src/**/*.config.{js,ts}'
   ],
-  coverageReporters: ['text-summary', 'html'],
+  coverageReporters: ['text', 'text-summary', 'html'],
   coverageThreshold: {
     global: {
       branches: 60,
