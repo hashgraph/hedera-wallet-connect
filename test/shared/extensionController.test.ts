@@ -37,6 +37,13 @@ describe('extensionController helpers', () => {
     )
   })
 
+  it('extensionQuery skips parent when not available', () => {
+    ;(global as any).window = { postMessage }
+
+    expect(() => extensionQuery()).not.toThrow()
+    expect(postMessage).toHaveBeenCalledWith({ type: EVENTS.extensionQuery }, '*')
+  })
+
   it('extensionConnect posts to parent when iframe', () => {
     extensionConnect('id', true, 'pair')
     expect(parentPostMessage).toHaveBeenCalledWith(
@@ -85,5 +92,13 @@ describe('extensionController helpers', () => {
     const metadata2 = { id: 'ext2', available: true, availableInIframe: true }
     messageHandler({ data: { type: EVENTS.iframeQueryResponse, metadata: metadata2 } })
     expect(cb).toHaveBeenCalledWith(metadata2, true)
+  })
+
+  it('findExtensions does nothing when window is undefined', () => {
+    ;(global as any).window = undefined
+    const cb = jest.fn()
+
+    expect(() => findExtensions(cb)).not.toThrow()
+    expect(cb).not.toHaveBeenCalled()
   })
 })

@@ -48,12 +48,27 @@ describe('HederaConnector', () => {
     })
   })
 
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
   describe('connectWalletConnect', () => {
     it('should connect with correct namespaces', async () => {
       await connector.connectWalletConnect()
       expect(mockProvider.connect).toHaveBeenCalledWith({
         optionalNamespaces: createNamespaces(testNetworks),
       })
+    })
+
+    it('should skip connection when already authenticated', async () => {
+      jest.spyOn(connector, 'authenticate').mockResolvedValue(true)
+      ;(mockProvider.client.core.crypto.getClientId as jest.Mock).mockResolvedValue('id')
+      mockProvider.session = { topic: 't' } as any
+
+      const result = await connector.connectWalletConnect()
+
+      expect(mockProvider.connect).not.toHaveBeenCalled()
+      expect(result).toEqual({ clientId: 'id', session: mockProvider.session })
     })
   })
 
