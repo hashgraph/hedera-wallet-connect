@@ -129,3 +129,33 @@ describe('EIP155Provider extra branches', () => {
     fetchMock.mockRestore()
   })
 })
+
+describe('additional branch cases', () => {
+  it('getDefaultChain uses defaultChain when set', () => {
+    const namespace = {
+      chains: ['eip155:296'],
+      accounts: [],
+      events: [],
+      methods: [],
+      rpcMap: {},
+      defaultChain: '123',
+    }
+    const provider = new EIP155Provider({ client: mockClient, events: new EventEmitter(), namespace })
+    provider.chainId = 0 as any
+    expect(provider.getDefaultChain()).toBe('123')
+  })
+
+  it('setHttpProvider ignores undefined provider', () => {
+    const provider = createProvider()
+    jest.spyOn(provider as any, 'createHttpProvider').mockReturnValue(undefined as any)
+    provider['setHttpProvider'](0)
+    expect(provider['httpProviders'][0]).toBeUndefined()
+  })
+
+  it('switchChain defaults params when missing', async () => {
+    const provider = createProvider()
+    provider['isChainApproved'] = jest.fn().mockReturnValue(true)
+    await provider['switchChain']({ topic: 't', request: { method: 'wallet_switchEthereumChain' }, chainId: 'eip155:296' } as any)
+    expect(provider.chainId).toBe(0)
+  })
+})

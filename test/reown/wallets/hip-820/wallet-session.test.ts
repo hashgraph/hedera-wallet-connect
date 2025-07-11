@@ -20,7 +20,12 @@
 
 import { AccountId } from '@hashgraph/sdk'
 import { formatJsonRpcResult } from '@walletconnect/jsonrpc-utils'
-import { HIP820Wallet, HederaJsonRpcMethod, HederaChainId } from '../../../../src'
+import {
+  HIP820Wallet,
+  HederaJsonRpcMethod,
+  HederaChainId,
+  getHederaError,
+} from '../../../../src'
 
 describe('HIP820Wallet Session Handling', () => {
   let wallet820: HIP820Wallet
@@ -61,6 +66,23 @@ describe('HIP820Wallet Session Handling', () => {
         body: undefined,
         accountId: undefined,
       })
+    })
+
+    it('throws on params for GetNodeAddresses', () => {
+      const event = {
+        id: 15,
+        topic: 'topic-param',
+        params: {
+          request: {
+            method: HederaJsonRpcMethod.GetNodeAddresses,
+            params: { bad: true },
+          },
+          chainId: HederaChainId.Testnet,
+        },
+      }
+      expect(() => wallet820.parseSessionRequest(event as any)).toThrow(
+        getHederaError('INVALID_PARAMS'),
+      )
     })
 
     it('throws on missing params for ExecuteTransaction', () => {
