@@ -74,5 +74,36 @@ describe(Wallet.name, () => {
         expect(respondSessionRequestSpy).toHaveBeenCalledWith(mockResponse)
       } catch (err) {}
     }, 15_000)
+  it('freezes transaction if needed before signing', async () => {
+    const wallet = await Wallet.create(projectId, walletMetadata)
+    const hederaWallet = wallet.getHederaWallet(
+      HederaChainId.Testnet,
+      testUserAccountId.toString(),
+      testPrivateKeyECDSA,
+    )
+
+    const transaction = prepareTestTransaction(new TopicCreateTransaction())
+    jest.spyOn(transaction, 'isFrozen').mockReturnValue(false)
+    const freezeSpy = jest
+      .spyOn(transaction, 'freezeWithSigner')
+      .mockResolvedValue(transaction)
+    jest.spyOn(hederaWallet, 'signTransaction').mockResolvedValue(transaction as any)
+    jest
+      .spyOn(hederaWallet, 'call')
+      .mockResolvedValue({ toJSON: () => ({}) } as any)
+    const respondSessionRequestSpy = jest
+      .spyOn(wallet, 'respondSessionRequest')
+      .mockReturnValue(undefined)
+
+    await wallet.hedera_signAndExecuteTransaction(
+      requestId,
+      requestTopic,
+      transaction,
+      hederaWallet,
+    )
+
+    expect(freezeSpy).toHaveBeenCalled()
+    expect(respondSessionRequestSpy).toHaveBeenCalled()
   })
+})
 })
