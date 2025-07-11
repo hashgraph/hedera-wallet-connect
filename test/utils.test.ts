@@ -142,11 +142,13 @@ describe(ledgerIdToEIPChainId.name, () => {
     const testnetChainId = ledgerIdToEIPChainId(LedgerId.TESTNET)
     const previewnetChainId = ledgerIdToEIPChainId(LedgerId.PREVIEWNET)
     const localnodeChainId = ledgerIdToEIPChainId(LedgerId.LOCAL_NODE)
+    const unknownEip = ledgerIdToEIPChainId(LedgerId.fromString('04'))
 
     expect(mainnetChainId).toBe(295)
     expect(testnetChainId).toBe(296)
     expect(previewnetChainId).toBe(297)
     expect(localnodeChainId).toBe(298)
+    expect(unknownEip).toBe(298)
   })
 })
 
@@ -171,10 +173,13 @@ describe(CAIPChainIdToLedgerId.name, () => {
     const previewnetLedgerId = CAIPChainIdToLedgerId(HederaChainId.Previewnet)
     const localnodeLedgerId = CAIPChainIdToLedgerId(HederaChainId.Devnet)
 
+    const unknown = CAIPChainIdToLedgerId('hedera:unknown')
+
     expect(mainnetLedgerId).toBe(LedgerId.MAINNET)
     expect(testnetLedgerId).toBe(LedgerId.TESTNET)
     expect(previewnetLedgerId).toBe(LedgerId.PREVIEWNET)
     expect(localnodeLedgerId).toBe(LedgerId.LOCAL_NODE)
+    expect(unknown).toBe(LedgerId.LOCAL_NODE)
   })
 })
 
@@ -184,11 +189,13 @@ describe(ledgerIdToCAIPChainId.name, () => {
     const testnetChainId = ledgerIdToCAIPChainId(LedgerId.TESTNET)
     const previewnetChainId = ledgerIdToCAIPChainId(LedgerId.PREVIEWNET)
     const localnodeChainId = ledgerIdToCAIPChainId(LedgerId.LOCAL_NODE)
+    const unknownChainId = ledgerIdToCAIPChainId(LedgerId.fromString('04'))
 
     expect(mainnetChainId).toBe(HederaChainId.Mainnet)
     expect(testnetChainId).toBe(HederaChainId.Testnet)
     expect(previewnetChainId).toBe(HederaChainId.Previewnet)
     expect(localnodeChainId).toBe(HederaChainId.Devnet)
+    expect(unknownChainId).toBe(HederaChainId.Devnet)
   })
 })
 
