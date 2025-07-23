@@ -7,8 +7,7 @@ import { BrowserProvider, Contract, formatUnits, JsonRpcSigner, parseUnits } fro
 
 import { HederaProvider } from './providers'
 import { HederaConnector } from './connectors'
-import { hederaNamespace } from './utils'
-import { getAccountInfo } from '..'
+import { hederaNamespace, getAccountBalance } from './utils'
 
 type UniversalProvider = Parameters<AdapterBlueprint['setUniversalProvider']>[0]
 
@@ -99,14 +98,14 @@ export class HederaAdapter extends AdapterBlueprint {
       })
     }
 
-    const accountInfo = await getAccountInfo(
+    const accountBalance = await getAccountBalance(
       caipNetwork.testnet ? LedgerId.TESTNET : LedgerId.MAINNET,
-      address!, // accountId or non-long-zero evmAddress
+      address!,
     )
 
     return Promise.resolve({
-      balance: accountInfo?.balance
-        ? formatUnits(accountInfo.balance.balance, 8).toString()
+      balance: accountBalance
+        ? formatUnits(accountBalance.hbars.toTinybars().toString(), 8).toString()
         : '0',
       decimals: caipNetwork.nativeCurrency.decimals,
       symbol: caipNetwork.nativeCurrency.symbol,
