@@ -1,5 +1,4 @@
 import { EventEmitter } from 'events'
-import Client from '@walletconnect/sign-client'
 import { JsonRpcProvider } from '@walletconnect/jsonrpc-provider'
 import { HttpConnection } from '@walletconnect/jsonrpc-http-connection'
 import { EngineTypes, SessionTypes } from '@walletconnect/types'
@@ -16,7 +15,7 @@ import { BUNDLER_URL, getChainId, HederaChainDefinition } from '../utils'
 
 class EIP155Provider implements IProvider {
   public name = 'eip155'
-  public client: Client
+  public client: IProvider['client']
   // the active chainId on the dapp
   public chainId: number
   public namespace: SessionNamespace
