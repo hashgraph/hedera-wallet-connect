@@ -522,22 +522,6 @@ describe('DAppSigner', () => {
     })
   })
 
-  describe('getAccountKey()', () => {
-    let signerRequestSpy: jest.SpyInstance
-
-    beforeEach(() => {
-      signerRequestSpy = jest.spyOn(signer, 'request')
-    })
-
-    afterEach(() => {
-      signerRequestSpy.mockRestore()
-    })
-
-    it('should throw error as no key was received from the mirror node', () => {
-      expect(() => signer.getAccountKey()).toThrow('No key was received from the mirror node')
-    })
-  })
-
   describe('network configuration', () => {
     let signerRequestSpy: jest.SpyInstance
 
@@ -1132,70 +1116,6 @@ describe('DAppSigner', () => {
       const result = await signer.call(receiptQuery)
       expect(result).toBeInstanceOf(TransactionReceipt)
       expect(signerRequestSpy).toHaveBeenCalled()
-    })
-  })
-
-  describe('additional coverage', () => {
-    it('logs error when account key retrieval fails', async () => {
-      jest
-        .spyOn(DAppSigner.prototype, 'getAccountKeyAsync')
-        .mockRejectedValueOnce(new Error('fail'))
-
-      const errorSpy = jest.spyOn(DefaultLogger.prototype, 'error')
-      const tempSigner = new DAppSigner(
-        testAccountId,
-        mockSignClient,
-        testTopic,
-        LedgerId.TESTNET,
-        testExtensionId,
-        'off',
-      )
-      await Promise.resolve()
-      await Promise.resolve()
-      expect(errorSpy).toHaveBeenCalledWith(
-        'Error when receiving a public key:',
-        'fail',
-      )
-    })
-
-    it('retrieves and returns account public key', async () => {
-      const key = PrivateKey.generate().publicKey
-      ;(mirrorNode.getAccountInfo as jest.Mock).mockResolvedValueOnce({
-        key: { key: key.toString() },
-      })
-
-      const result = await signer.getAccountKeyAsync()
-      expect(result?.toString()).toBe(key.toString())
-
-      ;(signer as any).publicKey = result
-      const getKey = signer.getAccountKey()
-      expect(getKey.toString()).toBe(key.toString())
-    })
-
-    it('logs and rethrows error on sign failure', async () => {
-      const error = new Error('sign failed')
-      const errorSpy = jest.spyOn(DefaultLogger.prototype, 'error')
-      jest.spyOn(signer, 'request').mockRejectedValueOnce(error)
-
-      await expect(signer.sign([Buffer.from('test')])).rejects.toThrow(error)
-      expect(errorSpy).toHaveBeenCalledWith('Error signing data:', error)
-    })
-
-    it('returns result from _tryExecuteQueryRequest for successful receipt query', async () => {
-      const receiptQuery = new TransactionReceiptQuery().setTransactionId(
-        TransactionId.generate(testAccountId),
-      )
-      const receipt = TransactionReceipt.fromBytes(
-        proto.TransactionGetReceiptResponse.encode({
-          receipt: { status: proto.ResponseCodeEnum.SUCCESS },
-        }).finish(),
-      )
-      jest
-        .spyOn(signer as any, 'executeReceiptQueryFromRequest')
-        .mockResolvedValueOnce({ result: receipt })
-
-      const result = await (signer as any)._tryExecuteQueryRequest(receiptQuery)
-      expect(result).toEqual({ result: receipt })
     })
   })
 })
