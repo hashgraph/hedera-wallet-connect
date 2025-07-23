@@ -18,7 +18,7 @@
  *
  */
 
-import { Wallet as HederaWallet, LedgerId } from '@hashgraph/sdk'
+import { Wallet as HederaWallet, LedgerId, Client } from '@hashgraph/sdk'
 import { HederaChainId, Wallet } from '../../src'
 import {
   defaultAccountNumber,
@@ -26,6 +26,7 @@ import {
   testPrivateKeyECDSA,
   walletMetadata,
 } from '../_helpers'
+import Provider from '../../src/lib/wallet/provider'
 
 describe(Wallet.name, () => {
   describe('create', () => {
@@ -66,6 +67,20 @@ describe(Wallet.name, () => {
           expect(hederaWallet.provider!.getLedgerId()).toBe(ledgerId)
         },
       )
+
+      it('uses provided Provider when supplied', () => {
+        const client = Client.forTestnet()
+        const customProvider = Provider.fromClient(client)
+
+        const hederaWallet = wallet.getHederaWallet(
+          HederaChainId.Testnet,
+          defaultAccountNumber.toString(),
+          testPrivateKeyECDSA,
+          customProvider,
+        )
+
+        expect(hederaWallet.provider).toBe(customProvider)
+      })
     })
   })
 })

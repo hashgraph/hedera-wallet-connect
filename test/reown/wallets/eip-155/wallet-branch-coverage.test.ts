@@ -42,4 +42,12 @@ describe('EIP155Wallet transaction hash branch', () => {
     const result = await wallet.approveSessionRequest(event)
     expect(result).toEqual(formatJsonRpcResult(requestId, txHash))
   })
+
+  it('handles SendTransaction returning undefined', async () => {
+    const event = createEvent(Eip155JsonRpcMethod.SendTransaction, [{ to: '0x1', value: '0x1' }])
+    jest.spyOn(wallet, 'eth_sendTransaction').mockResolvedValue(undefined as any)
+
+    const result = await wallet.approveSessionRequest(event)
+    expect(result).toEqual(formatJsonRpcResult(requestId, undefined))
+  })
 })

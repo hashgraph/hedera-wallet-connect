@@ -74,6 +74,19 @@ describe('EIP155Wallet Error Handling', () => {
     expect(result).toEqual(formatJsonRpcError(requestId, 'Failed to sign typed data'))
   })
 
+  it('returns specific error message when signTypedData throws Error', async () => {
+    const typedData = {
+      domain: {},
+      types: { EIP712Domain: [], Test: [{ name: 'x', type: 'string' }] },
+      message: { x: '1' },
+    }
+    const event = createEvent(Eip155JsonRpcMethod.SignTypedData, [typedData])
+    jest.spyOn(wallet, 'eth_signTypedData').mockRejectedValue(new Error('typed fail'))
+
+    const result = await wallet.approveSessionRequest(event)
+    expect(result).toEqual(formatJsonRpcError(requestId, 'typed fail'))
+  })
+
   it('returns specific error message when signTransaction throws Error', async () => {
     const event = createEvent(Eip155JsonRpcMethod.SignTransaction, [{ to: '0x1', value: '0x1' }])
     jest.spyOn(wallet, 'eth_signTransaction').mockRejectedValue(new Error('bad tx'))

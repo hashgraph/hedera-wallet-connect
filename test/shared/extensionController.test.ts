@@ -101,4 +101,24 @@ describe('extensionController helpers', () => {
     expect(() => findExtensions(cb)).not.toThrow()
     expect(cb).not.toHaveBeenCalled()
   })
+
+  it('findExtensions ignores events without valid metadata', () => {
+    let handler: any
+    ;(window as any).addEventListener = jest.fn((evt, cb) => {
+      if (evt === 'message') handler = cb
+    })
+
+    const cb = jest.fn()
+    findExtensions(cb)
+
+    // Invalid event type should be ignored
+    handler({ data: { type: 'random-event' } })
+    // Correct type but missing metadata
+    handler({ data: { type: EVENTS.extensionResponse } })
+    handler({ data: { type: EVENTS.iframeQueryResponse } })
+    // Event object missing data entirely
+    handler({})
+
+    expect(cb).not.toHaveBeenCalled()
+  })
 })
