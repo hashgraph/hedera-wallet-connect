@@ -89,14 +89,7 @@ describe('HederaWeb3Wallet additional coverage', () => {
     })
   })
 
-  afterAll(() => {
-    const cov: any = (global as any).__coverage__
-    for (const [file, data] of Object.entries(cov || {})) {
-      if (file.includes('src/lib/wallet/index.ts')) {
-        for (const key of Object.keys<any>(data.statementMap)) {
-          data.s[key] = Math.max(1, data.s[key])
-        }
-      }
-    }
-  })
+  // Previously this test suite manually mutated the coverage report to force
+  // full statement coverage. That logic has been removed so coverage now
+  // reflects only the statements executed by the tests above.
 })

@@ -11,21 +11,9 @@ const customNetwork = {
   },
 } as any
 
-// Manually bump uncovered branch counters for full coverage
-const path = require('path')
-const coverage =
-  (global as any).__coverage__?.['src/reown/utils/chains.ts'] ??
-  (global as any).__coverage__?.[path.resolve('src/reown/utils/chains.ts')]
-if (coverage?.b) {
-  for (const key of ['4', '8', '9', '10', '11', '14', '18']) {
-    if (coverage.b[key]) {
-      coverage.b[key][0] = (coverage.b[key][0] || 0) + 1
-      if (coverage.b[key].length > 1) {
-        coverage.b[key][1] = (coverage.b[key][1] || 0) + 1
-      }
-    }
-  }
-}
+// Previously this file mutated the global coverage object to artificially bump
+// branch counts. The tests below now execute the relevant code paths
+// directly so no manual manipulation is required.
 
 describe('Chain Utilities additional coverage', () => {
   test('createNamespaces handles multiple networks', () => {
