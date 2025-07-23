@@ -1,4 +1,4 @@
-import { CoreHelperUtil, WcHelpersUtil } from '@reown/appkit'
+import { CoreHelperUtil, WcHelpersUtil, CaipNetwork } from '@reown/appkit'
 import { type ChainNamespace, isReownName } from '@reown/appkit-common'
 import { AdapterBlueprint } from '@reown/appkit/adapters'
 import { ProviderUtil } from '@reown/appkit/store'
@@ -10,6 +10,15 @@ import { HederaConnector } from './connectors'
 import { hederaNamespace, getAccountBalance } from './utils'
 
 type UniversalProvider = Parameters<AdapterBlueprint['setUniversalProvider']>[0]
+type AdapterSendTransactionParams = AdapterBlueprint.SendTransactionParams & {
+  address: string
+}
+type GetEnsAddressParams = {
+  name: string
+  caipNetwork?: CaipNetwork
+}
+type GetEnsAddressResult = { address: string | false }
+type GetProfileResult = { profileImage: string; profileName: string }
 
 export class HederaAdapter extends AdapterBlueprint {
   constructor(params: AdapterBlueprint.Params) {
@@ -30,7 +39,9 @@ export class HederaAdapter extends AdapterBlueprint {
     })
   }
 
-  public override setUniversalProvider(universalProvider: UniversalProvider): void {
+  public override async setUniversalProvider(
+    universalProvider: UniversalProvider,
+  ): Promise<void> {
     this.addConnector(
       new HederaConnector({
         provider: universalProvider,
@@ -52,13 +63,16 @@ export class HederaAdapter extends AdapterBlueprint {
     })
   }
 
-  public async disconnect() {
+  public async disconnect(
+    _params?: AdapterBlueprint.DisconnectParams,
+  ): Promise<AdapterBlueprint.DisconnectResult> {
     try {
       const connector = this.getWalletConnectConnector()
       await connector.disconnect()
     } catch (error) {
       console.warn('UniversalAdapter:disconnect - error', error)
     }
+    return { connections: [] }
   }
 
   public async getAccounts({
@@ -82,6 +96,12 @@ export class HederaAdapter extends AdapterBlueprint {
   }
 
   public async syncConnectors() {
+    return Promise.resolve()
+  }
+
+  public async syncConnections(
+    _params: AdapterBlueprint.SyncConnectionsParams,
+  ): Promise<void> {
     return Promise.resolve()
   }
 
@@ -163,7 +183,7 @@ export class HederaAdapter extends AdapterBlueprint {
   }
 
   public async sendTransaction(
-    params: AdapterBlueprint.SendTransactionParams,
+    params: AdapterSendTransactionParams,
   ): Promise<AdapterBlueprint.SendTransactionResult> {
     if (!params.provider) {
       throw new Error('Provider is undefined')
@@ -178,9 +198,9 @@ export class HederaAdapter extends AdapterBlueprint {
           data: params.data as `0x${string}`,
           gas: params.gas as bigint,
           gasPrice: params.gasPrice as bigint,
-          address: params.address,
+          address: params.address as `0x${string}`,
         },
-        params.address,
+        params.address as `0x${string}`,
         Number(params.caipNetwork?.id),
       )
 
@@ -216,8 +236,8 @@ export class HederaAdapter extends AdapterBlueprint {
   }
 
   public async getEnsAddress(
-    params: AdapterBlueprint.GetEnsAddressParams,
-  ): Promise<AdapterBlueprint.GetEnsAddressResult> {
+    params: GetEnsAddressParams,
+  ): Promise<GetEnsAddressResult> {
     if (this.namespace !== 'eip155') {
       throw new Error('Namespace is not eip155')
     }
@@ -278,7 +298,7 @@ export class HederaAdapter extends AdapterBlueprint {
   }
 
   // Not supported
-  public async getProfile(): Promise<AdapterBlueprint.GetProfileResult> {
+  public async getProfile(): Promise<GetProfileResult> {
     return Promise.resolve({
       profileImage: '',
       profileName: '',
