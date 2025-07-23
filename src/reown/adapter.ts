@@ -99,9 +99,7 @@ export class HederaAdapter extends AdapterBlueprint {
     return Promise.resolve()
   }
 
-  public async syncConnections(
-    _params: AdapterBlueprint.SyncConnectionsParams,
-  ): Promise<void> {
+  public async syncConnections(_params: AdapterBlueprint.SyncConnectionsParams): Promise<void> {
     return Promise.resolve()
   }
 
@@ -235,9 +233,7 @@ export class HederaAdapter extends AdapterBlueprint {
     } else throw new Error('Contract method is undefined')
   }
 
-  public async getEnsAddress(
-    params: GetEnsAddressParams,
-  ): Promise<GetEnsAddressResult> {
+  public async getEnsAddress(params: GetEnsAddressParams): Promise<GetEnsAddressResult> {
     if (this.namespace !== 'eip155') {
       throw new Error('Namespace is not eip155')
     }
