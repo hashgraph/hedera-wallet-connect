@@ -30,22 +30,23 @@ const config: Config = {
   transform: {
     '^.+\\.(t|j)sx?$': '@swc/jest',
   },
-  transformIgnorePatterns: ['node_modules/(?!@walletconnect)'],
+  transformIgnorePatterns: ['node_modules/(?!@walletconnect|@reown|lit|@lit)'],
   testEnvironment: 'node',
+  setupFiles: ['./test/setup.ts'],
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
     'src/**/*.{js,ts}',
     '!src/**/*.d.ts',
     '!src/**/*.test.{js,ts}',
-    '!src/**/*.config.{js,ts}',
+    '!src/**/*.config.{js,ts}'
   ],
-  coverageReporters: ['text-summary', 'html'],
+  coverageReporters: ['text', 'text-summary', 'html'],
   coverageThreshold: {
     global: {
-      branches: 50,
-      functions: 50,
-      lines: 50,
-      statements: 50,
+      branches: 60,
+      functions: 60,
+      lines: 60,
+      statements: 60,
     },
   },
 }
