@@ -1,4 +1,10 @@
-import { AccountBalance, AccountBalanceQuery, AccountId, Client, LedgerId } from '@hashgraph/sdk'
+import {
+  AccountBalance,
+  AccountBalanceQuery,
+  AccountId,
+  Client,
+  LedgerId,
+} from '@hashgraph/sdk'
 
 export async function getAccountBalance(
   ledgerId: LedgerId,
