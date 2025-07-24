@@ -152,7 +152,7 @@ export function getChainId(chain: string): string {
 export function mergeRequiredOptionalNamespaces(
   required: ProposalTypes.RequiredNamespaces = {},
   optional: ProposalTypes.RequiredNamespaces = {},
-) {
+): ProposalTypes.RequiredNamespaces {
   const requiredNamespaces = normalizeNamespaces(required)
   const optionalNamespaces = normalizeNamespaces(optional)
   return merge(requiredNamespaces, optionalNamespaces)
