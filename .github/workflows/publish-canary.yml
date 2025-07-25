@@ -6,6 +6,9 @@ on:
       - canary
       - introduce-v2
 
+permissions:
+  contents: read
+
 jobs:
   publish-canary:
     name: Publish Canary
