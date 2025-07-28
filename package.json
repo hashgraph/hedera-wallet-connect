@@ -1,6 +1,6 @@
 {
   "name": "@hashgraph/hedera-wallet-connect",
-  "version": "2.0.0",
+  "version": "2.0.2",
   "description": "A library to facilitate integrating Hedera with WalletConnect",
   "repository": {
     "type": "git",
@@ -29,8 +29,8 @@
   },
   "peerDependencies": {
     "@hashgraph/sdk": "^2.63.0",
-    "@reown/appkit": "1.7.3",
-    "@reown/walletkit": "1.2.3",
+    "@reown/appkit": "^1.7.16",
+    "@reown/walletkit": "^1.2.8",
     "@walletconnect/modal": "^2.7.0",
     "ethers": "^6.13.5"
   },
