@@ -21,7 +21,9 @@ type GetEnsAddressResult = { address: string | false }
 type GetProfileResult = { profileImage: string; profileName: string }
 
 export class HederaAdapter extends AdapterBlueprint {
-  constructor(params: AdapterBlueprint.Params) {
+  private namespaceMode: 'optional' | 'required' = 'optional'
+
+  constructor(params: HederaAdapter.Params) {
     if (params.namespace !== hederaNamespace && params.namespace !== 'eip155') {
       throw new Error('Namespace must be "hedera" or "eip155"')
     }
@@ -37,6 +39,7 @@ export class HederaAdapter extends AdapterBlueprint {
     super({
       ...params,
     })
+    this.namespaceMode = params.namespaceMode || 'optional'
   }
 
   public override async setUniversalProvider(
@@ -47,6 +50,7 @@ export class HederaAdapter extends AdapterBlueprint {
         provider: universalProvider,
         caipNetworks: this.getCaipNetworks() || [],
         namespace: this.namespace as 'hedera' | 'eip155',
+        namespaceMode: this.namespaceMode,
       }),
     )
   }
@@ -349,5 +353,11 @@ export class HederaAdapter extends AdapterBlueprint {
     _params: AdapterBlueprint.WalletGetAssetsParams,
   ): Promise<AdapterBlueprint.WalletGetAssetsResponse> {
     return Promise.resolve({})
+  }
+}
+
+export namespace HederaAdapter {
+  export type Params = AdapterBlueprint.Params & {
+    namespaceMode?: 'optional' | 'required'
   }
 }

@@ -18,11 +18,18 @@ export class HederaConnector implements ChainAdapterConnector {
   public provider: UniversalProvider
 
   protected caipNetworks: CaipNetwork[]
+  protected namespaceMode: 'optional' | 'required'
 
-  constructor({ provider, caipNetworks, namespace }: HederaConnector.Options) {
+  constructor({
+    provider,
+    caipNetworks,
+    namespace,
+    namespaceMode = 'optional',
+  }: HederaConnector.Options) {
     this.caipNetworks = caipNetworks
     this.provider = provider
     this.chain = namespace as ChainNamespace
+    this.namespaceMode = namespaceMode
   }
 
   get chains() {
@@ -33,9 +40,13 @@ export class HederaConnector implements ChainAdapterConnector {
     const isAuthenticated = await this.authenticate()
 
     if (!isAuthenticated) {
-      await this.provider.connect({
-        optionalNamespaces: createNamespaces(this.caipNetworks),
-      })
+      const namespaces = createNamespaces(this.caipNetworks)
+      const connectParams =
+        this.namespaceMode === 'required'
+          ? { requiredNamespaces: namespaces }
+          : { optionalNamespaces: namespaces }
+
+      await this.provider.connect(connectParams)
     }
 
     return {
@@ -58,5 +69,6 @@ export namespace HederaConnector {
     provider: UniversalProvider
     caipNetworks: CaipNetwork[]
     namespace: 'hedera' | 'eip155'
+    namespaceMode?: 'optional' | 'required'
   }
 }
