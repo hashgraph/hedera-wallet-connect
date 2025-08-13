@@ -470,7 +470,7 @@ export class DAppConnector {
     }
     return this.walletConnectClient.connect({
       pairingTopic,
-      requiredNamespaces: networkNamespaces(
+      optionalNamespaces: networkNamespaces(
         this.network,
         this.supportedMethods,
         this.supportedEvents,

@@ -1309,7 +1309,7 @@ describe('DAppConnector', () => {
 
       expect(result.uri).toBe('mock:uri')
       expect(mockSignClient.connect).toHaveBeenCalledWith({
-        requiredNamespaces: mockNamespaces,
+        optionalNamespaces: mockNamespaces,
         pairingTopic: undefined,
       })
     })
@@ -1325,7 +1325,7 @@ describe('DAppConnector', () => {
       await connector['connectURI'](pairingTopic)
 
       expect(mockSignClient.connect).toHaveBeenCalledWith({
-        requiredNamespaces: expect.any(Object),
+        optionalNamespaces: expect.any(Object),
         pairingTopic,
       })
     })
