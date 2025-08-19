@@ -47,3 +47,38 @@ export class DefaultLogger implements ILogger {
     }
   }
 }
+
+// Global logger configuration
+let globalLogLevel: LogLevel = 'info'
+
+// Check if environment variable is set
+if (typeof process !== 'undefined' && process.env?.HWC_LOG_LEVEL) {
+  const envLevel = process.env.HWC_LOG_LEVEL.toLowerCase() as LogLevel
+  if (['error', 'warn', 'info', 'debug', 'off'].includes(envLevel)) {
+    globalLogLevel = envLevel
+  }
+}
+
+// Check if localStorage is available (browser environment)
+if (typeof localStorage !== 'undefined') {
+  const storedLevel = localStorage.getItem('hwc_log_level')
+  if (storedLevel && ['error', 'warn', 'info', 'debug', 'off'].includes(storedLevel)) {
+    globalLogLevel = storedLevel as LogLevel
+  }
+}
+
+export function setGlobalLogLevel(level: LogLevel): void {
+  globalLogLevel = level
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('hwc_log_level', level)
+  }
+}
+
+export function getGlobalLogLevel(): LogLevel {
+  return globalLogLevel
+}
+
+// Factory function to create logger instances
+export function createLogger(name: string, level?: LogLevel): DefaultLogger {
+  return new DefaultLogger(level || globalLogLevel, name)
+}

@@ -3,6 +3,7 @@ import { CaipNetwork, ChainNamespace, ConstantsUtil } from '@reown/appkit-common
 import { AdapterBlueprint, type ChainAdapterConnector } from '@reown/appkit/adapters'
 import { PresetsUtil } from '@reown/appkit-utils'
 import { createNamespaces } from '../utils'
+import { createLogger } from '../../lib/shared/logger'
 
 type UniversalProvider = Parameters<AdapterBlueprint['setUniversalProvider']>[0]
 
@@ -18,18 +19,12 @@ export class HederaConnector implements ChainAdapterConnector {
   public provider: UniversalProvider
 
   protected caipNetworks: CaipNetwork[]
-  protected namespaceMode: 'optional' | 'required'
+  private logger = createLogger('HederaConnector')
 
-  constructor({
-    provider,
-    caipNetworks,
-    namespace,
-    namespaceMode = 'optional',
-  }: HederaConnector.Options) {
+  constructor({ provider, caipNetworks, namespace }: HederaConnector.Options) {
     this.caipNetworks = caipNetworks
     this.provider = provider
     this.chain = namespace as ChainNamespace
-    this.namespaceMode = namespaceMode
   }
 
   get chains() {
@@ -37,16 +32,34 @@ export class HederaConnector implements ChainAdapterConnector {
   }
 
   async connectWalletConnect() {
+    this.logger.debug('connectWalletConnect called for', this.chain)
+    this.logger.debug('Provider type:', this.provider?.constructor?.name)
+    this.logger.debug('Provider session exists:', !!this.provider?.session)
+
     const isAuthenticated = await this.authenticate()
+    this.logger.debug('Is authenticated:', isAuthenticated)
 
     if (!isAuthenticated) {
       const namespaces = createNamespaces(this.caipNetworks)
-      const connectParams =
-        this.namespaceMode === 'required'
-          ? { requiredNamespaces: namespaces }
-          : { optionalNamespaces: namespaces }
+      const connectParams = { optionalNamespaces: namespaces }
 
+      this.logger.debug('Connecting with params:', {
+        namespace: this.chain,
+        caipNetworks: this.caipNetworks.map((n) => ({
+          id: n.id,
+          chainNamespace: n.chainNamespace,
+          caipNetworkId: n.caipNetworkId,
+          name: n.name,
+        })),
+        generatedNamespaces: namespaces,
+        connectParams,
+      })
+
+      this.logger.debug('Calling provider.connect with params')
       await this.provider.connect(connectParams)
+      this.logger.info('Provider.connect completed successfully')
+    } else {
+      this.logger.info('Already authenticated, skipping namespace setup')
     }
 
     return {
@@ -69,6 +82,5 @@ export namespace HederaConnector {
     provider: UniversalProvider
     caipNetworks: CaipNetwork[]
     namespace: 'hedera' | 'eip155'
-    namespaceMode?: 'optional' | 'required'
   }
 }

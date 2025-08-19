@@ -41,6 +41,7 @@ import {
 } from '../utils'
 import HIP820Provider from './HIP820Provider'
 import EIP155Provider from './EIP155Provider'
+import { createLogger } from '../../lib/shared/logger'
 
 export type HederaWalletConnectProviderConfig = {
   chains: CaipNetwork[]
@@ -48,6 +49,7 @@ export type HederaWalletConnectProviderConfig = {
 
 // Reown AppKit UniversalProvider for HIP-820 & EIP-155 version implementation of the @hashgraph/hedera-wallet-connect DAppConnector
 export class HederaProvider extends UniversalProvider {
+  private hederaLogger = createLogger('HederaProvider')
   public nativeProvider?: HIP820Provider
   public eip155Provider?: EIP155Provider
 
@@ -64,7 +66,7 @@ export class HederaProvider extends UniversalProvider {
         ? {
             eip155: {
               ...provider.namespaces?.eip155,
-              rpcMap: provider.optionalNamespaces?.eip155.rpcMap,
+              rpcMap: provider.optionalNamespaces?.eip155?.rpcMap || {},
             },
           }
         : {}),
@@ -72,7 +74,7 @@ export class HederaProvider extends UniversalProvider {
         ? {
             hedera: {
               ...provider.namespaces?.hedera,
-              rpcMap: provider.optionalNamespaces?.hedera.rpcMap,
+              rpcMap: provider.optionalNamespaces?.hedera?.rpcMap || {},
             },
           }
         : {}),
@@ -528,6 +530,52 @@ export class HederaProvider extends UniversalProvider {
 
   async eth_chainId() {
     return this.request<string>({ method: 'eth_chainId', params: [] })
+  }
+
+  public async connect(params?: any): Promise<any> {
+    this.hederaLogger.debug('connect called with params:', params)
+
+    // If no params provided or empty namespaces, create default namespaces
+    if (!params || (!params.requiredNamespaces && !params.optionalNamespaces)) {
+      this.hederaLogger.info('No namespaces provided, creating default namespaces')
+
+      // Create default namespaces based on initialized state
+      const defaultNamespaces = {
+        hedera: {
+          methods: Object.values(HederaJsonRpcMethod),
+          chains: ['hedera:testnet', 'hedera:mainnet'],
+          events: ['accountsChanged', 'chainChanged'],
+        },
+        eip155: {
+          methods: [
+            'eth_sendTransaction',
+            'eth_signTransaction',
+            'eth_sign',
+            'personal_sign',
+            'eth_signTypedData',
+            'eth_signTypedData_v4',
+            'eth_accounts',
+            'eth_chainId',
+          ],
+          chains: ['eip155:296', 'eip155:295'],
+          events: ['accountsChanged', 'chainChanged'],
+        },
+      }
+
+      params = {
+        requiredNamespaces: defaultNamespaces,
+        ...params,
+      }
+
+      this.hederaLogger.debug('Using default namespaces:', params.requiredNamespaces)
+    }
+
+    this.hederaLogger.debug('Calling super.connect with params')
+    const result = await super.connect(params)
+    this.hederaLogger.info('super.connect completed successfully')
+
+    this.initProviders()
+    return result
   }
 
   public async pair(pairingTopic: string | undefined): ReturnType<UniversalProvider['pair']> {
