@@ -40,8 +40,33 @@ export class HederaConnector implements ChainAdapterConnector {
     this.logger.debug('Is authenticated:', isAuthenticated)
 
     if (!isAuthenticated) {
-      const namespaces = createNamespaces(this.caipNetworks)
-      const connectParams = { optionalNamespaces: namespaces }
+      // Check for stored connection params from the dApp
+      let connectParams: any = undefined
+
+      this.logger.debug('Checking for stored params')
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const storedParams = sessionStorage.getItem('hwcV2ConnectionParams')
+        this.logger.debug('Stored params in sessionStorage:', storedParams)
+        if (storedParams) {
+          try {
+            connectParams = JSON.parse(storedParams)
+            this.logger.info(
+              'Using stored connection params from dApp in connector:',
+              connectParams,
+            )
+            // Don't clear here - let the provider handle it
+          } catch (e) {
+            this.logger.warn('Failed to parse stored connection params in connector:', e)
+          }
+        }
+      }
+
+      // If no stored params, create default namespaces
+      if (!connectParams) {
+        const namespaces = createNamespaces(this.caipNetworks)
+        connectParams = { optionalNamespaces: namespaces }
+        this.logger.debug('No stored params, using default namespaces:', connectParams)
+      }
 
       this.logger.debug('Connecting with params:', {
         namespace: this.chain,
@@ -51,10 +76,10 @@ export class HederaConnector implements ChainAdapterConnector {
           caipNetworkId: n.caipNetworkId,
           name: n.name,
         })),
-        generatedNamespaces: namespaces,
         connectParams,
       })
 
+      this.logger.debug('Final params before provider.connect:', connectParams)
       this.logger.debug('Calling provider.connect with params')
       await this.provider.connect(connectParams)
       this.logger.info('Provider.connect completed successfully')

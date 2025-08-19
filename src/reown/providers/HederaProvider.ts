@@ -535,7 +535,26 @@ export class HederaProvider extends UniversalProvider {
   public async connect(params?: any): Promise<any> {
     this.hederaLogger.debug('connect called with params:', params)
 
-    // If no params provided or empty namespaces, create default namespaces
+    // Check for stored connection params from the dApp
+    if (!params || (!params.requiredNamespaces && !params.optionalNamespaces)) {
+      // Try to get params from sessionStorage (set by the dApp)
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const storedParams = sessionStorage.getItem('hwcV2ConnectionParams')
+        this.hederaLogger.debug('Stored params in sessionStorage:', storedParams)
+        if (storedParams) {
+          try {
+            params = JSON.parse(storedParams)
+            this.hederaLogger.info('Using stored connection params from dApp:', params)
+            // Clear the stored params after using them
+            sessionStorage.removeItem('hwcV2ConnectionParams')
+          } catch (e) {
+            this.hederaLogger.warn('Failed to parse stored connection params:', e)
+          }
+        }
+      }
+    }
+
+    // If still no params provided or empty namespaces, create default namespaces
     if (!params || (!params.requiredNamespaces && !params.optionalNamespaces)) {
       this.hederaLogger.info('No namespaces provided, creating default namespaces')
 
@@ -570,9 +589,35 @@ export class HederaProvider extends UniversalProvider {
       this.hederaLogger.debug('Using default namespaces:', params.requiredNamespaces)
     }
 
+    this.hederaLogger.debug('Final params before super.connect:', params)
+
+    // Update the internal namespace properties before connecting
+    if (params) {
+      if (params.requiredNamespaces) {
+        this.hederaLogger.debug('Setting requiredNamespaces:', params.requiredNamespaces)
+        // @ts-ignore - accessing private property
+        this.requiredNamespaces = params.requiredNamespaces
+      }
+      if (params.optionalNamespaces) {
+        this.hederaLogger.debug('Setting optionalNamespaces:', params.optionalNamespaces)
+        // @ts-ignore - accessing private property
+        this.optionalNamespaces = params.optionalNamespaces
+      }
+    }
+
     this.hederaLogger.debug('Calling super.connect with params')
-    const result = await super.connect(params)
+
+    // Try to directly pass the namespaces to the parent connect
+    let result
+    try {
+      result = await super.connect(params)
+    } catch (error) {
+      this.hederaLogger.error('Error in super.connect:', error)
+      throw error
+    }
+
     this.hederaLogger.info('super.connect completed successfully')
+    this.hederaLogger.debug('Result from super.connect:', result)
 
     this.initProviders()
     return result
