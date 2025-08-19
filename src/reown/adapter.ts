@@ -8,6 +8,7 @@ import { BrowserProvider, Contract, formatUnits, JsonRpcSigner, parseUnits } fro
 import { HederaProvider } from './providers'
 import { HederaConnector } from './connectors'
 import { hederaNamespace, getAccountBalance } from './utils'
+import { createLogger } from '../lib/shared/logger'
 
 type UniversalProvider = Parameters<AdapterBlueprint['setUniversalProvider']>[0]
 type AdapterSendTransactionParams = AdapterBlueprint.SendTransactionParams & {
@@ -21,7 +22,9 @@ type GetEnsAddressResult = { address: string | false }
 type GetProfileResult = { profileImage: string; profileName: string }
 
 export class HederaAdapter extends AdapterBlueprint {
-  constructor(params: AdapterBlueprint.Params) {
+  private logger = createLogger('HederaAdapter')
+
+  constructor(params: HederaAdapter.Params) {
     if (params.namespace !== hederaNamespace && params.namespace !== 'eip155') {
       throw new Error('Namespace must be "hedera" or "eip155"')
     }
@@ -54,6 +57,17 @@ export class HederaAdapter extends AdapterBlueprint {
   public async connect(
     params: AdapterBlueprint.ConnectParams,
   ): Promise<AdapterBlueprint.ConnectResult> {
+    this.logger.debug('connect called with params:', params)
+
+    // Get the WalletConnect connector and ensure it connects with proper namespaces
+    const connector = this.getWalletConnectConnector()
+    if (connector && 'connectWalletConnect' in connector) {
+      this.logger.debug('Calling HederaConnector.connectWalletConnect')
+      await (connector as any).connectWalletConnect()
+    } else {
+      this.logger.warn('HederaConnector not found or connectWalletConnect method missing')
+    }
+
     return Promise.resolve({
       id: 'WALLET_CONNECT',
       type: 'WALLET_CONNECT' as const,
@@ -70,7 +84,7 @@ export class HederaAdapter extends AdapterBlueprint {
       const connector = this.getWalletConnectConnector()
       await connector.disconnect()
     } catch (error) {
-      console.warn('UniversalAdapter:disconnect - error', error)
+      this.logger.warn('disconnect - error', error)
     }
     return { connections: [] }
   }
@@ -349,5 +363,11 @@ export class HederaAdapter extends AdapterBlueprint {
     _params: AdapterBlueprint.WalletGetAssetsParams,
   ): Promise<AdapterBlueprint.WalletGetAssetsResponse> {
     return Promise.resolve({})
+  }
+}
+
+export namespace HederaAdapter {
+  export type Params = AdapterBlueprint.Params & {
+    namespaceMode?: 'optional' | 'required'
   }
 }

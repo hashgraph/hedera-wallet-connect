@@ -215,7 +215,6 @@ createAppKit({
 
 - [Hashpack](https://hashpack.app/)
 - [Kabila](https://wallet.kabila.app/)
-- [Blade](https://bladewallet.io/)
 - [Dropp](https://dropp.cc/)
 
 # Upgrading from v1 to v2
