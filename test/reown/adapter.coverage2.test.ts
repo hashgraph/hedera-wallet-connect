@@ -12,6 +12,13 @@ describe('HederaAdapter additional coverage', () => {
   test('connect returns wallet connect result', async () => {
     const adapter = new HederaAdapter({ namespace: hederaNamespace })
     ;(adapter as any).provider = {}
+    const mockConnector = { 
+      type: 'WALLET_CONNECT', 
+      connectWalletConnect: jest.fn().mockResolvedValue({}),
+      disconnect: jest.fn().mockResolvedValue({})
+    }
+    jest.spyOn(adapter as any, 'getWalletConnectConnector').mockReturnValue(mockConnector)
+    
     const res = await adapter.connect({ chainId: '5' } as any)
     expect(res).toEqual({
       id: 'WALLET_CONNECT',

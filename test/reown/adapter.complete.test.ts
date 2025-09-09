@@ -133,7 +133,7 @@ describe('HederaAdapter complete coverage', () => {
     adapter.setUniversalProvider(provider)
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
     await adapter.disconnect()
-    expect(warn).toHaveBeenCalledWith('UniversalAdapter:disconnect - error', error)
+    expect(warn).toHaveBeenCalledWith('[WARN - HederaAdapter] disconnect - error', error)
     warn.mockRestore()
   })
 })
