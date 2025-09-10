@@ -37,8 +37,8 @@ describe('HederaProvider additional branch coverage 2', () => {
 
     expect(initProvidersSpy).toHaveBeenCalled()
     expect(provider.namespaces).toEqual({
-      eip155: { chains: ['eip155:1'], rpcMap: undefined },
-      hedera: { chains: ['hedera:testnet'], rpcMap: undefined },
+      eip155: { chains: ['eip155:1'], rpcMap: {} },
+      hedera: { chains: ['hedera:testnet'], rpcMap: {} },
     })
   })
 
