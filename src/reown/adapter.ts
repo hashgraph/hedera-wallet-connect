@@ -7,7 +7,7 @@ import { BrowserProvider, Contract, formatUnits, JsonRpcSigner, parseUnits } fro
 
 import { HederaProvider } from './providers'
 import { HederaConnector } from './connectors'
-import { hederaNamespace, getAccountBalance } from './utils'
+import { hederaNamespace, getAccountBalance, HederaChainDefinition } from './utils'
 import { createLogger } from '../lib/shared/logger'
 
 type UniversalProvider = Parameters<AdapterBlueprint['setUniversalProvider']>[0]
@@ -40,6 +40,27 @@ export class HederaAdapter extends AdapterBlueprint {
     super({
       ...params,
     })
+
+    // Override getCaipNetworks to return appropriate networks based on namespace
+    this.getCaipNetworks = (namespace?: ChainNamespace): CaipNetwork[] => {
+      const targetNamespace = namespace || this.namespace
+
+      if (targetNamespace === 'eip155') {
+        // Return EIP155 Hedera networks
+        return [HederaChainDefinition.EVM.Mainnet, HederaChainDefinition.EVM.Testnet]
+      } else if (targetNamespace === hederaNamespace) {
+        // Return native Hedera networks
+        return [HederaChainDefinition.Native.Mainnet, HederaChainDefinition.Native.Testnet]
+      } else {
+        // Return all Hedera networks if no specific namespace is requested
+        return [
+          HederaChainDefinition.EVM.Mainnet,
+          HederaChainDefinition.EVM.Testnet,
+          HederaChainDefinition.Native.Mainnet,
+          HederaChainDefinition.Native.Testnet,
+        ]
+      }
+    }
   }
 
   public override async setUniversalProvider(

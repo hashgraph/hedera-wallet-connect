@@ -58,26 +58,14 @@ export class HederaProvider extends UniversalProvider {
   }
   static async init(opts: UniversalProviderOpts) {
     const provider = new HederaProvider(opts)
-
-    //@ts-expect-error - private base method
+    //@ts-expect-error
     await provider.initialize()
+
     provider.namespaces = {
-      ...(provider.namespaces?.eip155
-        ? {
-            eip155: {
-              ...provider.namespaces?.eip155,
-              rpcMap: provider.optionalNamespaces?.eip155?.rpcMap || {},
-            },
-          }
-        : {}),
-      ...(provider.namespaces?.hedera
-        ? {
-            hedera: {
-              ...provider.namespaces?.hedera,
-              rpcMap: provider.optionalNamespaces?.hedera?.rpcMap || {},
-            },
-          }
-        : {}),
+      //@ts-ignore
+      ...(provider.providerOpts?.optionalNamespaces || {}),
+      //@ts-ignore
+      ...(provider.providerOpts?.requiredNamespaces || {}),
     }
     if (provider.session) provider.initProviders()
     return provider
@@ -88,7 +76,7 @@ export class HederaProvider extends UniversalProvider {
   }
 
   getAccountAddresses(): string[] {
-    if (!this.session || !this.namespaces) {
+    if (!this.session || !this.optionalNamespaces) {
       throw new Error('Not initialized. Please call connect()')
     }
 
@@ -124,7 +112,7 @@ export class HederaProvider extends UniversalProvider {
       if (!this.eip155Provider) {
         throw new Error('eip155Provider not initialized')
       }
-      chainId = chainId ?? this.namespaces.eip155?.chains[0]
+      chainId = chainId ?? this.namespaces?.eip155?.chains[0]
 
       return this.eip155Provider?.request({
         request: {
@@ -534,74 +522,22 @@ export class HederaProvider extends UniversalProvider {
 
   public async connect(params?: any): Promise<any> {
     this.hederaLogger.debug('connect called with params:', params)
-
-    // Check for stored connection params from the dApp
-    if (!params || (!params.requiredNamespaces && !params.optionalNamespaces)) {
-      // Try to get params from sessionStorage (set by the dApp)
-      if (typeof window !== 'undefined' && window.sessionStorage) {
-        const storedParams = sessionStorage.getItem('hwcV2ConnectionParams')
-        this.hederaLogger.debug('Stored params in sessionStorage:', storedParams)
-        if (storedParams) {
-          try {
-            params = JSON.parse(storedParams)
-            this.hederaLogger.info('Using stored connection params from dApp:', params)
-            // Clear the stored params after using them
-            sessionStorage.removeItem('hwcV2ConnectionParams')
-          } catch (e) {
-            this.hederaLogger.warn('Failed to parse stored connection params:', e)
-          }
-        }
-      }
-    }
-
-    // If still no params provided or empty namespaces, create default namespaces
-    if (!params || (!params.requiredNamespaces && !params.optionalNamespaces)) {
-      this.hederaLogger.info('No namespaces provided, creating default namespaces')
-
-      // Create default namespaces based on initialized state
-      const defaultNamespaces = {
-        hedera: {
-          methods: Object.values(HederaJsonRpcMethod),
-          chains: ['hedera:testnet', 'hedera:mainnet'],
-          events: ['accountsChanged', 'chainChanged'],
-        },
-        eip155: {
-          methods: [
-            'eth_sendTransaction',
-            'eth_signTransaction',
-            'eth_sign',
-            'personal_sign',
-            'eth_signTypedData',
-            'eth_signTypedData_v4',
-            'eth_accounts',
-            'eth_chainId',
-          ],
-          chains: ['eip155:296', 'eip155:295'],
-          events: ['accountsChanged', 'chainChanged'],
-        },
-      }
-
-      params = {
-        requiredNamespaces: defaultNamespaces,
-        ...params,
-      }
-
-      this.hederaLogger.debug('Using default namespaces:', params.requiredNamespaces)
-    }
-
-    this.hederaLogger.debug('Final params before super.connect:', params)
-
     // Update the internal namespace properties before connecting
     if (params) {
-      if (params.requiredNamespaces) {
+      if (params.rrequiredNamespacesequiredNamespaces) {
         this.hederaLogger.debug('Setting requiredNamespaces:', params.requiredNamespaces)
         // @ts-ignore - accessing private property
         this.requiredNamespaces = params.requiredNamespaces
       }
       if (params.optionalNamespaces) {
-        this.hederaLogger.debug('Setting optionalNamespaces:', params.optionalNamespaces)
+        this.hederaLogger.debug('Setting optionalNamespaces:', params.requiredNamespaces)
         // @ts-ignore - accessing private property
         this.optionalNamespaces = params.optionalNamespaces
+      }
+      if (params.namespaces) {
+        this.hederaLogger.debug('Setting namespaces:', params.namespaces)
+        // @ts-ignore - accessing private property
+        this.namespaces = params.namespaces
       }
     }
 
@@ -624,6 +560,9 @@ export class HederaProvider extends UniversalProvider {
   }
 
   public async pair(pairingTopic: string | undefined): ReturnType<UniversalProvider['pair']> {
+    console.log(pairingTopic)
+    //@ts-expect-error
+    console.log(this.requiredNamespaces)
     const session = await super.pair(pairingTopic)
     this.initProviders()
     return session
