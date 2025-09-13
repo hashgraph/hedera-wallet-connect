@@ -65,8 +65,7 @@ class HIP820Provider implements IProvider {
     if (this.chainId) return this.chainId
     if (this.namespace.defaultChain) return this.namespace.defaultChain
 
-    const chainId = this.namespace.chains[0]
-    if (!chainId) throw new Error(`ChainId not found`)
+    const chainId = this.namespace.chains[0] || 'hedera:mainnet' // default to mainnet
 
     return chainId.split(':')[1]
   }

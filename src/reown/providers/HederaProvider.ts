@@ -582,7 +582,7 @@ export class HederaProvider extends UniversalProvider {
     const providers: Record<string, IProvider> = {}
 
     namespaces.forEach((namespace) => {
-      const accounts = this.session!.namespaces[namespace].accounts
+      const accounts = this.session?.namespaces[namespace]?.accounts || []
       const approvedChains = getChainsFromApprovedSession(accounts)
       const mergedNamespaces = mergeRequiredOptionalNamespaces(
         this.namespaces,

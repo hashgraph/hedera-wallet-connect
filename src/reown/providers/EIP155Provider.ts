@@ -83,8 +83,7 @@ class EIP155Provider implements IProvider {
     if (this.chainId) return this.chainId.toString()
     if (this.namespace.defaultChain) return this.namespace.defaultChain
 
-    const chainId = this.namespace.chains[0]
-    if (!chainId) throw new Error(`ChainId not found`)
+    const chainId = this.namespace.chains[0] || 'eip155:295' // default to mainnet
 
     return chainId.split(':')[1]
   }
