@@ -199,33 +199,11 @@ describe('Namespace Modes: Required vs Optional', () => {
       // Mock initProviders
       provider['initProviders'] = jest.fn()
 
-      // Call connect without parameters - should create default namespaces
+      // Call connect without parameters - should pass undefined to parent
       await provider.connect()
 
-      // Verify that connect was called with default requiredNamespaces
-      expect(mockConnect).toHaveBeenCalledWith({
-        requiredNamespaces: {
-          hedera: {
-            methods: Object.values(HederaJsonRpcMethod),
-            chains: ['hedera:testnet', 'hedera:mainnet'],
-            events: ['accountsChanged', 'chainChanged'],
-          },
-          eip155: {
-            methods: [
-              'eth_sendTransaction',
-              'eth_signTransaction',
-              'eth_sign',
-              'personal_sign',
-              'eth_signTypedData',
-              'eth_signTypedData_v4',
-              'eth_accounts',
-              'eth_chainId',
-            ],
-            chains: ['eip155:296', 'eip155:295'],
-            events: ['accountsChanged', 'chainChanged'],
-          },
-        },
-      })
+      // Verify that connect was called with undefined (no default namespaces created)
+      expect(mockConnect).toHaveBeenCalledWith(undefined)
 
       // Restore original method
       Object.getPrototypeOf(Object.getPrototypeOf(provider)).connect = originalConnect
