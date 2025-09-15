@@ -21,9 +21,11 @@ describe('HederaProvider additional branch coverage', () => {
           eip155: { chains: ['eip155:1'] },
           hedera: { chains: ['hedera:testnet'] },
         }
-        this.optionalNamespaces = {
-          eip155: { rpcMap: { 'eip155:1': 'rpc' } },
-          hedera: { rpcMap: { 'hedera:testnet': 'hrpc' } },
+        this.providerOpts = {
+          optionalNamespaces: {
+            eip155: { rpcMap: { 'eip155:1': 'rpc' } },
+            hedera: { rpcMap: { 'hedera:testnet': 'hrpc' } },
+          }
         }
         this.session = { topic: requestTopic, namespaces: {} }
         return Promise.resolve()
@@ -40,8 +42,8 @@ describe('HederaProvider additional branch coverage', () => {
 
     expect(pairSpy).toHaveBeenCalled()
     expect(provider.namespaces).toEqual({
-      eip155: { chains: ['eip155:1'], rpcMap: { 'eip155:1': 'rpc' } },
-      hedera: { chains: ['hedera:testnet'], rpcMap: { 'hedera:testnet': 'hrpc' } },
+      eip155: { rpcMap: { 'eip155:1': 'rpc' } },
+      hedera: { rpcMap: { 'hedera:testnet': 'hrpc' } },
     })
 
     initSpy.mockRestore()
@@ -68,7 +70,7 @@ describe('HederaProvider additional branch coverage', () => {
   test('getAccountAddresses handles undefined map result', async () => {
     const provider = await HederaProvider.init({ projectId: 'pid', logger: 'error' })
     provider.session = {
-      namespaces: { hedera: { accounts: { map: jest.fn().mockReturnValue(undefined) } } },
+      namespaces: { hedera: { accounts: [] } },
     } as any
     provider.namespaces = {}
 

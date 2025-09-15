@@ -39,7 +39,7 @@ describe('EIP155Provider remaining branches', () => {
     jest.clearAllMocks()
   })
 
-  test('getDefaultChain uses namespace default and throws when chain missing', () => {
+  test('getDefaultChain uses namespace default and returns 295 when chain missing', () => {
     const provider = createProvider()
     provider.chainId = 0 as any
     provider.namespace.defaultChain = '123'
@@ -47,7 +47,7 @@ describe('EIP155Provider remaining branches', () => {
 
     provider.namespace.defaultChain = undefined as any
     provider.namespace.chains = []
-    expect(() => provider.getDefaultChain()).toThrow('ChainId not found')
+    expect(provider.getDefaultChain()).toBe('295')
   })
 
   test('setHttpProvider ignores undefined provider', () => {

@@ -60,14 +60,30 @@ describe('HederaConnector', () => {
       })
     })
 
-    it('should skip connection when already authenticated', async () => {
+    it('should always call connect with optionalNamespaces', async () => {
       jest.spyOn(connector, 'authenticate').mockResolvedValue(true)
       ;(mockProvider.client.core.crypto.getClientId as jest.Mock).mockResolvedValue('id')
       mockProvider.session = { topic: 't' } as any
 
       const result = await connector.connectWalletConnect()
 
-      expect(mockProvider.connect).not.toHaveBeenCalled()
+      expect(mockProvider.connect).toHaveBeenCalledWith({
+        optionalNamespaces: {
+          hedera: {
+            chains: ['hedera:mainnet'],
+            events: ['accountsChanged', 'chainChanged'],
+            methods: [
+              'hedera_getNodeAddresses',
+              'hedera_executeTransaction',
+              'hedera_signMessage',
+              'hedera_signAndExecuteQuery',
+              'hedera_signAndExecuteTransaction',
+              'hedera_signTransaction',
+            ],
+            rpcMap: { mainnet: 'https://mainnet.hashio.io/api' },
+          },
+        },
+      })
       expect(result).toEqual({ clientId: 'id', session: mockProvider.session })
     })
   })

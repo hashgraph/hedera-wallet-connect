@@ -76,7 +76,7 @@ export class HederaProvider extends UniversalProvider {
   }
 
   getAccountAddresses(): string[] {
-    if (!this.session || !this.optionalNamespaces) {
+    if (!this.session) {
       throw new Error('Not initialized. Please call connect()')
     }
 
