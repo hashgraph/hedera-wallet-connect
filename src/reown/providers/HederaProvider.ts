@@ -524,7 +524,7 @@ export class HederaProvider extends UniversalProvider {
     this.hederaLogger.debug('connect called with params:', params)
     // Update the internal namespace properties before connecting
     if (params) {
-      if (params.rrequiredNamespacesequiredNamespaces) {
+      if (params.requiredNamespaces) {
         this.hederaLogger.debug('Setting requiredNamespaces:', params.requiredNamespaces)
         // @ts-ignore - accessing private property
         this.requiredNamespaces = params.requiredNamespaces
