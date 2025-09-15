@@ -592,6 +592,10 @@ export class HederaProvider extends UniversalProvider {
         ...mergedNamespaces[namespace],
         accounts,
         chains: approvedChains,
+        // Include rpcMap from optionalNamespaces if it exists
+        ...(this.optionalNamespaces?.[namespace]?.rpcMap && {
+          rpcMap: this.optionalNamespaces[namespace].rpcMap,
+        }),
       }
 
       switch (namespace) {
