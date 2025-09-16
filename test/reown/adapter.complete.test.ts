@@ -1,5 +1,4 @@
 import { HederaAdapter, hederaNamespace, HederaChainDefinition } from '../../src'
-import { ProviderUtil } from '@reown/appkit/store'
 import { formatUnits, parseUnits, Contract } from 'ethers'
 
 jest.mock('ethers', () => {
@@ -97,7 +96,8 @@ describe('HederaAdapter complete coverage', () => {
 
     const evmAdapter = new HederaAdapter({ namespace: 'eip155' })
     const req = jest.fn().mockResolvedValue('cap')
-    jest.spyOn(ProviderUtil, 'getProvider').mockReturnValue({ session: { sessionProperties: {} }, request: req } as any)
+    // Set provider directly on adapter
+    ;(evmAdapter as any).provider = { session: { sessionProperties: {} }, request: req }
     const res = await evmAdapter.getCapabilities('0x1' as any)
     expect(req).toHaveBeenCalled()
     expect(res).toBe('cap')

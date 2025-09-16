@@ -1,5 +1,4 @@
 import { HederaAdapter, HederaChainDefinition, hederaNamespace } from '../../src'
-import { ProviderUtil } from '@reown/appkit/store'
 import { WcHelpersUtil } from '@reown/appkit'
 
 describe('HederaAdapter extra branches', () => {
@@ -63,10 +62,11 @@ describe('HederaAdapter extra branches', () => {
 
   it('getCapabilities parses capabilities', async () => {
     const adapter = new HederaAdapter({ namespace: 'eip155' })
-    jest.spyOn(ProviderUtil, 'getProvider').mockReturnValue({
+    // Set provider directly on adapter
+    ;(adapter as any).provider = {
       session: { sessionProperties: { capabilities: '{"0x1": {"gas": "1"}}' } },
       request: jest.fn(),
-    } as any)
+    }
     const caps = await adapter.getCapabilities('0x1' as any)
     expect(caps).toEqual({ gas: '1' })
   })
@@ -88,16 +88,17 @@ describe('HederaAdapter extra branches', () => {
 
   it('getCapabilities errors when provider missing', async () => {
     const adapter = new HederaAdapter({ namespace: 'eip155' })
-    jest.spyOn(ProviderUtil, 'getProvider').mockReturnValue(undefined as any)
+    // Provider is undefined by default
     await expect(adapter.getCapabilities('0x1' as any)).rejects.toThrow('Provider is undefined')
   })
 
   it('getCapabilities errors on invalid json', async () => {
     const adapter = new HederaAdapter({ namespace: 'eip155' })
-    jest.spyOn(ProviderUtil, 'getProvider').mockReturnValue({
+    // Set provider directly on adapter
+    ;(adapter as any).provider = {
       session: { sessionProperties: { capabilities: 'bad' } },
       request: jest.fn(),
-    } as any)
+    }
     await expect(adapter.getCapabilities('0x1' as any)).rejects.toThrow('Error parsing wallet capabilities')
   })
 
@@ -130,7 +131,8 @@ describe('additional cases', () => {
   it('getCapabilities falls back to provider request', async () => {
     const adapter = new HederaAdapter({ namespace: 'eip155' })
     const req = jest.fn().mockResolvedValue('cap')
-    jest.spyOn(ProviderUtil, 'getProvider').mockReturnValue({ session: { sessionProperties: {} }, request: req } as any)
+    // Set provider directly on adapter
+    ;(adapter as any).provider = { session: { sessionProperties: {} }, request: req }
     const res = await adapter.getCapabilities('0x1' as any)
     expect(req).toHaveBeenCalled()
     expect(res).toBe('cap')
