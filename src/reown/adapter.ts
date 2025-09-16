@@ -1,7 +1,6 @@
 import { CoreHelperUtil, WcHelpersUtil, CaipNetwork } from '@reown/appkit'
 import { type ChainNamespace, isReownName } from '@reown/appkit-common'
 import { AdapterBlueprint } from '@reown/appkit/adapters'
-import { ProviderUtil } from '@reown/appkit/store'
 import { LedgerId } from '@hashgraph/sdk'
 import { BrowserProvider, Contract, formatUnits, JsonRpcSigner, parseUnits } from 'ethers'
 
@@ -303,7 +302,7 @@ export class HederaAdapter extends AdapterBlueprint {
       throw new Error('Namespace is not eip155')
     }
 
-    const provider = ProviderUtil.getProvider('eip155')
+    const provider = this.provider as UniversalProvider
 
     if (!provider) {
       throw new Error('Provider is undefined')
