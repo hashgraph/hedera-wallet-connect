@@ -5,4 +5,5 @@ process.env.DISABLE_GLOBAL_CORE = "true";
 globalThis.localStorage = {
   setItem: () => undefined,
   removeItem: () => undefined,
+  getItem: () => null,
 } as unknown as Storage

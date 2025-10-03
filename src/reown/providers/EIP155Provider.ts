@@ -12,6 +12,7 @@ import {
 import { formatJsonRpcRequest } from '@walletconnect/jsonrpc-utils'
 
 import { BUNDLER_URL, getChainId, HederaChainDefinition } from '../utils'
+import { createLogger } from '../../lib/shared/logger'
 
 class EIP155Provider implements IProvider {
   public name = 'eip155'
@@ -21,6 +22,7 @@ class EIP155Provider implements IProvider {
   public namespace: SessionNamespace
   public httpProviders: RpcProvidersMap
   public events: EventEmitter
+  private logger = createLogger('EIP155Provider')
 
   constructor({
     client,
@@ -81,8 +83,7 @@ class EIP155Provider implements IProvider {
     if (this.chainId) return this.chainId.toString()
     if (this.namespace.defaultChain) return this.namespace.defaultChain
 
-    const chainId = this.namespace.chains[0]
-    if (!chainId) throw new Error(`ChainId not found`)
+    const chainId = this.namespace.chains[0] || 'eip155:295' // default to mainnet
 
     return chainId.split(':')[1]
   }
@@ -187,7 +188,7 @@ class EIP155Provider implements IProvider {
       try {
         return await this.getUserOperationReceipt(bundlerUrl, args)
       } catch (error) {
-        console.warn('Failed to fetch call status from bundler', error, bundlerUrl)
+        this.logger.warn('Failed to fetch call status from bundler', error, bundlerUrl)
       }
     }
     const customUrl = session.sessionProperties?.bundler_url
@@ -195,7 +196,7 @@ class EIP155Provider implements IProvider {
       try {
         return await this.getUserOperationReceipt(customUrl, args)
       } catch (error) {
-        console.warn('Failed to fetch call status from custom bundler', error, customUrl)
+        this.logger.warn('Failed to fetch call status from custom bundler', error, customUrl)
       }
     }
 

@@ -41,6 +41,7 @@ import {
 } from '../utils'
 import HIP820Provider from './HIP820Provider'
 import EIP155Provider from './EIP155Provider'
+import { createLogger } from '../../lib/shared/logger'
 
 export type HederaWalletConnectProviderConfig = {
   chains: CaipNetwork[]
@@ -48,6 +49,7 @@ export type HederaWalletConnectProviderConfig = {
 
 // Reown AppKit UniversalProvider for HIP-820 & EIP-155 version implementation of the @hashgraph/hedera-wallet-connect DAppConnector
 export class HederaProvider extends UniversalProvider {
+  private hederaLogger = createLogger('HederaProvider')
   public nativeProvider?: HIP820Provider
   public eip155Provider?: EIP155Provider
 
@@ -56,26 +58,14 @@ export class HederaProvider extends UniversalProvider {
   }
   static async init(opts: UniversalProviderOpts) {
     const provider = new HederaProvider(opts)
-
-    //@ts-expect-error - private base method
+    //@ts-expect-error
     await provider.initialize()
+
     provider.namespaces = {
-      ...(provider.namespaces?.eip155
-        ? {
-            eip155: {
-              ...provider.namespaces?.eip155,
-              rpcMap: provider.optionalNamespaces?.eip155.rpcMap,
-            },
-          }
-        : {}),
-      ...(provider.namespaces?.hedera
-        ? {
-            hedera: {
-              ...provider.namespaces?.hedera,
-              rpcMap: provider.optionalNamespaces?.hedera.rpcMap,
-            },
-          }
-        : {}),
+      //@ts-ignore
+      ...(provider.providerOpts?.optionalNamespaces || {}),
+      //@ts-ignore
+      ...(provider.providerOpts?.requiredNamespaces || {}),
     }
     if (provider.session) provider.initProviders()
     return provider
@@ -86,7 +76,7 @@ export class HederaProvider extends UniversalProvider {
   }
 
   getAccountAddresses(): string[] {
-    if (!this.session || !this.namespaces) {
+    if (!this.session) {
       throw new Error('Not initialized. Please call connect()')
     }
 
@@ -122,7 +112,7 @@ export class HederaProvider extends UniversalProvider {
       if (!this.eip155Provider) {
         throw new Error('eip155Provider not initialized')
       }
-      chainId = chainId ?? this.namespaces.eip155?.chains[0]
+      chainId = chainId ?? this.namespaces?.eip155?.chains[0]
 
       return this.eip155Provider?.request({
         request: {
@@ -530,7 +520,49 @@ export class HederaProvider extends UniversalProvider {
     return this.request<string>({ method: 'eth_chainId', params: [] })
   }
 
+  public async connect(params?: any): Promise<any> {
+    this.hederaLogger.debug('connect called with params:', params)
+    // Update the internal namespace properties before connecting
+    if (params) {
+      if (params.requiredNamespaces) {
+        this.hederaLogger.debug('Setting requiredNamespaces:', params.requiredNamespaces)
+        // @ts-ignore - accessing private property
+        this.requiredNamespaces = params.requiredNamespaces
+      }
+      if (params.optionalNamespaces) {
+        this.hederaLogger.debug('Setting optionalNamespaces:', params.requiredNamespaces)
+        // @ts-ignore - accessing private property
+        this.optionalNamespaces = params.optionalNamespaces
+      }
+      if (params.namespaces) {
+        this.hederaLogger.debug('Setting namespaces:', params.namespaces)
+        // @ts-ignore - accessing private property
+        this.namespaces = params.namespaces
+      }
+    }
+
+    this.hederaLogger.debug('Calling super.connect with params')
+
+    // Try to directly pass the namespaces to the parent connect
+    let result
+    try {
+      result = await super.connect(params)
+    } catch (error) {
+      this.hederaLogger.error('Error in super.connect:', error)
+      throw error
+    }
+
+    this.hederaLogger.info('super.connect completed successfully')
+    this.hederaLogger.debug('Result from super.connect:', result)
+
+    this.initProviders()
+    return result
+  }
+
   public async pair(pairingTopic: string | undefined): ReturnType<UniversalProvider['pair']> {
+    console.log(pairingTopic)
+    //@ts-expect-error
+    console.log(this.requiredNamespaces)
     const session = await super.pair(pairingTopic)
     this.initProviders()
     return session
@@ -550,7 +582,7 @@ export class HederaProvider extends UniversalProvider {
     const providers: Record<string, IProvider> = {}
 
     namespaces.forEach((namespace) => {
-      const accounts = this.session!.namespaces[namespace].accounts
+      const accounts = this.session?.namespaces[namespace]?.accounts || []
       const approvedChains = getChainsFromApprovedSession(accounts)
       const mergedNamespaces = mergeRequiredOptionalNamespaces(
         this.namespaces,
@@ -560,6 +592,10 @@ export class HederaProvider extends UniversalProvider {
         ...mergedNamespaces[namespace],
         accounts,
         chains: approvedChains,
+        // Include rpcMap from optionalNamespaces if it exists
+        ...(this.optionalNamespaces?.[namespace]?.rpcMap && {
+          rpcMap: this.optionalNamespaces[namespace].rpcMap,
+        }),
       }
 
       switch (namespace) {

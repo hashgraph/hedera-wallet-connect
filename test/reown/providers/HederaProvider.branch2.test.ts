@@ -36,10 +36,7 @@ describe('HederaProvider additional branch coverage 2', () => {
     })
 
     expect(initProvidersSpy).toHaveBeenCalled()
-    expect(provider.namespaces).toEqual({
-      eip155: { chains: ['eip155:1'], rpcMap: undefined },
-      hedera: { chains: ['hedera:testnet'], rpcMap: undefined },
-    })
+    expect(provider.namespaces).toEqual({})
   })
 
   test('request uses supplied chain ids', async () => {
@@ -157,13 +154,13 @@ describe('HederaProvider additional branch coverage 2', () => {
       .spyOn(UniversalProvider.prototype as any, 'initialize')
       .mockImplementation(function () {
         this.namespaces = { hedera: { chains: ['hedera:testnet'] } }
-        this.optionalNamespaces = { hedera: { rpcMap: { 'hedera:testnet': 'hrpc' } } }
+        this.providerOpts = { optionalNamespaces: { hedera: { rpcMap: { 'hedera:testnet': 'hrpc' } } } }
         this.session = { topic: requestTopic, namespaces: {} }
         return Promise.resolve()
       })
     const initSpy = jest.spyOn(HederaProvider.prototype as any, 'initProviders').mockReturnValue({})
     const provider = await HederaProvider.init({ projectId: 'pid', logger: 'error', session: { topic: requestTopic, namespaces: {} } as any })
-    expect(provider.namespaces).toEqual({ hedera: { chains: ['hedera:testnet'], rpcMap: { 'hedera:testnet': 'hrpc' } } })
+    expect(provider.namespaces).toEqual({ hedera: { rpcMap: { 'hedera:testnet': 'hrpc' } } })
     initSpy.mockRestore()
     ;(UniversalProvider.prototype.initialize as jest.Mock).mockRestore()
   })
@@ -173,13 +170,13 @@ describe('HederaProvider additional branch coverage 2', () => {
       .spyOn(UniversalProvider.prototype as any, 'initialize')
       .mockImplementation(function () {
         this.namespaces = { eip155: { chains: ['eip155:1'] } }
-        this.optionalNamespaces = { eip155: { rpcMap: { 'eip155:1': 'rpc' } } }
+        this.providerOpts = { optionalNamespaces: { eip155: { rpcMap: { 'eip155:1': 'rpc' } } } }
         this.session = { topic: requestTopic, namespaces: {} }
         return Promise.resolve()
       })
     const initSpy = jest.spyOn(HederaProvider.prototype as any, 'initProviders').mockReturnValue({})
     const provider = await HederaProvider.init({ projectId: 'pid', logger: 'error', session: { topic: requestTopic, namespaces: {} } as any })
-    expect(provider.namespaces).toEqual({ eip155: { chains: ['eip155:1'], rpcMap: { 'eip155:1': 'rpc' } } })
+    expect(provider.namespaces).toEqual({ eip155: { rpcMap: { 'eip155:1': 'rpc' } } })
     initSpy.mockRestore()
     ;(UniversalProvider.prototype.initialize as jest.Mock).mockRestore()
   })
