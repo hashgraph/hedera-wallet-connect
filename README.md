@@ -64,7 +64,7 @@ reviewing the [Reown docs](https://docs.reown.com/overview).
 1. Add Hedera dependencies to your project:
 
 ```sh
-npm install @hashgraph/hedera-wallet-connect@2.0.4-canary.3ca04e9.0 @hashgraph/sdk @walletconnect/modal
+npm install @hashgraph/hedera-wallet-connect @hashgraph/sdk @walletconnect/modal
 ```
 
 2. Initialize dApp Connector
