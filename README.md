@@ -13,7 +13,7 @@ read transactions. Hedera implements EVM compatible smart contracts using
 [Hyperledger Besu](https://besu.hyperledger.org/) under the hood.
 
 Ethereum developers and toolsets often expect to interact with Ethereum compatible chains using
-the [Ethereum JSON-RPC](https://ethereum.org/en/developers/docs/apis/json-rpc/). To acheive
+the [Ethereum JSON-RPC](https://ethereum.org/en/developers/docs/apis/json-rpc/). To achieve
 compatibility with this API,
 [Hedera JSON-RPC Providers](https://docs.hedera.com/hedera/core-concepts/smart-contracts/json-rpc-relay#community-hosted-json-rpc-relays)
 operate a software middlelayer that translates Ethereum JSON-RPC compatible API calls into
@@ -26,7 +26,7 @@ transactions to wallets over the WalletConnect network using the JSON-RPC spec d
 Hedera native transactions or use Ethereum JSON-RPC calls sent to a Hedera JSON-RPC Relay
 provider which then communicates with Hedera consensus and mirror nodes.
 
-On a high level, JSON-RPC is a type of API stucture, such as SOAP, gRPC, REST, GraphQL, etc. In
+On a high level, JSON-RPC is a type of API structure, such as SOAP, gRPC, REST, GraphQL, etc. In
 the Hedera ecosystem, there are distinct concepts regarding JSON-RPC APIs to consider:
 
 - Ethereum JSON-RPC spec defines how to interact with Ethereum compatible networks
@@ -34,7 +34,7 @@ the Hedera ecosystem, there are distinct concepts regarding JSON-RPC APIs to con
 - Wallets in the Hedera ecosystem also support a separate specification that defines how to send
   transactions and messages to wallets over the WalletConnect network without relying on a
   Hedera JSON-RPC Relay provider. This is a Hedera specific specification defined for utilizing
-  the WalletConnect network distict from other JSON-RPC specs such as the one defined by the
+  the WalletConnect network distinct from other JSON-RPC specs such as the one defined by the
   Ethereum network.
 
 For more information see:
@@ -64,7 +64,7 @@ reviewing the [Reown docs](https://docs.reown.com/overview).
 1. Add Hedera dependencies to your project:
 
 ```sh
-npm install @hashgraph/hedera-wallet-connect@2.0.0-canary.811af2f.0 @hashgraph/sdk @walletconnect/modal
+npm install @hashgraph/hedera-wallet-connect @hashgraph/sdk @walletconnect/modal
 ```
 
 2. Initialize dApp Connector
@@ -121,7 +121,7 @@ await dAppConnector.openModal()
 2. Add Hedera dependencies to your project:
 
 ```sh
-npm install @hashgraph/hedera-wallet-connect@2.0.1-canary.24fffa7.0 @hashgraph/sdk @walletconnect/universal-provider
+npm install @hashgraph/hedera-wallet-connect@2.0.4-canary.3ca04e9.0 @hashgraph/sdk @walletconnect/universal-provider
 ```
 
 3. Update `createAppKit` with adapters and a universal provider for Hedera. Note the
@@ -154,7 +154,7 @@ const hederaEVMAdapter = new HederaAdapter({
 })
 
 const universalProvider = (await HederaProvider.init({
-  projectId: "YOUR_PROJECT_ID"
+  projectId: "YOUR_PROJECT_ID",
   metadata,
 })) as unknown as UniversalProvider, // avoid type mismatch error due to missing of private properties in HederaProvider
 
@@ -215,7 +215,6 @@ createAppKit({
 
 - [Hashpack](https://hashpack.app/)
 - [Kabila](https://wallet.kabila.app/)
-- [Blade](https://bladewallet.io/)
 - [Dropp](https://dropp.cc/)
 
 # Upgrading from v1 to v2

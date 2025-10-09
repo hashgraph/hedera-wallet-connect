@@ -1,6 +1,6 @@
 {
   "name": "@hashgraph/hedera-wallet-connect",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "A library to facilitate integrating Hedera with WalletConnect",
   "repository": {
     "type": "git",
@@ -38,6 +38,7 @@
     "@swc/jest": "^0.2.37",
     "@types/jest": "^30.0.0",
     "jest": "^30.0.3",
+    "nodemon": "^3.1.10",
     "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"

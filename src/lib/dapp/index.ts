@@ -468,13 +468,24 @@ export class DAppConnector {
     if (!this.walletConnectClient) {
       throw new Error('WalletConnect is not initialized')
     }
+
+    const requiredNamespaces = networkNamespaces(
+      this.network,
+      this.supportedMethods,
+      this.supportedEvents,
+    )
+
+    this.logger.debug('V1 DAppConnector: Connecting with params:', {
+      network: this.network.toString(),
+      pairingTopic,
+      requiredNamespaces,
+      supportedMethods: this.supportedMethods,
+      supportedEvents: this.supportedEvents,
+    })
+
     return this.walletConnectClient.connect({
       pairingTopic,
-      requiredNamespaces: networkNamespaces(
-        this.network,
-        this.supportedMethods,
-        this.supportedEvents,
-      ),
+      requiredNamespaces,
     })
   }
 

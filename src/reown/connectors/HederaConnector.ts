@@ -30,13 +30,10 @@ export class HederaConnector implements ChainAdapterConnector {
   }
 
   async connectWalletConnect() {
-    const isAuthenticated = await this.authenticate()
+    const namespaces = createNamespaces(this.caipNetworks)
+    const connectParams = { optionalNamespaces: namespaces }
 
-    if (!isAuthenticated) {
-      await this.provider.connect({
-        optionalNamespaces: createNamespaces(this.caipNetworks),
-      })
-    }
+    await this.provider.connect(connectParams)
 
     return {
       clientId: await this.provider.client.core.crypto.getClientId(),

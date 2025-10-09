@@ -80,12 +80,12 @@ describe('HIP820Provider', () => {
       expect(provider.getDefaultChain()).toBe('previewnet')
     })
 
-    it('throws when chain not found', () => {
+    it('returns mainnet when chain not found', () => {
       const provider = createProvider()
       provider.chainId = ''
       provider.namespace.chains = []
       delete (provider as any).namespace.defaultChain
-      expect(() => provider.getDefaultChain()).toThrow('ChainId not found')
+      expect(provider.getDefaultChain()).toBe('mainnet')
     })
   })
 
