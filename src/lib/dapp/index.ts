@@ -48,6 +48,8 @@ import {
   extensionConnect,
   findExtensions,
   SignTransactionRequest,
+  TabCoordinator,
+  MultiTabSignClientWrapper,
 } from '../shared'
 import { DAppSigner } from './DAppSigner'
 import { JsonRpcResult } from '@walletconnect/jsonrpc-types'
@@ -142,6 +144,14 @@ export class DAppConnector {
         projectId: this.projectId,
         metadata: this.dAppMetadata,
       })
+
+      // Wrap the SignClient for multi-tab coordination
+      const tabCoordinator = TabCoordinator.getInstance({
+        logLevel: this.logger instanceof DefaultLogger ? this.logger.getLogLevel() : 'debug',
+      })
+      // The wrapper modifies the signClient's request method in place for multi-tab support
+      new MultiTabSignClientWrapper(this.walletConnectClient, tabCoordinator, this.logger)
+
       const existingSessions = this.walletConnectClient.session.getAll()
       if (existingSessions.length > 0)
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))
@@ -159,6 +169,8 @@ export class DAppConnector {
         'pairing_delete',
         this.handlePairingDelete.bind(this),
       )
+
+      this.logger.info('DAppConnector initialized with multi-tab support')
     } catch (e) {
       this.logger.error('Error initializing DAppConnector:', e)
     } finally {
