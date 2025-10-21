@@ -19,8 +19,8 @@
  */
 
 import { LedgerId } from '@hashgraph/sdk'
-import { WcHelpersUtil } from '@reown/appkit'
 import { CaipNetwork } from '@reown/appkit-common'
+import { WcHelpersUtil } from '@reown/appkit-controllers'
 import { ProposalTypes } from '@walletconnect/types'
 import { NamespaceConfig } from '@walletconnect/universal-provider'
 
