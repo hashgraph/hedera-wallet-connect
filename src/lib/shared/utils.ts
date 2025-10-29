@@ -22,6 +22,7 @@ import { Buffer } from 'buffer'
 import {
   AccountId,
   PublicKey,
+  PrivateKey,
   Transaction,
   LedgerId,
   Query,
@@ -476,4 +477,92 @@ export const accountAndLedgerFromSession = (
       account: AccountId.fromString(acc),
     }
   })
+}
+
+/**
+ * Adds an additional signature to an already-signed transaction.
+ *
+ * This function is critical for multi-signature workflows where a transaction
+ * has already been signed by one party (e.g., via WalletConnect) and needs
+ * an additional signature from another party (e.g., backend co-signer).
+ *
+ * IMPORTANT: The standard SDK `.sign()` method does NOT work on reconstructed
+ * transactions because it clears the `_transactions` array (Transaction.js:825),
+ * which deletes existing signatures. This function uses proto-level manipulation
+ * to preserve all existing signatures while adding new ones.
+ *
+ * This implementation mirrors the signature merging pattern used in
+ * `DAppSigner.signTransaction()` (DAppSigner.ts:248-273).
+ *
+ * @param transaction - Transaction that already has one or more signatures
+ * @param privateKey - Private key to create additional signature
+ * @returns New transaction instance with all signatures (existing + new)
+ *
+ * @example
+ * ```typescript
+ * // Wallet signs first
+ * const walletSigned = await signer.signTransaction(transaction)
+ *
+ * // Backend adds signature
+ * const fullySigned = await addSignatureToTransaction(walletSigned, backendPrivateKey)
+ *
+ * // Now has both signatures
+ * await fullySigned.execute(client)
+ * ```
+ */
+export async function addSignatureToTransaction<T extends Transaction>(
+  transaction: T,
+  privateKey: PublicKey | PrivateKey,
+): Promise<T> {
+  // Step 1: Get original transaction bytes (preserves ALL existing signatures)
+  const originalBytes = transaction.toBytes()
+  const originalList = proto.TransactionList.decode(originalBytes)
+
+  // Step 2: Extract transaction body bytes to sign
+  const firstTransaction = originalList.transactionList[0]
+  let bodyBytes: Uint8Array
+
+  if (firstTransaction.signedTransactionBytes) {
+    const signedTx = proto.SignedTransaction.decode(firstTransaction.signedTransactionBytes)
+    bodyBytes = signedTx.bodyBytes!
+  } else {
+    bodyBytes = firstTransaction.bodyBytes!
+  }
+
+  // Step 3: Create signature with the provided private key
+  const publicKey = privateKey instanceof PublicKey ? privateKey : privateKey.publicKey
+  const signature =
+    privateKey instanceof PublicKey
+      ? (() => {
+          throw new Error('Cannot sign with PublicKey, PrivateKey required')
+        })()
+      : await privateKey.sign(bodyBytes)
+
+  // Step 4: Add new signature to ALL transactions in the list
+  // Each transaction in the list corresponds to a different node
+  const signedTransactionList = originalList.transactionList.map((tx) => {
+    const existingSigMap = tx.sigMap || proto.SignatureMap.create({})
+
+    // Create the new signature pair using SDK's internal method
+    const newSigPair = publicKey._toProtobufSignature(signature)
+
+    // Merge existing signatures with new signature
+    const mergedSigPairs = [...(existingSigMap.sigPair || []), newSigPair]
+
+    return {
+      ...tx,
+      sigMap: {
+        ...existingSigMap,
+        sigPair: mergedSigPairs,
+      },
+    }
+  })
+
+  // Step 5: Encode the signed transaction list back to bytes
+  const signedBytes = proto.TransactionList.encode({
+    transactionList: signedTransactionList,
+  }).finish()
+
+  // Step 6: Return reconstructed transaction with all signatures
+  return Transaction.fromBytes(signedBytes) as T
 }
