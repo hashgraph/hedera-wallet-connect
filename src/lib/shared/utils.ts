@@ -22,6 +22,7 @@ import { Buffer } from 'buffer'
 import {
   AccountId,
   PublicKey,
+  PrivateKey,
   Transaction,
   LedgerId,
   Query,
@@ -476,4 +477,52 @@ export const accountAndLedgerFromSession = (
       account: AccountId.fromString(acc),
     }
   })
+}
+
+/**
+ * Adds an additional signature to an already-signed transaction.
+ * Uses proto-level manipulation to preserve existing signatures.
+ */
+export async function addSignatureToTransaction<T extends Transaction>(
+  transaction: T,
+  privateKey: PrivateKey,
+): Promise<T> {
+  const originalBytes = transaction.toBytes()
+  const originalList = proto.TransactionList.decode(originalBytes)
+  const firstTransaction = originalList.transactionList[0]
+
+  let bodyBytes: Uint8Array
+  if (firstTransaction.signedTransactionBytes) {
+    const signedTx = proto.SignedTransaction.decode(firstTransaction.signedTransactionBytes)
+    bodyBytes = signedTx.bodyBytes!
+  } else {
+    bodyBytes = firstTransaction.bodyBytes!
+  }
+
+  const signature = await privateKey.sign(bodyBytes)
+  const publicKey = privateKey.publicKey
+
+  const signedTransactionList = originalList.transactionList.map((tx) => {
+    const newSigPair = publicKey._toProtobufSignature(signature)
+
+    if (tx.signedTransactionBytes) {
+      const signedTx = proto.SignedTransaction.decode(tx.signedTransactionBytes)
+      const existingSigMap = signedTx.sigMap || proto.SignatureMap.create({})
+      const mergedSigPairs = [...(existingSigMap.sigPair || []), newSigPair]
+
+      const updatedSignedTx = proto.SignedTransaction.encode({
+        bodyBytes: signedTx.bodyBytes,
+        sigMap: proto.SignatureMap.create({ sigPair: mergedSigPairs }),
+      }).finish()
+
+      return { signedTransactionBytes: updatedSignedTx }
+    } else {
+      const existingSigMap = tx.sigMap || proto.SignatureMap.create({})
+      const mergedSigPairs = [...(existingSigMap.sigPair || []), newSigPair]
+      return { ...tx, sigMap: { ...existingSigMap, sigPair: mergedSigPairs } }
+    }
+  })
+
+  const signedBytes = proto.TransactionList.encode({ transactionList: signedTransactionList }).finish()
+  return Transaction.fromBytes(signedBytes) as T
 }
