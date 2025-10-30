@@ -523,6 +523,8 @@ export async function addSignatureToTransaction<T extends Transaction>(
     }
   })
 
-  const signedBytes = proto.TransactionList.encode({ transactionList: signedTransactionList }).finish()
+  const signedBytes = proto.TransactionList.encode({
+    transactionList: signedTransactionList,
+  }).finish()
   return Transaction.fromBytes(signedBytes) as T
 }
