@@ -64,7 +64,7 @@ reviewing the [Reown docs](https://docs.reown.com/overview).
 1. Add Hedera dependencies to your project:
 
 ```sh
-npm install @hashgraph/hedera-wallet-connect@2.0.4-canary.3ca04e9.0 @hashgraph/sdk @walletconnect/modal
+npm install @hashgraph/hedera-wallet-connect @hashgraph/sdk @walletconnect/modal
 ```
 
 2. Initialize dApp Connector
@@ -226,12 +226,10 @@ refer to how to send transactions to wallets using the `hedera:(mainnet|testnet)
 While minimal, the main breaking changes are:
 
 - remove WalletConnect v1 modals
-
   - these are very old, though in the spirit of semver, we kept the dependency until this
     library's v2 release
 
 - remove setting node id's within this library for transactions
-
   - initially, a transaction created by the Hedera Javascript SDK needed to have one or more
     consensus node ids set to be able to serialize into bytes, sent over a network, and
     deserialized by the SDK

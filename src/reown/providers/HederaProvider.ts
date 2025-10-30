@@ -67,11 +67,7 @@ export class HederaProvider extends UniversalProvider {
       //@ts-ignore
       ...(provider.providerOpts?.requiredNamespaces || {}),
     }
-    if (provider.session) {
-      provider.initProviders()
-      // Emit connect event to notify listeners (like AppKit) about the restored session
-      provider.events.emit('connect', { session: provider.session })
-    }
+    if (provider.session) provider.initProviders()
     return provider
   }
 
