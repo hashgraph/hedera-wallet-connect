@@ -308,7 +308,7 @@ app.post('/api/execute-transaction', async (req, res) => {
 
 ### Important Notes
 
-1. **Transaction Must Be Frozen**: Before signing, ensure your transaction is frozen. The wallet will automatically freeze transactions if not already frozen.
+1. **Transaction Must Be Frozen**: Before signing, ensure your transaction is frozen.
 
 2. **Signature Order**: Signatures can be added in any order. Hedera validates that all required signatures are present when the transaction is executed.
 
