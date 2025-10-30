@@ -253,15 +253,38 @@ export class DAppSigner implements Signer {
     // Add the signature to all transactions in the list
     // Each transaction in the list corresponds to a different node
     const signedTransactionList = originalTransactionList.transactionList.map((tx) => {
-      const existingSigMap = tx.sigMap || proto.SignatureMap.create({})
-      // Merge the new signatures with existing signatures
-      const mergedSigPairs = [...(existingSigMap.sigPair || []), ...(sigMap.sigPair || [])]
-      return {
-        ...tx,
-        sigMap: {
-          ...existingSigMap,
-          sigPair: mergedSigPairs,
-        },
+      // Check if the transaction has signedTransactionBytes (frozen transactions)
+      if (tx.signedTransactionBytes) {
+        // Decode the SignedTransaction to access the bodyBytes and existing sigMap
+        const signedTx = proto.SignedTransaction.decode(tx.signedTransactionBytes)
+        const existingSigMap = signedTx.sigMap || proto.SignatureMap.create({})
+
+        // Merge the new signatures with existing signatures
+        const mergedSigPairs = [...(existingSigMap.sigPair || []), ...(sigMap.sigPair || [])]
+
+        // Create updated SignedTransaction with merged signatures
+        const updatedSignedTx = proto.SignedTransaction.encode({
+          bodyBytes: signedTx.bodyBytes,
+          sigMap: proto.SignatureMap.create({
+            sigPair: mergedSigPairs,
+          }),
+        }).finish()
+
+        return {
+          signedTransactionBytes: updatedSignedTx,
+        }
+      } else {
+        // Transaction has bodyBytes and sigMap at the top level (not frozen)
+        const existingSigMap = tx.sigMap || proto.SignatureMap.create({})
+        // Merge the new signatures with existing signatures
+        const mergedSigPairs = [...(existingSigMap.sigPair || []), ...(sigMap.sigPair || [])]
+        return {
+          ...tx,
+          sigMap: {
+            ...existingSigMap,
+            sigPair: mergedSigPairs,
+          },
+        }
       }
     })
 

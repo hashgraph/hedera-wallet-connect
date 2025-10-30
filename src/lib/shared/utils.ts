@@ -541,20 +541,43 @@ export async function addSignatureToTransaction<T extends Transaction>(
   // Step 4: Add new signature to ALL transactions in the list
   // Each transaction in the list corresponds to a different node
   const signedTransactionList = originalList.transactionList.map((tx) => {
-    const existingSigMap = tx.sigMap || proto.SignatureMap.create({})
-
     // Create the new signature pair using SDK's internal method
     const newSigPair = publicKey._toProtobufSignature(signature)
 
-    // Merge existing signatures with new signature
-    const mergedSigPairs = [...(existingSigMap.sigPair || []), newSigPair]
+    // Check if the transaction has signedTransactionBytes (frozen transactions)
+    if (tx.signedTransactionBytes) {
+      // Decode the SignedTransaction to access the bodyBytes and existing sigMap
+      const signedTx = proto.SignedTransaction.decode(tx.signedTransactionBytes)
+      const existingSigMap = signedTx.sigMap || proto.SignatureMap.create({})
 
-    return {
-      ...tx,
-      sigMap: {
-        ...existingSigMap,
-        sigPair: mergedSigPairs,
-      },
+      // Merge existing signatures with new signature
+      const mergedSigPairs = [...(existingSigMap.sigPair || []), newSigPair]
+
+      // Create updated SignedTransaction with merged signatures
+      const updatedSignedTx = proto.SignedTransaction.encode({
+        bodyBytes: signedTx.bodyBytes,
+        sigMap: proto.SignatureMap.create({
+          sigPair: mergedSigPairs,
+        }),
+      }).finish()
+
+      return {
+        signedTransactionBytes: updatedSignedTx,
+      }
+    } else {
+      // Transaction has bodyBytes and sigMap at the top level (not frozen)
+      const existingSigMap = tx.sigMap || proto.SignatureMap.create({})
+
+      // Merge existing signatures with new signature
+      const mergedSigPairs = [...(existingSigMap.sigPair || []), newSigPair]
+
+      return {
+        ...tx,
+        sigMap: {
+          ...existingSigMap,
+          sigPair: mergedSigPairs,
+        },
+      }
     }
   })
 
