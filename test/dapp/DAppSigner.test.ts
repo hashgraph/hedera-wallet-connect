@@ -514,6 +514,116 @@ describe('DAppSigner', () => {
         }),
       })
     })
+
+    it('should freeze unfrozen transaction before signing', async () => {
+      const mockPublicKey = PrivateKey.generate().publicKey
+      const mockSignature = new Uint8Array([1, 2, 3])
+
+      signerRequestSpy.mockImplementation(() =>
+        Promise.resolve({
+          signatureMap: Uint8ArrayToBase64String(
+            proto.SignatureMap.encode({
+              sigPair: [
+                {
+                  pubKeyPrefix: mockPublicKey.toBytes(),
+                  ed25519: mockSignature,
+                },
+              ],
+            }).finish(),
+          ),
+        }),
+      )
+
+      // Create an unfrozen transaction
+      const transaction = prepareTestTransaction(new AccountCreateTransaction(), {
+        freeze: false,
+      })
+
+      expect(transaction.isFrozen()).toBe(false)
+
+      const signedTx = await signer.signTransaction(transaction)
+
+      expect(signedTx).toBeDefined()
+      // Verify the signed transaction has node account IDs preserved
+      expect(signedTx.nodeAccountIds).toBeDefined()
+      expect(signedTx.nodeAccountIds.length).toBeGreaterThan(0)
+    })
+
+    it('should preserve node account IDs in signed transaction', async () => {
+      const mockPublicKey = PrivateKey.generate().publicKey
+      const mockSignature = new Uint8Array([1, 2, 3])
+
+      signerRequestSpy.mockImplementation(() =>
+        Promise.resolve({
+          signatureMap: Uint8ArrayToBase64String(
+            proto.SignatureMap.encode({
+              sigPair: [
+                {
+                  pubKeyPrefix: mockPublicKey.toBytes(),
+                  ed25519: mockSignature,
+                },
+              ],
+            }).finish(),
+          ),
+        }),
+      )
+
+      const transaction = prepareTestTransaction(new AccountCreateTransaction(), {
+        freeze: true,
+      })
+
+      const originalNodeIds = transaction.nodeAccountIds
+      const signedTx = await signer.signTransaction(transaction)
+
+      // Verify node account IDs are preserved in the signed transaction
+      expect(signedTx.nodeAccountIds).toEqual(originalNodeIds)
+      expect(signedTx.nodeAccountIds.length).toBeGreaterThan(0)
+    })
+
+    it('should preserve node account IDs for later execution by a different client', async () => {
+      const mockPublicKey = PrivateKey.generate().publicKey
+      const mockSignature = new Uint8Array([1, 2, 3])
+
+      signerRequestSpy.mockImplementation(() =>
+        Promise.resolve({
+          signatureMap: Uint8ArrayToBase64String(
+            proto.SignatureMap.encode({
+              sigPair: [
+                {
+                  pubKeyPrefix: mockPublicKey.toBytes(),
+                  ed25519: mockSignature,
+                },
+              ],
+            }).finish(),
+          ),
+        }),
+      )
+
+      // Create a transaction with specific node account IDs
+      const transaction = prepareTestTransaction(new AccountCreateTransaction(), {
+        freeze: true,
+      })
+
+      const originalNodeIds = transaction.nodeAccountIds
+      expect(originalNodeIds.length).toBeGreaterThan(0)
+
+      // Sign the transaction
+      const signedTx = await signer.signTransaction(transaction)
+
+      // Serialize and deserialize to simulate sending to another client
+      const txBytes = signedTx.toBytes()
+      const reconstructedTx = Transaction.fromBytes(txBytes)
+
+      // Verify node account IDs are still present after reconstruction
+      expect(reconstructedTx.nodeAccountIds).toBeDefined()
+      expect(reconstructedTx.nodeAccountIds.length).toBeGreaterThan(0)
+      expect(reconstructedTx.nodeAccountIds).toEqual(originalNodeIds)
+
+      // Verify the transaction has the necessary data to be executed
+      // by checking internal properties that would be needed for execution
+      expect((reconstructedTx as any)._nodeAccountIds).toBeDefined()
+      expect((reconstructedTx as any)._nodeAccountIds.length).toBeGreaterThan(0)
+    })
   })
 
   describe('getAccountKey()', () => {
