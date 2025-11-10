@@ -121,7 +121,7 @@ await dAppConnector.openModal()
 2. Add Hedera dependencies to your project:
 
 ```sh
-npm install @hashgraph/hedera-wallet-connect@2.0.4-canary.3ca04e9.0 @hashgraph/sdk @walletconnect/universal-provider
+npm install @hashgraph/hedera-wallet-connect @hashgraph/sdk @walletconnect/universal-provider
 ```
 
 3. Update `createAppKit` with adapters and a universal provider for Hedera. Note the
