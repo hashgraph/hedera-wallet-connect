@@ -19,7 +19,7 @@
  */
 
 import { AccountId, LedgerId, Transaction } from '@hashgraph/sdk'
-import { EngineTypes, SessionTypes, SignClientTypes } from '@walletconnect/types'
+import { EngineTypes, SessionTypes, SignClientTypes, ISignClient } from '@walletconnect/types'
 import { WalletConnectModal } from '@walletconnect/modal'
 import SignClient from '@walletconnect/sign-client'
 import { getSdkError } from '@walletconnect/utils'
@@ -412,7 +412,7 @@ export class DAppConnector {
       ({ account, network }: { account: AccountId; network: LedgerId }) =>
         new DAppSigner(
           account,
-          this.walletConnectClient!,
+          this.walletConnectClient! as unknown as ISignClient,
           session.topic,
           network,
           session.sessionProperties?.extensionId,
