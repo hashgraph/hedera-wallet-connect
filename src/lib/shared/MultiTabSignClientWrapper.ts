@@ -25,7 +25,7 @@ import { ILogger } from './logger'
 /**
  * Wraps a WalletConnect SignClient to intercept all responses and coordinate
  * them across multiple browser tabs.
- * 
+ *
  * This solves the issue where WalletConnect v2 only delivers responses to the
  * most recently connected tab, not the tab that initiated the request.
  */
@@ -56,7 +56,9 @@ export class MultiTabSignClientWrapper {
     const self = this
 
     // Override the request method
-    this.signClient.request = async function <T>(args: Parameters<ISignClient['request']>[0]): Promise<T> {
+    this.signClient.request = async function <T>(
+      args: Parameters<ISignClient['request']>[0],
+    ): Promise<T> {
       const { topic, request, chainId } = args
       const requestId = self.generateRequestId(topic, request.method, request.params)
 

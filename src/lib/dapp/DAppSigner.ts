@@ -123,7 +123,7 @@ export class DAppSigner implements Signer {
     }
 
     if (this.extensionId) extensionOpen(this.extensionId)
-    
+
     // The SignClient is wrapped by MultiTabSignClientWrapper in DAppConnector
     // so multi-tab coordination happens automatically
     return this.signClient.request<T>({

@@ -239,7 +239,11 @@ export class TabCoordinator {
         this.handleRequestRegistered(message.request)
         break
       case 'RESPONSE_RECEIVED':
-        this.handleResponseReceived(message.requestId, message.response, message.receivedByTabId)
+        this.handleResponseReceived(
+          message.requestId,
+          message.response,
+          message.receivedByTabId,
+        )
         break
       case 'REQUEST_CLAIM':
         this.handleRequestClaim(message.requestId, message.claimingTabId)
@@ -346,9 +350,7 @@ export class TabCoordinator {
       this.completeRequest(requestId, response)
     } else {
       // This response belongs to another tab, forward it
-      this.logger.info(
-        `Forwarding response for request ${requestId} to tab ${request.tabId}`,
-      )
+      this.logger.info(`Forwarding response for request ${requestId} to tab ${request.tabId}`)
       this.broadcastMessage({
         type: 'RESPONSE_RECEIVED',
         requestId,
@@ -503,9 +505,7 @@ export class TabCoordinator {
         // Check for orphaned requests
         for (const [requestId, request] of this.pendingRequests.entries()) {
           if (request.tabId === deadTabId) {
-            this.logger.info(
-              `Found orphaned request ${requestId} from dead tab ${deadTabId}`,
-            )
+            this.logger.info(`Found orphaned request ${requestId} from dead tab ${deadTabId}`)
             // We don't claim it automatically - the response might still arrive
             // and be handled by remaining tabs
           }
