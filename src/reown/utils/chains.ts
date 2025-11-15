@@ -1,6 +1,6 @@
-import { WcHelpersUtil } from '@reown/appkit'
 import { CaipNetwork, CaipNetworkId, ChainNamespace } from '@reown/appkit-common'
 import { defineChain } from '@reown/appkit/networks'
+import { WcHelpersUtil } from '@reown/appkit-controllers'
 import { Namespace, NamespaceConfig } from '@walletconnect/universal-provider'
 import { ProposalTypes } from '@walletconnect/types'
 import { mergeArrays, normalizeNamespaces } from '@walletconnect/utils'

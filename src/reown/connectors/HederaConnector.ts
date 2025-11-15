@@ -1,6 +1,6 @@
 import type { SessionTypes } from '@walletconnect/types'
 import { CaipNetwork, ChainNamespace, ConstantsUtil } from '@reown/appkit-common'
-import { AdapterBlueprint, type ChainAdapterConnector } from '@reown/appkit/adapters'
+import { AdapterBlueprint, type ChainAdapterConnector } from '@reown/appkit-controllers'
 import { PresetsUtil } from '@reown/appkit-utils'
 import { createNamespaces } from '../utils'
 

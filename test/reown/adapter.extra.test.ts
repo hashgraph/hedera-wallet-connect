@@ -1,5 +1,5 @@
 import { HederaAdapter, HederaChainDefinition, hederaNamespace } from '../../src'
-import { WcHelpersUtil } from '@reown/appkit'
+import { WcHelpersUtil } from '@reown/appkit-controllers'
 
 describe('HederaAdapter extra branches', () => {
   it('constructor validates inputs', () => {

@@ -29,7 +29,8 @@
   },
   "peerDependencies": {
     "@hashgraph/sdk": "^2.63.0",
-    "@reown/appkit": "^1.7.16",
+    "@reown/appkit": "1.8.10",
+    "@reown/appkit-controllers": "1.8.10",
     "@reown/walletkit": "^1.2.8",
     "@walletconnect/modal": "^2.7.0",
     "ethers": "^6.13.5"
