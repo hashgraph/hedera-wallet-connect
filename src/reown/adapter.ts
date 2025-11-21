@@ -1,6 +1,6 @@
-import { CoreHelperUtil, WcHelpersUtil, CaipNetwork } from '@reown/appkit'
+import { CoreHelperUtil, CaipNetwork } from '@reown/appkit'
 import { type ChainNamespace, isReownName } from '@reown/appkit-common'
-import { AdapterBlueprint } from '@reown/appkit/adapters'
+import { AdapterBlueprint, WcHelpersUtil } from '@reown/appkit-controllers'
 import { LedgerId } from '@hashgraph/sdk'
 import { BrowserProvider, Contract, formatUnits, JsonRpcSigner, parseUnits } from 'ethers'
 
