@@ -211,6 +211,141 @@ createAppKit({
 - [Hedera Wallet Example by Hgraph](https://github.com/hgraph-io/hedera-wallet)
 - <em>[Add an example, demo, or tool here](https://github.com/hashgraph/hedera-wallet-connect/pulls)</em>
 
+# Multi-Signature Transactions
+
+Multi-signature (multi-sig) workflows allow multiple parties to sign a single transaction before it's executed on the Hedera network. This is commonly used for:
+
+- Treasury operations requiring approval from multiple parties
+- Escrow services
+- Joint accounts
+- Backend co-signing for additional security
+
+## Using `hedera_signTransaction` for Multi-Sig Workflows
+
+The `hedera_signTransaction` method allows you to collect a signature from a wallet without immediately executing the transaction. This signature can then be combined with additional signatures (such as from a backend service) before final execution.
+
+### Example: Frontend Wallet Signature + Backend Co-Signature
+
+This example demonstrates a common pattern where a user signs a transaction in their wallet, and then a backend service adds its signature before executing the transaction.
+
+#### Step 1: Create and Sign Transaction on Frontend
+
+```typescript
+import { DAppConnector, HederaJsonRpcMethod } from '@hashgraph/hedera-wallet-connect'
+import { TransferTransaction, Hbar, AccountId } from '@hashgraph/sdk'
+
+// Initialize your DAppConnector (see Getting Started section)
+const dAppConnector = new DAppConnector(/* ... */)
+
+// Create a transaction
+const transaction = new TransferTransaction()
+  .addHbarTransfer(userAccountId, new Hbar(-10))
+  .addHbarTransfer(recipientAccountId, new Hbar(10))
+  .setTransactionMemo('Multi-sig transfer')
+
+// Request signature from wallet (does NOT execute)
+const signer = dAppConnector.getSigner(userAccountId)
+const signedTransaction = await signer.signTransaction(transaction)
+
+// Convert signed transaction to bytes for transmission to backend
+const signedTransactionBytes = signedTransaction.toBytes()
+
+// Send to backend
+const response = await fetch('/api/execute-transaction', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    signedTransaction: Buffer.from(signedTransactionBytes).toString('base64'),
+  }),
+})
+
+const result = await response.json()
+console.log('Transaction executed:', result.transactionId)
+```
+
+#### Step 2: Add Backend Signature and Execute
+
+On your backend, use the `addSignatureToTransaction` utility to add your server's signature:
+
+```typescript
+import { Transaction, PrivateKey, Client } from '@hashgraph/sdk'
+import { addSignatureToTransaction } from '@hashgraph/hedera-wallet-connect'
+
+// Backend API endpoint
+app.post('/api/execute-transaction', async (req, res) => {
+  try {
+    // Reconstruct transaction from bytes
+    const signedTransactionBytes = Buffer.from(req.body.signedTransaction, 'base64')
+    const signedTransaction = Transaction.fromBytes(signedTransactionBytes)
+
+    // Load your backend private key (store securely!)
+    const backendPrivateKey = PrivateKey.fromStringED25519(process.env.BACKEND_PRIVATE_KEY)
+
+    // Add backend signature to the transaction
+    const fullySignedTransaction = await addSignatureToTransaction(
+      signedTransaction,
+      backendPrivateKey,
+    )
+
+    // Execute the fully signed transaction
+    const client = Client.forTestnet() // or Client.forMainnet()
+    client.setOperator(backendAccountId, backendPrivateKey)
+
+    const txResponse = await fullySignedTransaction.execute(client)
+    const receipt = await txResponse.getReceipt(client)
+
+    res.json({
+      success: true,
+      transactionId: txResponse.transactionId.toString(),
+      status: receipt.status.toString(),
+    })
+  } catch (error) {
+    console.error('Error executing transaction:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+```
+
+### Important Notes
+
+1. **Transaction Must Be Frozen**: Before signing, ensure your transaction is frozen.
+
+2. **Signature Order**: Signatures can be added in any order. Hedera validates that all required signatures are present when the transaction is executed.
+
+3. **Security Considerations**:
+   - Never expose backend private keys to the frontend
+   - Validate transaction contents on the backend before adding your signature
+   - Implement proper authentication and authorization
+   - Consider implementing transaction limits and approval workflows
+
+4. **Multiple Signatures**: You can add more than two signatures using the same pattern:
+
+```typescript
+// Add multiple signatures sequentially
+let signedTx = await addSignatureToTransaction(transaction, privateKey1)
+signedTx = await addSignatureToTransaction(signedTx, privateKey2)
+signedTx = await addSignatureToTransaction(signedTx, privateKey3)
+
+// Execute with all signatures
+await signedTx.execute(client)
+```
+
+5. **Threshold Keys**: For accounts with threshold key structures, ensure you collect enough signatures to meet the threshold requirement before execution.
+
+### Alternative: Using `hedera_signAndExecuteTransaction`
+
+If you don't need backend co-signing and want the wallet to execute the transaction immediately:
+
+```typescript
+// This signs AND executes in one call
+const result = await dAppConnector.signAndExecuteTransaction({
+  signerAccountId: `hedera:testnet:${userAccountId}`,
+  transactionList: transactionToBase64String(transaction),
+})
+```
+
+Use `hedera_signTransaction` when you need to collect multiple signatures. Use `hedera_signAndExecuteTransaction` when the wallet's signature alone is sufficient to execute the transaction.
+
 # Hedera Wallets
 
 - [Hashpack](https://hashpack.app/)
@@ -226,12 +361,10 @@ refer to how to send transactions to wallets using the `hedera:(mainnet|testnet)
 While minimal, the main breaking changes are:
 
 - remove WalletConnect v1 modals
-
   - these are very old, though in the spirit of semver, we kept the dependency until this
     library's v2 release
 
 - remove setting node id's within this library for transactions
-
   - initially, a transaction created by the Hedera Javascript SDK needed to have one or more
     consensus node ids set to be able to serialize into bytes, sent over a network, and
     deserialized by the SDK
