@@ -222,7 +222,16 @@ export class DAppSigner implements Signer {
    * @returns transaction - `Transaction` object with signature
    */
   async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
-    const transactionBody = transactionToTransactionBody(transaction)
+    // Ensure transaction is frozen with node account IDs before signing
+    // This is required so the transaction can be executed later by any client
+    if (!transaction.isFrozen()) {
+      transaction.freezeWith(this._getHederaClient())
+    }
+
+    // Extract the first node account ID from the frozen transaction to preserve it in the transaction body
+    const nodeAccountId = transaction.nodeAccountIds?.[0] ?? null
+
+    const transactionBody = transactionToTransactionBody(transaction, nodeAccountId)
     if (!transactionBody) throw new Error('Failed to serialize transaction body')
     const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
 
@@ -235,9 +244,56 @@ export class DAppSigner implements Signer {
     })
 
     const sigMap = base64StringToSignatureMap(signatureMap)
-    const bodyBytes = base64StringToUint8Array(transactionBodyBase64)
-    const bytes = proto.Transaction.encode({ bodyBytes, sigMap }).finish()
-    return Transaction.fromBytes(bytes) as T
+
+    // Get the original transaction bytes to preserve the full transaction structure
+    // including all node account IDs
+    const originalTransactionBytes = transaction.toBytes()
+    const originalTransactionList = proto.TransactionList.decode(originalTransactionBytes)
+
+    // Add the signature to all transactions in the list
+    // Each transaction in the list corresponds to a different node
+    const signedTransactionList = originalTransactionList.transactionList.map((tx) => {
+      // Check if the transaction has signedTransactionBytes (frozen transactions)
+      if (tx.signedTransactionBytes) {
+        // Decode the SignedTransaction to access the bodyBytes and existing sigMap
+        const signedTx = proto.SignedTransaction.decode(tx.signedTransactionBytes)
+        const existingSigMap = signedTx.sigMap || proto.SignatureMap.create({})
+
+        // Merge the new signatures with existing signatures
+        const mergedSigPairs = [...(existingSigMap.sigPair || []), ...(sigMap.sigPair || [])]
+
+        // Create updated SignedTransaction with merged signatures
+        const updatedSignedTx = proto.SignedTransaction.encode({
+          bodyBytes: signedTx.bodyBytes,
+          sigMap: proto.SignatureMap.create({
+            sigPair: mergedSigPairs,
+          }),
+        }).finish()
+
+        return {
+          signedTransactionBytes: updatedSignedTx,
+        }
+      } else {
+        // Transaction has bodyBytes and sigMap at the top level (not frozen)
+        const existingSigMap = tx.sigMap || proto.SignatureMap.create({})
+        // Merge the new signatures with existing signatures
+        const mergedSigPairs = [...(existingSigMap.sigPair || []), ...(sigMap.sigPair || [])]
+        return {
+          ...tx,
+          sigMap: {
+            ...existingSigMap,
+            sigPair: mergedSigPairs,
+          },
+        }
+      }
+    })
+
+    // Encode the signed transaction list back to bytes
+    const signedBytes = proto.TransactionList.encode({
+      transactionList: signedTransactionList,
+    }).finish()
+
+    return Transaction.fromBytes(signedBytes) as T
   }
 
   private async _tryExecuteTransactionRequest<RequestT, ResponseT, OutputT>(

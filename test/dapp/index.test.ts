@@ -494,10 +494,9 @@ describe('DAppConnector', () => {
     })
 
     it('should verify signatures using real signing', async () => {
-      // Create a test transaction
+      // Create a test transaction with freeze: true to ensure node IDs are set
       const transaction = prepareTestTransaction(new TopicCreateTransaction(), {
-        freeze: false,
-        setNodeAccountIds: false,
+        freeze: true,
       })
 
       // Sign with connector
@@ -512,7 +511,9 @@ describe('DAppConnector', () => {
       const bytesToVerify = connectorSigned._signedTransactions.get(0)!.bodyBytes!
 
       // Sign directly with private key for comparison
-      const transactionBody = transactionToTransactionBody(transaction)
+      // Use the first node account ID from the frozen transaction to match what the connector does
+      const nodeAccountId = transaction.nodeAccountIds?.[0] ?? null
+      const transactionBody = transactionToTransactionBody(transaction, nodeAccountId)
       const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
       const bodyBytes = base64StringToUint8Array(transactionBodyBase64)
       const directSignature = privateKey.sign(bodyBytes)
