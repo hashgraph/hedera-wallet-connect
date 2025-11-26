@@ -247,7 +247,8 @@ describe('Namespace Methods and Events Consistency', () => {
       const readMethods = [HederaJsonRpcMethod.GetNodeAddresses]
       const signMethods = [
         HederaJsonRpcMethod.SignMessage,
-        HederaJsonRpcMethod.SignTransaction
+        HederaJsonRpcMethod.SignTransaction,
+        HederaJsonRpcMethod.SignTransactions,
       ]
       const executeMethods = [
         HederaJsonRpcMethod.ExecuteTransaction,
