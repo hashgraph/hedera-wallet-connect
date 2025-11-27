@@ -184,6 +184,31 @@ export class HIP820Wallet implements HIP820WalletInterface {
           body = Buffer.from(transactionBody, 'base64')
           break
         }
+        case HederaJsonRpcMethod.SignTransactions: {
+          // 7 - HIP-1190
+          const { signerAccountId: _accountId, transactionBody, nodeCount } = params
+          this.validateParam('signerAccountId', _accountId, 'string')
+          this.validateParam('transactionBody', transactionBody, 'string')
+          
+          if (nodeCount !== undefined) {
+            this.validateParam('nodeCount', nodeCount, 'number')
+            
+            if (nodeCount <= 0) {
+              throw getHederaError(
+                'INVALID_PARAMS',
+                'nodeCount must be a positive number'
+              )
+            }
+          }
+          
+          signerAccountId = AccountId.fromString(_accountId.replace(chainId + ':', ''))
+          body = Buffer.from(transactionBody, 'base64')
+          
+          // Store nodeCount for handler method
+          ;(body as any).__nodeCount = nodeCount ?? 5
+          
+          break
+        }
         default:
           throw getSdkError('INVALID_METHOD')
       }
@@ -206,7 +231,15 @@ export class HIP820Wallet implements HIP820WalletInterface {
     event: WalletRequestEventArgs,
   ): Promise<JsonRpcResult<any> | JsonRpcError> {
     const { method, id, body } = this.parseSessionRequest(event)
-    const response = await this[method](id, body)
+    
+    // Extract nodeCount if it exists (for HIP-1190)
+    const nodeCount = (body as any)?.__nodeCount
+    
+    // Call the method with appropriate parameters
+    const response = nodeCount !== undefined 
+      ? await this[method](id, body, nodeCount)
+      : await this[method](id, body)
+      
     return response
   }
 
