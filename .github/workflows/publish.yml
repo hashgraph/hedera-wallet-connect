@@ -1,5 +1,13 @@
-name: Publishing
+name: Publish Release (Canary OR Stable)
+
 on:
+  # TRIGGER 1: Canary Builds
+  push:
+    branches:
+      - main
+      - canary
+      - introduce-v2
+  # TRIGGER 2: Stable Releases
   release:
     types:
       - published
@@ -11,8 +19,8 @@ permissions:
 jobs:
   build-and-pack:
     name: Build and Pack
+    if: github.repository_owner == 'hashgraph' 
     runs-on: wallet-tools-linux-medium
-
     permissions:
       contents: read
 
@@ -32,18 +40,37 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Update npm
-        run: npm install -g npm@latest
+        run: npm install -g npm@11.6.4
 
       - name: Install dependencies
         run: npm install
 
+      - name: Set Canary Version
+        if: github.event_name == 'push'
+        run: |
+          # For canary publishing - bump version to prerelease format: 1.0.0-canary.abc1234.0
+          npm version prerelease --preid="canary.$(git rev-parse --short HEAD)" --no-git-tag-version
+
       - name: Pack Package
         id: pack
         run: |
-          # npm pack creates a .tgz file
-          # We capture the filename to use it in the upload step
+          # Calculate expected package filename from package.json
+          PACKAGE_NAME=$(node -p "require('./package.json').name.replace('@', '').replace('/', '-')")
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          EXPECTED_FILENAME="${PACKAGE_NAME}-${PACKAGE_VERSION}.tgz"
+          
+          # Create the package
           npm pack
-          echo "PACK_FILENAME=$(ls *.tgz)" >> $GITHUB_OUTPUT
+          
+          # Verify the expected file exists
+          if [ ! -f "$EXPECTED_FILENAME" ]; then
+            echo "Error: Expected package file $EXPECTED_FILENAME not found"
+            echo "Available files:"
+            ls -la *.tgz
+            exit 1
+          fi
+          
+          echo "PACK_FILENAME=$EXPECTED_FILENAME" >> $GITHUB_OUTPUT
 
       - name: Upload Package Artifact
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
@@ -55,8 +82,7 @@ jobs:
   publish-package:
     name: Publish to NPM
     needs: build-and-pack
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-latest # Must be GitHub-hosted for OIDC for npmjs
     permissions:
       contents: read
       id-token: write
@@ -74,12 +100,38 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Update npm
-        run: npm install -g npm@latest
+        run: npm install -g npm@11.6.4
 
       - name: Download Package Artifact
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: package-artifact
 
+      - name: Determine Publish Flags
+        id: flags
+        run: |
+          # Default flags
+          FLAGS="--access public"
+          
+          # If it is a Push event, add the canary tag
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            FLAGS="$FLAGS --tag canary"
+          fi
+          
+          # If it is a Release, we assume 'latest' (which is default), so no extra flag needed.
+          
+          echo "args=$FLAGS" >> $GITHUB_OUTPUT
+
       - name: Publish
-        run: npm publish $(ls *.tgz) --public
+        run: |
+          # Verify exactly one .tgz file exists
+          TGZ_COUNT=$(ls -1 *.tgz 2>/dev/null | wc -l)
+          if [ "$TGZ_COUNT" -ne 1 ]; then
+            echo "Error: Expected exactly 1 .tgz file, found $TGZ_COUNT"
+            ls -la *.tgz 2>/dev/null || echo "No .tgz files found"
+            exit 1
+          fi
+          
+          PACKAGE_FILE=$(ls *.tgz)
+          echo "Publishing package: $PACKAGE_FILE"
+          npm publish "$PACKAGE_FILE" ${{ steps.flags.outputs.args }}
