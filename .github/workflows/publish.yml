@@ -19,7 +19,7 @@ permissions:
 jobs:
   build-and-pack:
     name: Build and Pack
-    if: github.repository_owner == 'hashgraph' 
+    if: ${{ github.repository_owner == 'hashgraph'  }}
     runs-on: wallet-tools-linux-medium
     permissions:
       contents: read
@@ -46,7 +46,7 @@ jobs:
         run: npm install
 
       - name: Set Canary Version
-        if: github.event_name == 'push'
+        if: ${{ github.event_name == 'push' }}
         run: |
           # For canary publishing - bump version to prerelease format: 1.0.0-canary.abc1234.0
           npm version prerelease --preid="canary.$(git rev-parse --short HEAD)" --no-git-tag-version
