@@ -8,10 +8,11 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
-  publish-canary:
-    name: Publish Canary
+  build-and-pack-canary:
+    name: Build and Pack Canary
     if: github.event.pull_request.head.repo.fork == false
     runs-on: wallet-tools-linux-medium
     permissions:
@@ -24,26 +25,66 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Setup NodeJS Environment
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Update npm
+        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: npm install
-
-      - name: Create .npmrc
-        run: |
-          touch .npmrc
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
 
       - name: Set prerelease version
         run: |
           npm version prerelease --preid="canary.$(git rev-parse --short HEAD)" --no-git-tag-version
 
+      - name: Pack Package
+        id: pack
+        run: |
+          # npm pack creates a .tgz file with the new canary version
+          npm pack
+          echo "PACK_FILENAME=$(ls *.tgz)" >> $GITHUB_OUTPUT
+
+      - name: Upload Package Artifact
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: canary-package-artifact
+          path: ${{ steps.pack.outputs.PACK_FILENAME }}
+          if-no-files-found: error
+
+  publish-canary:
+    name: Publish Canary to NPM
+    if: github.event.pull_request.head.repo.fork == false
+    needs: build-and-pack-canary
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - name: Setup NodeJS Environment
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        with:
+          node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Download Package Artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: canary-package-artifact
+
       - name: Publish
-        run: npm publish --tag canary --public
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish $(ls *.tgz) --tag canary --public
