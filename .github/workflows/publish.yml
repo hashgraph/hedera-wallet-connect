@@ -1,16 +1,26 @@
-name: Publishing
+name: Publish Release (Canary OR Stable)
+
 on:
+  # TRIGGER 1: Canary Builds
+  push:
+    branches:
+      - main
+      - canary
+      - introduce-v2
+  # TRIGGER 2: Stable Releases
   release:
     types:
       - published
+
 permissions:
   contents: read
+  id-token: write
 
 jobs:
-  publish:
-    name: publish
+  build-and-pack:
+    name: Build and Pack
+    if: ${{ github.repository_owner == 'hashgraph'  }}
     runs-on: wallet-tools-linux-medium
-
     permissions:
       contents: read
 
@@ -21,23 +31,107 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Setup NodeJS Environment
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Update npm
+        run: npm install -g npm@11.6.4
 
       - name: Install dependencies
         run: npm install
 
-      - name: Create .npmrc
+      - name: Set Canary Version
+        if: ${{ github.event_name == 'push' }}
         run: |
-            touch .npmrc
-            echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
+          # For canary publishing - bump version to prerelease format: 1.0.0-canary.abc1234.0
+          npm version prerelease --preid="canary.$(git rev-parse --short HEAD)" --no-git-tag-version
+
+      - name: Pack Package
+        id: pack
+        run: |
+          # Calculate expected package filename from package.json
+          PACKAGE_NAME=$(node -p "require('./package.json').name.replace('@', '').replace('/', '-')")
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          EXPECTED_FILENAME="${PACKAGE_NAME}-${PACKAGE_VERSION}.tgz"
+          
+          # Create the package
+          npm pack
+          
+          # Verify the expected file exists
+          if [ ! -f "$EXPECTED_FILENAME" ]; then
+            echo "Error: Expected package file $EXPECTED_FILENAME not found"
+            echo "Available files:"
+            ls -la *.tgz
+            exit 1
+          fi
+          
+          echo "PACK_FILENAME=$EXPECTED_FILENAME" >> $GITHUB_OUTPUT
+
+      - name: Upload Package Artifact
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: package-artifact
+          path: ${{ steps.pack.outputs.PACK_FILENAME }}
+          if-no-files-found: error
+
+  publish-package:
+    name: Publish to NPM
+    needs: build-and-pack
+    runs-on: ubuntu-latest # Must be GitHub-hosted for OIDC for npmjs
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - name: Setup NodeJS Environment
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        with:
+          node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Update npm
+        run: npm install -g npm@11.6.4
+
+      - name: Download Package Artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: package-artifact
+
+      - name: Determine Publish Flags
+        id: flags
+        run: |
+          # Default flags
+          FLAGS="--access public"
+          
+          # If it is a Push event, add the canary tag
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            FLAGS="$FLAGS --tag canary"
+          fi
+          
+          # If it is a Release, we assume 'latest' (which is default), so no extra flag needed.
+          
+          echo "args=$FLAGS" >> $GITHUB_OUTPUT
 
       - name: Publish
-        run: npm publish --public
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # Verify exactly one .tgz file exists
+          TGZ_COUNT=$(ls -1 *.tgz 2>/dev/null | wc -l)
+          if [ "$TGZ_COUNT" -ne 1 ]; then
+            echo "Error: Expected exactly 1 .tgz file, found $TGZ_COUNT"
+            ls -la *.tgz 2>/dev/null || echo "No .tgz files found"
+            exit 1
+          fi
+          
+          PACKAGE_FILE=$(ls *.tgz)
+          echo "Publishing package: $PACKAGE_FILE"
+          npm publish "$PACKAGE_FILE" ${{ steps.flags.outputs.args }}
