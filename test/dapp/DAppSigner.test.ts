@@ -40,6 +40,7 @@ import {
   TransactionReceipt,
   AccountBalance,
   FileInfoQuery,
+  Hbar,
 } from '@hashgraph/sdk'
 import { proto } from '@hashgraph/proto'
 import {
@@ -855,6 +856,124 @@ describe('DAppSigner', () => {
       await expect(signer.call(mockRequest)).rejects.toThrow(
         /Error executing transaction or query/,
       )
+    })
+  })
+
+  describe('signTransactions', () => {
+    it('should sign transaction for multiple nodes', async () => {
+      const transaction = prepareTestTransaction(
+        new TopicCreateTransaction().setTopicMemo('test memo'),
+        { freeze: true },
+      )
+
+      const privateKey1 = PrivateKey.generateED25519()
+      const privateKey2 = PrivateKey.generateED25519()
+
+      mockSignClient.request.mockResolvedValueOnce({
+        signatureMaps: [
+          Uint8ArrayToBase64String(
+            proto.SignatureMap.encode({
+              sigPair: [
+                {
+                  pubKeyPrefix: privateKey1.publicKey.toBytes(),
+                  ed25519: privateKey1.sign(new Uint8Array([1, 2, 3])),
+                },
+              ],
+            }).finish(),
+          ),
+          Uint8ArrayToBase64String(
+            proto.SignatureMap.encode({
+              sigPair: [
+                {
+                  pubKeyPrefix: privateKey2.publicKey.toBytes(),
+                  ed25519: privateKey2.sign(new Uint8Array([4, 5, 6])),
+                },
+              ],
+            }).finish(),
+          ),
+        ],
+        nodeAccountIds: ['0.0.3', '0.0.4'],
+      })
+
+      const result = await signer.signTransactions(transaction, 2)
+
+      expect(result).toBeDefined()
+      expect(Array.isArray(result)).toBe(true)
+      expect(result.length).toBe(2)
+
+      expect(mockSignClient.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          request: expect.objectContaining({
+            method: HederaJsonRpcMethod.SignTransactions,
+            params: expect.objectContaining({
+              nodeCount: 2,
+            }),
+          }),
+        }),
+      )
+    })
+
+    it('should handle single node signing', async () => {
+      const transaction = prepareTestTransaction(
+        new TokenCreateTransaction().setTokenName('Test Token').setTokenSymbol('TST'),
+        { freeze: true },
+      )
+
+      const privateKey = PrivateKey.generateED25519()
+
+      mockSignClient.request.mockResolvedValueOnce({
+        signatureMaps: [
+          Uint8ArrayToBase64String(
+            proto.SignatureMap.encode({
+              sigPair: [
+                {
+                  pubKeyPrefix: privateKey.publicKey.toBytes(),
+                  ed25519: privateKey.sign(new Uint8Array([1, 2, 3])),
+                },
+              ],
+            }).finish(),
+          ),
+        ],
+        nodeAccountIds: ['0.0.3'],
+      })
+
+      const result = await signer.signTransactions(transaction, 1)
+
+      expect(result).toBeDefined()
+      expect(Array.isArray(result)).toBe(true)
+      expect(result.length).toBe(1)
+    })
+
+    it('should return valid Transaction objects', async () => {
+      const transaction = prepareTestTransaction(
+        new AccountUpdateTransaction().setAccountId(testAccountId),
+        { freeze: true },
+      )
+
+      const privateKey = PrivateKey.generateED25519()
+
+      mockSignClient.request.mockResolvedValueOnce({
+        signatureMaps: [
+          Uint8ArrayToBase64String(
+            proto.SignatureMap.encode({
+              sigPair: [
+                {
+                  pubKeyPrefix: privateKey.publicKey.toBytes(),
+                  ed25519: privateKey.sign(new Uint8Array([1, 2, 3])),
+                },
+              ],
+            }).finish(),
+          ),
+        ],
+        nodeAccountIds: ['0.0.3'],
+      })
+
+      const result = await signer.signTransactions(transaction, 1)
+
+      // Verify returned transactions are valid
+      expect(result).toHaveLength(1)
+      expect(result[0]).toBeDefined()
+      expect(result[0].toBytes).toBeDefined()
     })
   })
 
