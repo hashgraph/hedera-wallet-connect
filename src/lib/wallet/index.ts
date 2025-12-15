@@ -36,12 +36,14 @@ import {
   signerSignaturesToSignatureMap,
   base64StringToTransaction,
   getHederaError,
+  getRandomNodes,
   GetNodeAddresesResponse,
   ExecuteTransactionResponse,
   SignMessageResponse,
   SignAndExecuteQueryResponse,
   SignAndExecuteTransactionResponse,
   SignTransactionResponse,
+  SignTransactionsResponse,
 } from '../shared'
 import { proto } from '@hashgraph/proto'
 import Provider from './provider'
@@ -426,6 +428,150 @@ export class HederaWeb3Wallet extends WalletKit implements HederaNativeWallet {
         id,
         result: {
           signatureMap,
+        },
+      },
+    }
+
+    return await this.respondSessionRequest(response)
+  }
+
+  /**
+   * Signs a transaction body for multiple random Hedera nodes (HIP-1190)
+   *
+   * This method implements HIP-1190 to enable multi-signature workflows
+   * with node redundancy. The wallet:
+   * 1. Validates transaction body has NO node account ID set
+   * 2. Selects N random nodes from the network
+   * 3. Signs transaction for each node
+   * 4. Returns ONLY signature maps (not full transactions)
+   *
+   * @param id - JSON-RPC request ID
+   * @param topic - WalletConnect session topic
+   * @param body - Transaction body as Uint8Array (must not have nodeAccountId)
+   * @param signer - HederaWallet instance with private key
+   * @param nodeCount - Number of nodes to sign for (default: 5)
+   *
+   * @returns Promise that resolves when response is sent
+   *
+   * @throws {Error} If transaction body already has nodeAccountId set
+   * @throws {Error} If insufficient nodes available in network
+   *
+   * @see {@link https://github.com/hashgraph/hedera-improvement-proposal/blob/main/HIP/hip-1190.md | HIP-1190}
+   */
+  public async hedera_signTransactions(
+    id: number,
+    topic: string,
+    body: Uint8Array,
+    signer: HederaWallet,
+    nodeCount: number = 5,
+  ): Promise<void> {
+    // Decode transaction body
+    let transactionBody: proto.ITransactionBody
+    try {
+      transactionBody = proto.TransactionBody.decode(body)
+    } catch (error: any) {
+      const errorResponse = {
+        topic,
+        response: {
+          jsonrpc: '2.0',
+          id,
+          error: {
+            code: -32602,
+            message: `Failed to decode transaction body: ${error.message}`,
+          },
+        },
+      }
+      return await this.respondSessionRequest(errorResponse)
+    }
+
+    // SECURITY CHECK - Ensure no node account ID is set
+    if (transactionBody.nodeAccountID) {
+      const errorResponse = {
+        topic,
+        response: {
+          jsonrpc: '2.0',
+          id,
+          error: {
+            code: -32602,
+            message:
+              'Transaction body must not have nodeAccountId set. ' +
+              'The wallet assigns multiple random nodes for HIP-1190 multi-node signing.',
+          },
+        },
+      }
+      return await this.respondSessionRequest(errorResponse)
+    }
+
+    // Get available nodes from signer's network
+    const network = signer.getNetwork()
+
+    // Select N random nodes
+    let selectedNodes: AccountId[]
+    try {
+      selectedNodes = getRandomNodes(network, nodeCount)
+    } catch (error: any) {
+      const errorResponse = {
+        topic,
+        response: {
+          jsonrpc: '2.0',
+          id,
+          error: {
+            code: -32603,
+            message: `Node selection failed: ${error.message}`,
+          },
+        },
+      }
+      return await this.respondSessionRequest(errorResponse)
+    }
+
+    // Sign transaction body for each node
+    const signatureMaps: string[] = []
+    const nodeAccountIds: string[] = []
+
+    try {
+      for (const nodeAccountId of selectedNodes) {
+        const txBodyWithNode: proto.ITransactionBody = {
+          ...transactionBody,
+          nodeAccountID: {
+            shardNum: nodeAccountId.shard,
+            realmNum: nodeAccountId.realm,
+            accountNum: nodeAccountId.num,
+          },
+        }
+
+        const bodyWithNode = proto.TransactionBody.encode(txBodyWithNode).finish()
+        const signerSignatures = await signer.sign([bodyWithNode])
+        const _signatureMap = proto.SignatureMap.create(
+          signerSignaturesToSignatureMap(signerSignatures),
+        )
+        const signatureMap = signatureMapToBase64String(_signatureMap)
+        signatureMaps.push(signatureMap)
+        nodeAccountIds.push(nodeAccountId.toString())
+      }
+    } catch (error: any) {
+      const errorResponse = {
+        topic,
+        response: {
+          jsonrpc: '2.0',
+          id,
+          error: {
+            code: -32603,
+            message: `Signing failed: ${error.message}`,
+          },
+        },
+      }
+      return await this.respondSessionRequest(errorResponse)
+    }
+
+    // Return signature maps + node IDs (NOT full transactions)
+    const response: SignTransactionsResponse = {
+      topic,
+      response: {
+        jsonrpc: '2.0',
+        id,
+        result: {
+          signatureMaps,
+          nodeAccountIds,
         },
       },
     }
