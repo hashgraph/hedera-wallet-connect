@@ -528,3 +528,55 @@ export async function addSignatureToTransaction<T extends Transaction>(
   }).finish()
   return Transaction.fromBytes(signedBytes) as T
 }
+
+/**
+ * Selects N random nodes from a Hedera network for multi-node transaction signing (HIP-1190)
+ *
+ * Uses Fisher-Yates shuffle algorithm for unbiased randomization, ensuring each node
+ * has equal probability of being selected.
+ *
+ * @param nodes - Network node map from Hedera Client (e.g., client.network)
+ * @param count - Number of random nodes to select (default: 5)
+ * @returns Array of randomly selected AccountId objects
+ *
+ * @throws {Error} If requested count exceeds available nodes
+ *
+ * @example
+ * ```typescript
+ * const client = Client.forTestnet()
+ * const nodes = client.network
+ * const randomNodes = getRandomNodes(nodes, 5)
+ * // Returns: [AccountId(0.0.3), AccountId(0.0.4), AccountId(0.0.5), ...]
+ * ```
+ *
+ * @see {@link https://github.com/hashgraph/hedera-improvement-proposal/blob/main/HIP/hip-1190.md | HIP-1190}
+ */
+export function getRandomNodes(
+  nodes: { [key: string]: AccountId | string },
+  count: number = 5,
+): AccountId[] {
+  // Convert node map values to AccountId array
+  const nodeArray = Object.values(nodes).map((node) =>
+    typeof node === 'string' ? AccountId.fromString(node) : node,
+  )
+
+  // Validate we have enough nodes
+  if (nodeArray.length < count) {
+    throw new Error(
+      `Insufficient nodes available. Requested ${count}, but only ${nodeArray.length} nodes in network. ` +
+        `Please reduce nodeCount parameter or connect to a network with more nodes.`,
+    )
+  }
+
+  // Fisher-Yates shuffle algorithm for unbiased randomization
+  // This ensures each node has equal probability of being selected
+  const shuffled = [...nodeArray] // Create copy to avoid mutation
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    // Swap elements
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+
+  // Return first N nodes from shuffled array
+  return shuffled.slice(0, count)
+}
