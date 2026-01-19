@@ -23,7 +23,13 @@ import { Core } from '@walletconnect/core'
 import { WalletKit, WalletKitTypes } from '@reown/walletkit'
 import { SessionTypes } from '@walletconnect/types'
 import { buildApprovedNamespaces, getSdkError } from '@walletconnect/utils'
-import { Wallet as HederaWallet, Client, AccountId, Transaction, Query } from '@hiero-ledger/sdk'
+import {
+  Wallet as HederaWallet,
+  Client,
+  AccountId,
+  Transaction,
+  Query,
+} from '@hiero-ledger/sdk'
 
 import {
   HederaChainId,
