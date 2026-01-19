@@ -20,7 +20,7 @@
 
 import { EIP155Wallet } from '../../../../src/reown/wallets/EIP155Wallet'
 import { formatJsonRpcError } from '@walletconnect/jsonrpc-utils'
-import { PrivateKey } from '@hashgraph/sdk'
+import { PrivateKey } from '@hiero-ledger/sdk'
 
 import {
   testPrivateKeyECDSA,

@@ -1,7 +1,7 @@
 import { CoreHelperUtil, CaipNetwork } from '@reown/appkit'
 import { type ChainNamespace, isReownName } from '@reown/appkit-common'
 import { AdapterBlueprint, WcHelpersUtil } from '@reown/appkit-controllers'
-import { LedgerId } from '@hashgraph/sdk'
+import { LedgerId } from '@hiero-ledger/sdk'
 import { BrowserProvider, Contract, formatUnits, JsonRpcSigner, parseUnits } from 'ethers'
 
 import { HederaProvider } from './providers'

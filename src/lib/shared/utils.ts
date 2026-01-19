@@ -27,9 +27,9 @@ import {
   LedgerId,
   Query,
   SignerSignature,
-} from '@hashgraph/sdk'
+} from '@hiero-ledger/sdk'
 import { ProposalTypes, SessionTypes } from '@walletconnect/types'
-import { proto } from '@hashgraph/proto'
+import { proto } from '@hiero-ledger/proto'
 
 /**
  * Converts `Transaction` to a Base64-string.

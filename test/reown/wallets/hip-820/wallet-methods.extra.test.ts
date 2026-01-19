@@ -1,4 +1,4 @@
-import { AccountInfoQuery, TopicCreateTransaction, PrecheckStatusError, Status, PrivateKey } from '@hashgraph/sdk'
+import { AccountInfoQuery, TopicCreateTransaction, PrecheckStatusError, Status, PrivateKey } from '@hiero-ledger/sdk'
 import { formatJsonRpcError, formatJsonRpcResult } from '@walletconnect/jsonrpc-utils'
 import {
   HIP820Wallet,

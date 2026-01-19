@@ -18,7 +18,7 @@
  *
  */
 
-import { AccountId, LedgerId, Transaction } from '@hashgraph/sdk'
+import { AccountId, LedgerId, Transaction } from '@hiero-ledger/sdk'
 import { EngineTypes, SessionTypes, SignClientTypes, ISignClient } from '@walletconnect/types'
 import { WalletConnectModal } from '@walletconnect/modal'
 import SignClient from '@walletconnect/sign-client'

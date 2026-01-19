@@ -20,7 +20,7 @@
 
 import { EIP155Wallet } from '../../../../src/reown/wallets/EIP155Wallet'
 import { testPrivateKeyECDSA } from '../../../_helpers'
-import { PrivateKey } from '@hashgraph/sdk'
+import { PrivateKey } from '@hiero-ledger/sdk'
 
 describe('EIP155Wallet', () => {
   const privateKey = `0x${PrivateKey.fromStringECDSA(testPrivateKeyECDSA).toStringRaw()}`
