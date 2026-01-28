@@ -79,6 +79,7 @@ describe('HederaConnector', () => {
               'hedera_signAndExecuteQuery',
               'hedera_signAndExecuteTransaction',
               'hedera_signTransaction',
+              'hedera_signTransactions',
             ],
             rpcMap: { mainnet: 'https://mainnet.hashio.io/api' },
           },

@@ -25,6 +25,7 @@ import {
   stringToSignerMessage,
   signerSignaturesToSignatureMap,
   getHederaError,
+  getRandomNodes,
   GetNodeAddressesResult,
   ExecuteTransactionResult,
   SignAndExecuteQueryResult,
@@ -183,6 +184,28 @@ export class HIP820Wallet implements HIP820WalletInterface {
           body = Buffer.from(transactionBody, 'base64')
           break
         }
+        case HederaJsonRpcMethod.SignTransactions: {
+          // 7 - HIP-1190
+          const { signerAccountId: _accountId, transactionBody, nodeCount } = params
+          this.validateParam('signerAccountId', _accountId, 'string')
+          this.validateParam('transactionBody', transactionBody, 'string')
+
+          if (nodeCount !== undefined) {
+            this.validateParam('nodeCount', nodeCount, 'number')
+
+            if (nodeCount <= 0) {
+              throw getHederaError('INVALID_PARAMS', 'nodeCount must be a positive number')
+            }
+          }
+
+          signerAccountId = AccountId.fromString(_accountId.replace(chainId + ':', ''))
+          body = Buffer.from(transactionBody, 'base64')
+
+          // Store nodeCount for handler method
+          ;(body as any).__nodeCount = nodeCount ?? 5
+
+          break
+        }
         default:
           throw getSdkError('INVALID_METHOD')
       }
@@ -205,7 +228,16 @@ export class HIP820Wallet implements HIP820WalletInterface {
     event: WalletRequestEventArgs,
   ): Promise<JsonRpcResult<any> | JsonRpcError> {
     const { method, id, body } = this.parseSessionRequest(event)
-    const response = await this[method](id, body)
+
+    // Extract nodeCount if it exists (for HIP-1190)
+    const nodeCount = (body as any)?.__nodeCount
+
+    // Call the method with appropriate parameters
+    const response =
+      nodeCount !== undefined
+        ? await this[method](id, body, nodeCount)
+        : await this[method](id, body)
+
     return response
   }
 
@@ -341,6 +373,74 @@ export class HIP820Wallet implements HIP820WalletInterface {
     return formatJsonRpcResult(id, {
       signatureMap,
     })
+  }
+
+  /**
+   * 7. hedera_signTransactions (HIP-1190)
+   */
+  public async hedera_signTransactions(id: number, body: Uint8Array, nodeCount: number = 5) {
+    try {
+      let transactionBody: proto.ITransactionBody
+      try {
+        transactionBody = proto.TransactionBody.decode(body)
+      } catch (error: any) {
+        return formatJsonRpcError(id, {
+          code: -32602,
+          message: `Failed to decode transaction body: ${error.message}`,
+        })
+      }
+
+      if (transactionBody.nodeAccountID) {
+        return formatJsonRpcError(id, {
+          code: -32602,
+          message:
+            'Transaction body must not have nodeAccountId set. ' +
+            'The wallet assigns multiple random nodes for HIP-1190 multi-node signing.',
+        })
+      }
+
+      const network = this.wallet.getNetwork()
+
+      let selectedNodes: AccountId[]
+      try {
+        selectedNodes = getRandomNodes(network, nodeCount)
+      } catch (error: any) {
+        return formatJsonRpcError(id, {
+          code: -32603,
+          message: `Node selection failed: ${error.message}`,
+        })
+      }
+
+      const signatureMaps: string[] = []
+      const nodeAccountIds: string[] = []
+
+      for (const nodeAccountId of selectedNodes) {
+        const txBodyWithNode: proto.ITransactionBody = {
+          ...transactionBody,
+          nodeAccountID: {
+            shardNum: nodeAccountId.shard,
+            realmNum: nodeAccountId.realm,
+            accountNum: nodeAccountId.num,
+          },
+        }
+
+        const bodyWithNode = proto.TransactionBody.encode(txBodyWithNode).finish()
+        const signerSignatures = await this.wallet.sign([bodyWithNode])
+        const _signatureMap = proto.SignatureMap.create(
+          signerSignaturesToSignatureMap(signerSignatures),
+        )
+        const signatureMap = signatureMapToBase64String(_signatureMap)
+        signatureMaps.push(signatureMap)
+        nodeAccountIds.push(nodeAccountId.toString())
+      }
+
+      return formatJsonRpcResult(id, { signatureMaps, nodeAccountIds })
+    } catch (error: any) {
+      return formatJsonRpcError(id, {
+        code: -32603,
+        message: `Unexpected error: ${error.message}`,
+      })
+    }
   }
 }
 

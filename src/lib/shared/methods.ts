@@ -29,4 +29,5 @@ export enum HederaJsonRpcMethod {
   SignAndExecuteQuery = 'hedera_signAndExecuteQuery', // 4
   SignAndExecuteTransaction = 'hedera_signAndExecuteTransaction', // 5
   SignTransaction = 'hedera_signTransaction', // 6
+  SignTransactions = 'hedera_signTransactions', // 7
 }
