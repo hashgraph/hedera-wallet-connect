@@ -25,8 +25,8 @@ import {
   Transaction,
   TransferTransaction,
   Hbar,
-} from '@hashgraph/sdk'
-import { proto } from '@hashgraph/proto'
+} from '@hiero-ledger/sdk'
+import { proto } from '@hiero-ledger/proto'
 import {
   DAppSigner,
   HederaJsonRpcMethod,

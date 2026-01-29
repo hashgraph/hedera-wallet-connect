@@ -28,7 +28,7 @@ import {
   Eip155JsonRpcMethod,
   WalletRequestEventArgs,
 } from '../../../../src/reown/utils'
-import { PrivateKey } from '@hashgraph/sdk'
+import { PrivateKey } from '@hiero-ledger/sdk'
 
 describe('EIP155Wallet Session Management', () => {
   let wallet: EIP155Wallet

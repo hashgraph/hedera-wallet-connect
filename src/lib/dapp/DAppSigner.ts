@@ -40,8 +40,8 @@ import {
   TransactionReceiptQuery,
   TransactionReceipt,
   TransactionRecordQuery,
-} from '@hashgraph/sdk'
-import { proto } from '@hashgraph/proto'
+} from '@hiero-ledger/sdk'
+import { proto } from '@hiero-ledger/proto'
 import type { CoreTypes, ISignClient } from '@walletconnect/types'
 
 import {
