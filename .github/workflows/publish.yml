@@ -6,7 +6,6 @@ on:
     branches:
       - main
       - canary
-      - introduce-v2
   # TRIGGER 2: Stable Releases
   release:
     types:
@@ -44,6 +43,9 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Build
+        run: npm run build
 
       - name: Set Canary Version
         if: ${{ github.event_name == 'push' }}
@@ -112,14 +114,14 @@ jobs:
         run: |
           # Default flags
           FLAGS="--access public"
-          
+
           # If it is a Push event, add the canary tag
           if [[ "${{ github.event_name }}" == "push" ]]; then
             FLAGS="$FLAGS --tag canary"
           fi
-          
+
           # If it is a Release, we assume 'latest' (which is default), so no extra flag needed.
-          
+
           echo "args=$FLAGS" >> $GITHUB_OUTPUT
 
       - name: Publish
@@ -131,7 +133,7 @@ jobs:
             ls -la *.tgz 2>/dev/null || echo "No .tgz files found"
             exit 1
           fi
-          
+
           PACKAGE_FILE=$(ls *.tgz)
           echo "Publishing package: $PACKAGE_FILE"
           npm publish "$PACKAGE_FILE" ${{ steps.flags.outputs.args }}
