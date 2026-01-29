@@ -1,6 +1,6 @@
 {
   "name": "@hashgraph/hedera-wallet-connect",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "A library to facilitate integrating Hedera with WalletConnect",
   "repository": {
     "type": "git",
@@ -28,7 +28,7 @@
     "prettier:fix": "prettier --write ./src/"
   },
   "peerDependencies": {
-    "@hashgraph/sdk": "^2.63.0",
+    "@hiero-ledger/sdk": "2.79.0",
     "@reown/appkit": "1.8.10",
     "@reown/appkit-controllers": "1.8.10",
     "@reown/walletkit": "^1.2.8",
@@ -36,6 +36,7 @@
     "ethers": "^6.13.5"
   },
   "devDependencies": {
+    "@hiero-ledger/proto": "^2.25.0",
     "@swc/jest": "^0.2.37",
     "@types/jest": "^30.0.0",
     "jest": "^30.0.3",

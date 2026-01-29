@@ -18,7 +18,7 @@
  *
  */
 
-import { AccountInfo, AccountInfoQuery } from '@hashgraph/sdk'
+import { AccountInfo, AccountInfoQuery } from '@hiero-ledger/sdk'
 import {
   HederaChainId,
   SignAndExecuteTransactionResponse,

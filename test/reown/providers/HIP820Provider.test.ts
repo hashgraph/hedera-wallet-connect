@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events'
 import HIP820Provider from '../../../src/reown/providers/HIP820Provider'
-import { AccountId, Transaction } from '@hashgraph/sdk'
+import { AccountId, Transaction } from '@hiero-ledger/sdk'
 import { DAppSigner } from '../../../src'
 
 const signTransactionMock = jest.fn()

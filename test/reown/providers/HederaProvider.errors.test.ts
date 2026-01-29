@@ -1,4 +1,4 @@
-import { TopicCreateTransaction } from '@hashgraph/sdk'
+import { TopicCreateTransaction } from '@hiero-ledger/sdk'
 import { HederaProvider } from '../../../src'
 import { testUserAccountId, requestTopic } from '../../_helpers'
 

@@ -30,7 +30,7 @@ import {
   type TransactionId,
   type TransactionResponse,
   type TransactionReceipt,
-} from '@hashgraph/sdk'
+} from '@hiero-ledger/sdk'
 
 export default class Provider implements HederaWalletProvider {
   constructor(private client: Client) {}
