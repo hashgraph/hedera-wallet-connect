@@ -24,7 +24,7 @@ import {
   LedgerId,
   Query,
   TopicCreateTransaction,
-} from '@hashgraph/sdk'
+} from '@hiero-ledger/sdk'
 import {
   transactionToBase64String,
   base64StringToTransaction,

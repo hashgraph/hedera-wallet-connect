@@ -20,7 +20,7 @@
 
 import type { WalletKitTypes } from '@reown/walletkit'
 import type { SessionTypes } from '@walletconnect/types'
-import type { Transaction, Query, AccountId, Wallet as HederaWallet } from '@hashgraph/sdk'
+import type { Transaction, Query, AccountId, Wallet as HederaWallet } from '@hiero-ledger/sdk'
 import type { HederaJsonRpcMethod, HederaChainId } from '../shared'
 import type Provider from './provider'
 

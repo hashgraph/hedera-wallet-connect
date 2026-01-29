@@ -4,7 +4,7 @@ import {
   AccountId,
   Client,
   LedgerId,
-} from '@hashgraph/sdk'
+} from '@hiero-ledger/sdk'
 import { createLogger } from '../../lib/shared/logger'
 
 const logger = createLogger('AccountUtils')
