@@ -23,7 +23,13 @@ import { Core } from '@walletconnect/core'
 import { WalletKit, WalletKitTypes } from '@reown/walletkit'
 import { SessionTypes } from '@walletconnect/types'
 import { buildApprovedNamespaces, getSdkError } from '@walletconnect/utils'
-import { Wallet as HederaWallet, Client, AccountId, Transaction, Query } from '@hashgraph/sdk'
+import {
+  Wallet as HederaWallet,
+  Client,
+  AccountId,
+  Transaction,
+  Query,
+} from '@hiero-ledger/sdk'
 
 import {
   HederaChainId,
@@ -45,7 +51,7 @@ import {
   SignTransactionResponse,
   SignTransactionsResponse,
 } from '../shared'
-import { proto } from '@hashgraph/proto'
+import { proto } from '@hiero-ledger/proto'
 import Provider from './provider'
 import type { HederaNativeWallet } from './types'
 

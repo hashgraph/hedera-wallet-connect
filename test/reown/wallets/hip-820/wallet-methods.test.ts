@@ -27,7 +27,7 @@ import {
   AccountInfo,
   TransactionResponse,
   PrivateKey,
-} from '@hashgraph/sdk'
+} from '@hiero-ledger/sdk'
 import {
   GetNodeAddresesResponse,
   HederaChainId,
@@ -47,7 +47,7 @@ import {
   testNodeAccountId,
   testPrivateKeyED25519,
 } from '../../../_helpers'
-import { proto } from '@hashgraph/proto'
+import { proto } from '@hiero-ledger/proto'
 
 describe('HIP820Wallet Methods', () => {
   let hip820Wallet: HIP820Wallet

@@ -19,7 +19,7 @@ import UniversalProvider, {
   RpcProviderMap,
   UniversalProviderOpts,
 } from '@walletconnect/universal-provider'
-import { Transaction } from '@hashgraph/sdk'
+import { Transaction } from '@hiero-ledger/sdk'
 import {
   GetNodeAddressesResult,
   ExecuteTransactionParams,

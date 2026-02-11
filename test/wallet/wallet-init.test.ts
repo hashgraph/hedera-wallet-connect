@@ -18,7 +18,7 @@
  *
  */
 
-import { Wallet as HederaWallet, LedgerId } from '@hashgraph/sdk'
+import { Wallet as HederaWallet, LedgerId } from '@hiero-ledger/sdk'
 import { HederaChainId, Wallet } from '../../src'
 import {
   defaultAccountNumber,

@@ -20,7 +20,7 @@
 
 import { JsonRpcResult } from '@walletconnect/jsonrpc-types'
 import { EngineTypes } from '@walletconnect/types'
-import type { Transaction, TransactionResponseJSON } from '@hashgraph/sdk'
+import type { Transaction, TransactionResponseJSON } from '@hiero-ledger/sdk'
 import { HederaJsonRpcMethod } from './methods'
 
 /**

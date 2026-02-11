@@ -40,9 +40,9 @@ import {
   TransactionReceipt,
   AccountBalance,
   FileInfoQuery,
-  Hbar,
-} from '@hashgraph/sdk'
-import { proto } from '@hashgraph/proto'
+  Hbar
+} from '@hiero-ledger/sdk'
+import { proto } from '@hiero-ledger/proto'
 import {
   DAppConnector,
   HederaJsonRpcMethod,

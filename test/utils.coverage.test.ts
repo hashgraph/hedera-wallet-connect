@@ -18,8 +18,8 @@
  *
  */
 
-import { TopicCreateTransaction, PrivateKey, LedgerId, SignerSignature } from '@hashgraph/sdk'
-import { proto } from '@hashgraph/proto'
+import { TopicCreateTransaction, PrivateKey, LedgerId, SignerSignature } from '@hiero-ledger/sdk'
+import { proto } from '@hiero-ledger/proto'
 import {
   transactionListToBase64String,
   extractFirstSignature,

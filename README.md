@@ -42,7 +42,7 @@ For more information see:
 - [Ethereum JSON-RPC Specification ](https://ethereum.github.io/execution-apis/api-documentation/)
 - [Hedera JSON-RPC relay](https://docs.hedera.com/hedera/core-concepts/smart-contracts/json-rpc-relay)
 - [Hedera Native JSON-RPC spec for WalletConnect](https://docs.reown.com/advanced/multichain/rpc-reference/hedera-rpc)
-- [Hedera Javascript SDK](https://www.npmjs.com/package/@hashgraph/sdk)
+- [Hedera Javascript SDK](https://www.npmjs.com/package/@hiero-ledger/sdk)
 - [Reown Docs](https://docs.reown.com/overview)
 - [WalletConnect Network](https://walletconnect.network/)
 
@@ -64,7 +64,7 @@ reviewing the [Reown docs](https://docs.reown.com/overview).
 1. Add Hedera dependencies to your project:
 
 ```sh
-npm install @hashgraph/hedera-wallet-connect @hashgraph/sdk @walletconnect/modal
+npm install @hashgraph/hedera-wallet-connect @hiero-ledger/sdk @walletconnect/modal
 ```
 
 2. Initialize dApp Connector
@@ -76,7 +76,7 @@ import {
   DAppConnector,
   HederaChainId,
 } from '@hashgraph/hedera-wallet-connect'
-import { LedgerId } from '@hashgraph/sdk'
+import { LedgerId } from '@hiero-ledger/sdk'
 
 const metadata = {
   name: 'Hedera Integration using Hedera DAppConnector - v1 approach',
@@ -121,7 +121,7 @@ await dAppConnector.openModal()
 2. Add Hedera dependencies to your project:
 
 ```sh
-npm install @hashgraph/hedera-wallet-connect @hashgraph/sdk @walletconnect/universal-provider
+npm install @hashgraph/hedera-wallet-connect @hiero-ledger/sdk @walletconnect/universal-provider
 ```
 
 3. Update `createAppKit` with adapters and a universal provider for Hedera. Note the
@@ -232,7 +232,7 @@ This example demonstrates a common pattern where a user signs a transaction in t
 
 ```typescript
 import { DAppConnector, HederaJsonRpcMethod } from '@hashgraph/hedera-wallet-connect'
-import { TransferTransaction, Hbar, AccountId } from '@hashgraph/sdk'
+import { TransferTransaction, Hbar, AccountId } from '@hiero-ledger/sdk'
 
 // Initialize your DAppConnector (see Getting Started section)
 const dAppConnector = new DAppConnector(/* ... */)
@@ -268,7 +268,7 @@ console.log('Transaction executed:', result.transactionId)
 On your backend, use the `addSignatureToTransaction` utility to add your server's signature:
 
 ```typescript
-import { Transaction, PrivateKey, Client } from '@hashgraph/sdk'
+import { Transaction, PrivateKey, Client } from '@hiero-ledger/sdk'
 import { addSignatureToTransaction } from '@hashgraph/hedera-wallet-connect'
 
 // Backend API endpoint

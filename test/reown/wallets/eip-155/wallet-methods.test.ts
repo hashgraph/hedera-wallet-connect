@@ -21,7 +21,7 @@
 import { JsonRpcProvider, TransactionResponse } from 'ethers'
 import { EIP155Wallet } from '../../../../src'
 import { testPrivateKeyECDSA } from '../../../_helpers'
-import { PrivateKey } from '@hashgraph/sdk'
+import { PrivateKey } from '@hiero-ledger/sdk'
 
 describe('EIP155Wallet Methods', () => {
   let eip155wallet: EIP155Wallet

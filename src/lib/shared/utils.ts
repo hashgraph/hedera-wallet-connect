@@ -27,9 +27,9 @@ import {
   LedgerId,
   Query,
   SignerSignature,
-} from '@hashgraph/sdk'
+} from '@hiero-ledger/sdk'
 import { ProposalTypes, SessionTypes } from '@walletconnect/types'
-import { proto } from '@hashgraph/proto'
+import { proto } from '@hiero-ledger/proto'
 
 /**
  * Converts `Transaction` to a Base64-string.
@@ -349,6 +349,15 @@ export function ledgerIdToEIPChainId(ledgerId: LedgerId): number {
 }
 
 /**
+ * Normalizes a network name to a valid LedgerId string.
+ * Hiero SDK accepts: 'mainnet', 'testnet', 'previewnet', 'local-node'
+ */
+function normalizeNetworkName(networkName: string): string {
+  const lower = networkName.toLowerCase()
+  return lower === 'devnet' ? 'local-node' : lower
+}
+
+/**
  * Converts a network name to an EIP chain id.
  * If no mapping is found, returns the EIP chain id for `LedgerId.LOCAL_NODE`.
  *
@@ -363,7 +372,7 @@ export function ledgerIdToEIPChainId(ledgerId: LedgerId): number {
  * ```
  */
 export function networkNameToEIPChainId(networkName: string): number {
-  const ledgerId = LedgerId.fromString(networkName.toLowerCase())
+  const ledgerId = LedgerId.fromString(normalizeNetworkName(networkName))
   return ledgerIdToEIPChainId(ledgerId)
 }
 
@@ -433,9 +442,8 @@ export function ledgerIdToCAIPChainId(ledgerId: LedgerId): string {
  * ```
  */
 export function networkNameToCAIPChainId(networkName: string): string {
-  const ledgerId = LedgerId.fromString(networkName.toLowerCase())
-  const chainId = ledgerIdToCAIPChainId(ledgerId)
-  return chainId
+  const ledgerId = LedgerId.fromString(normalizeNetworkName(networkName))
+  return ledgerIdToCAIPChainId(ledgerId)
 }
 
 /**
