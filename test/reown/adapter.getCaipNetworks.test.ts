@@ -65,4 +65,64 @@ describe('HederaAdapter getCaipNetworks', () => {
     expect(networks).toContainEqual(HederaChainDefinition.Native.Mainnet)
     expect(networks).toContainEqual(HederaChainDefinition.Native.Testnet)
   })
+
+  describe('with params.networks', () => {
+    it('returns only the user-provided networks when no namespace argument is given', () => {
+      const adapter = new HederaAdapter({
+        namespace: 'eip155',
+        networks: [HederaChainDefinition.EVM.Mainnet],
+      })
+      const networks = adapter.getCaipNetworks()
+
+      expect(networks).toHaveLength(1)
+      expect(networks).toContainEqual(HederaChainDefinition.EVM.Mainnet)
+    })
+
+    it('filters user-provided networks by the requested namespace', () => {
+      const adapter = new HederaAdapter({
+        namespace: 'eip155',
+        networks: [HederaChainDefinition.EVM.Mainnet, HederaChainDefinition.EVM.Testnet],
+      })
+      const networks = adapter.getCaipNetworks('eip155')
+
+      expect(networks).toHaveLength(2)
+      expect(networks).toContainEqual(HederaChainDefinition.EVM.Mainnet)
+      expect(networks).toContainEqual(HederaChainDefinition.EVM.Testnet)
+    })
+
+    it('returns empty array when user-provided networks do not match the requested namespace', () => {
+      const adapter = new HederaAdapter({
+        namespace: 'eip155',
+        networks: [HederaChainDefinition.EVM.Mainnet],
+      })
+      const networks = adapter.getCaipNetworks(hederaNamespace)
+
+      expect(networks).toHaveLength(0)
+    })
+
+    it('returns all user-provided networks when targetNamespace is undefined', () => {
+      const adapter = new HederaAdapter({
+        namespace: 'eip155',
+        networks: [HederaChainDefinition.EVM.Mainnet, HederaChainDefinition.EVM.Testnet],
+      })
+      ;(adapter as any).namespace = undefined
+      const networks = adapter.getCaipNetworks()
+
+      expect(networks).toHaveLength(2)
+      expect(networks).toContainEqual(HederaChainDefinition.EVM.Mainnet)
+      expect(networks).toContainEqual(HederaChainDefinition.EVM.Testnet)
+    })
+
+    it('falls back to hardcoded networks when params.networks is an empty array', () => {
+      const adapter = new HederaAdapter({
+        namespace: 'eip155',
+        networks: [],
+      })
+      const networks = adapter.getCaipNetworks()
+
+      expect(networks).toHaveLength(2)
+      expect(networks).toContainEqual(HederaChainDefinition.EVM.Mainnet)
+      expect(networks).toContainEqual(HederaChainDefinition.EVM.Testnet)
+    })
+  })
 })
