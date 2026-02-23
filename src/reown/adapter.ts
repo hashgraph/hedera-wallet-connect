@@ -18,7 +18,6 @@ import { HederaConnector } from './connectors'
 import { hederaNamespace, getAccountBalance, HederaChainDefinition } from './utils'
 import { createLogger } from '../lib/shared/logger'
 
-// EIP-6963 types for injected wallet discovery
 interface EIP6963ProviderInfo {
   uuid: string
   name: string
@@ -75,18 +74,14 @@ export class HederaAdapter extends AdapterBlueprint {
       ...params,
     })
 
-    // Override getCaipNetworks to return appropriate networks based on namespace
     this.getCaipNetworks = (namespace?: ChainNamespace): CaipNetwork[] => {
       const targetNamespace = namespace || this.namespace
 
       if (targetNamespace === 'eip155') {
-        // Return EIP155 Hedera networks
         return [HederaChainDefinition.EVM.Mainnet, HederaChainDefinition.EVM.Testnet]
       } else if (targetNamespace === hederaNamespace) {
-        // Return native Hedera networks
         return [HederaChainDefinition.Native.Mainnet, HederaChainDefinition.Native.Testnet]
       } else {
-        // Return all Hedera networks if no specific namespace is requested
         return [
           HederaChainDefinition.EVM.Mainnet,
           HederaChainDefinition.EVM.Testnet,
@@ -184,7 +179,6 @@ export class HederaAdapter extends AdapterBlueprint {
     })) as string
     let chainId = parseInt(chainIdHex, 16)
 
-    // Switch to a supported Hedera EVM chain if the wallet is on an unsupported chain
     const configuredNetworks = this.getCaipNetworks()
     const isChainSupported = configuredNetworks.some((n) => Number(n.id) === chainId)
 
@@ -202,7 +196,7 @@ export class HederaAdapter extends AdapterBlueprint {
           params: [{ chainId: targetChainIdHex }],
         })
       } catch (switchError: any) {
-        // Error code 4902: chain not added to wallet — add it first
+        // 4902: chain not added to wallet yet
         if (switchError?.code === 4902 || switchError?.data?.originalError?.code === 4902) {
           await injectedProvider.request({
             method: 'wallet_addEthereumChain',
@@ -223,7 +217,6 @@ export class HederaAdapter extends AdapterBlueprint {
         }
       }
 
-      // Read the updated chain ID after switching
       chainIdHex = (await injectedProvider.request({
         method: 'eth_chainId',
       })) as string
@@ -236,17 +229,14 @@ export class HederaAdapter extends AdapterBlueprint {
     }
     this.logger.debug(`connectInjected: connected to ${accounts[0]} on chain ${chainId}`)
 
-    // Build connector info for AppKit
     const connector = this.connectors.find((c) => c.id === id)
 
-    // Emit accountChanged so AppKit sets the address in account state
     this.emit('accountChanged', {
       address: accounts[0],
       chainId,
       connector: connector as any,
     })
 
-    // Listen for ongoing account/chain changes from the injected wallet
     this.setupInjectedListeners(injectedProvider, id)
 
     return {
@@ -629,35 +619,29 @@ export class HederaAdapter extends AdapterBlueprint {
     })
   }
 
-  // Not supported
   public async getProfile(): Promise<GetProfileResult> {
-    return Promise.resolve({
-      profileImage: '',
-      profileName: '',
-    })
+    return Promise.resolve({ profileImage: '', profileName: '' })
   }
-  // Not supported
+
   public async grantPermissions(): Promise<unknown> {
     return Promise.resolve({})
   }
-  // Not supported
+
   public async revokePermissions(): Promise<`0x${string}`> {
     return Promise.resolve('0x')
   }
 
   public async syncConnection(params: AdapterBlueprint.SyncConnectionParams) {
-    // Don't auto-reconnect if the user explicitly disconnected
     const wasDisconnected =
       typeof window !== 'undefined' &&
       window.localStorage.getItem(HederaAdapter.INJECTED_DISCONNECT_KEY) === 'true'
 
-    // Try to restore an injected wallet connection (e.g. after page refresh)
     const injectedProvider =
       !wasDisconnected &&
       (this.activeInjectedProvider || this.injectedProviders.get(params.id))
 
     if (injectedProvider) {
-      // Use eth_accounts (not eth_requestAccounts) to silently check — no popup
+      // eth_accounts (not eth_requestAccounts) to avoid triggering a popup
       const accounts = (await injectedProvider.request({
         method: 'eth_accounts',
       })) as string[]
@@ -681,7 +665,6 @@ export class HederaAdapter extends AdapterBlueprint {
       }
     }
 
-    // Fall back to WalletConnect
     return {
       id: 'WALLET_CONNECT',
       type: 'WALLET_CONNECT' as const,

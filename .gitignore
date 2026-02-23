@@ -4,4 +4,3 @@ dist
 **/.idea
 .DS_Store
 coverage
-test-app/
