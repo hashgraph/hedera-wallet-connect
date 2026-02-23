@@ -45,11 +45,13 @@ export class HederaAdapter extends AdapterBlueprint {
       // returning all Hedera networks regardless of configuration.
       if (params.networks?.length) {
         const targetNamespace = namespace || this.namespace
-        return params.networks.filter((n) => !targetNamespace || n.chainNamespace === targetNamespace)
+        return params.networks.filter(
+          (n) => !targetNamespace || n.chainNamespace === targetNamespace,
+        )
       }
-    
+
       const targetNamespace = namespace || this.namespace
-    
+
       if (targetNamespace === 'eip155') {
         return [HederaChainDefinition.EVM.Mainnet, HederaChainDefinition.EVM.Testnet]
       } else if (targetNamespace === hederaNamespace) {
