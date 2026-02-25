@@ -38,6 +38,8 @@ interface EIP1193Provider {
   request(args: { method: string; params?: unknown[] | object }): Promise<unknown>
   on?(event: string, listener: (...args: unknown[]) => void): void
   removeListener?(event: string, listener: (...args: unknown[]) => void): void
+  /** Set to true by Hedera-native wallets that announce via EIP-6963 but delegate connection to WalletConnect */
+  isWalletConnectOnly?: boolean
 }
 
 type UniversalProvider = Parameters<AdapterBlueprint['setUniversalProvider']>[0]
@@ -153,6 +155,13 @@ export class HederaAdapter extends AdapterBlueprint {
       throw new Error(`Injected provider not found for id: ${id}`)
     }
 
+    // Hedera-native wallets (e.g. Kabila) announce via EIP-6963 for discovery but
+    // cannot fulfill EIP-1193 RPC calls — they require WalletConnect + HIP-820.
+    if (injectedProvider.isWalletConnectOnly) {
+      this.logger.debug(`connectInjected: "${id}" is WalletConnect-only, falling back to WC`)
+      return this.connectViaWalletConnect(params)
+    }
+
     this.logger.debug(`connectInjected: requesting accounts from "${id}"`)
 
     let accounts: string[]
@@ -162,12 +171,19 @@ export class HederaAdapter extends AdapterBlueprint {
       })) as string[]
     } catch (error: any) {
       if (error?.message?.includes('already pending')) {
+        // User has a pending MetaMask request — surface this so they can action it.
         this.logger.warn(
           'A wallet_requestPermissions request is already pending. ' +
             'Open the wallet extension and approve or reject the pending request.',
         )
+        throw error
       }
-      throw error
+      // Any other rejection (e.g. wallet announced via EIP-6963 but doesn't support
+      // EIP-1193) — fall back to WalletConnect pairing instead of surfacing an error.
+      this.logger.warn(
+        `connectInjected: "${id}" rejected eth_requestAccounts (${error?.message}), falling back to WC`,
+      )
+      return this.connectViaWalletConnect(params)
     }
 
     if (!accounts || accounts.length === 0) {
