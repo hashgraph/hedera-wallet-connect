@@ -291,8 +291,7 @@ export class HederaAdapter extends AdapterBlueprint {
       const newChainId =
         typeof chainId === 'string' ? parseInt(chainId, 16) : (chainId as number)
       this.emit('switchNetwork', {
-        address:
-          (this.connectors.find((c) => c.id === connectorId) as any)?.address || '',
+        address: (this.connectors.find((c) => c.id === connectorId) as any)?.address || '',
         chainId: newChainId,
       })
     }
@@ -653,8 +652,7 @@ export class HederaAdapter extends AdapterBlueprint {
       window.localStorage.getItem(HederaAdapter.INJECTED_DISCONNECT_KEY) === 'true'
 
     const injectedProvider =
-      !wasDisconnected &&
-      (this.activeInjectedProvider || this.injectedProviders.get(params.id))
+      !wasDisconnected && (this.activeInjectedProvider || this.injectedProviders.get(params.id))
 
     if (injectedProvider) {
       // eth_accounts (not eth_requestAccounts) to avoid triggering a popup
