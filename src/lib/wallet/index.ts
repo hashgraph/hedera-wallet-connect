@@ -235,6 +235,19 @@ export class HederaWeb3Wallet extends WalletKit implements HederaNativeWallet {
           body = Buffer.from(transactionBody, 'base64')
           break
         }
+        case HederaJsonRpcMethod.SignTransactions: {
+          // 7 - HIP-1190
+          const { signerAccountId: _accountId, transactionBody, nodeCount } = params
+          this.validateParam('signerAccountId', _accountId, 'string')
+          this.validateParam('transactionBody', transactionBody, 'string')
+          if (nodeCount !== undefined) {
+            this.validateParam('nodeCount', nodeCount, 'number')
+          }
+          signerAccountId = AccountId.fromString(_accountId.replace(chainId + ':', ''))
+          body = Buffer.from(transactionBody, 'base64')
+          ;(body as any).__nodeCount = nodeCount ?? 5
+          break
+        }
         default:
           throw getSdkError('INVALID_METHOD')
       }
@@ -258,6 +271,11 @@ export class HederaWeb3Wallet extends WalletKit implements HederaNativeWallet {
     hederaWallet: HederaWallet,
   ): Promise<void> {
     const { method, id, topic, body } = this.parseSessionRequest(event)
+
+    if (method === HederaJsonRpcMethod.SignTransactions) {
+      const nodeCount = (body as any)?.__nodeCount ?? 5
+      return await this[method](id, topic, body as Uint8Array, hederaWallet, nodeCount)
+    }
 
     return await this[method](id, topic, body, hederaWallet)
   }
