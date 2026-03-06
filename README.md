@@ -59,60 +59,6 @@ first submitting transactions directly to the Hedera network without requiring i
 a [Wallet](#hedera-wallets) when integrating Hedera for the first time. We also recommend
 reviewing the [Reown docs](https://docs.reown.com/overview).
 
-## Using this library and underlying WalletConnect libraries directly
-
-1. Add Hedera dependencies to your project:
-
-```sh
-npm install @hashgraph/hedera-wallet-connect @hiero-ledger/sdk @walletconnect/modal
-```
-
-2. Initialize dApp Connector
-
-```typescript
-import {
-  HederaSessionEvent,
-  HederaJsonRpcMethod,
-  DAppConnector,
-  HederaChainId,
-} from '@hashgraph/hedera-wallet-connect'
-import { LedgerId } from '@hiero-ledger/sdk'
-
-const metadata = {
-  name: 'Hedera Integration using Hedera DAppConnector - v1 approach',
-  description: 'Hedera dAppConnector Example',
-  url: 'https://example.com', // origin must match your domain & subdomain
-  icons: ['https://avatars.githubusercontent.com/u/31002956'],
-}
-
-const dAppConnector = new DAppConnector(
-  metadata,
-  LedgerId.Mainnet,
-  projectId,
-  Object.values(HederaJsonRpcMethod),
-  [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
-  [HederaChainId.Mainnet, HederaChainId.Testnet],
-)
-
-await dAppConnector.init({ logger: 'error' })
-```
-
-3. Connect to a wallet
-
-```typescript
-await dAppConnector.openModal()
-```
-
-4. Handle sessions, events, and payloads.
-
-- See: [DAppConnector](./src/lib/dapp/index.ts)
-
-### Examples, demos, and tools
-
-- [Hashgraph React Wallets by Buidler Labs](https://github.com/buidler-labs/hashgraph-react-wallets)
-- [Hashgraph Online's WalletConnect SDK](https://github.com/hashgraph-online/hashinal-wc)
-- <em>[Add an example, demo, or tool here](https://github.com/hashgraph/hedera-wallet-connect/pulls)</em>
-
 ## Using Reown's AppKit
 
 1. Follow one of the quickstart instructions at
@@ -211,7 +157,69 @@ createAppKit({
 - [Hedera Wallet Example by Hgraph](https://github.com/hgraph-io/hedera-wallet)
 - <em>[Add an example, demo, or tool here](https://github.com/hashgraph/hedera-wallet-connect/pulls)</em>
 
-# Multi-Signature Transactions
+# Hedera Wallets
+
+- [Hashpack](https://hashpack.app/)
+- [Kabila](https://wallet.kabila.app/)
+- [Dropp](https://dropp.cc/)
+
+# Legacy
+
+## Using this library and underlying WalletConnect libraries directly
+
+1. Add Hedera dependencies to your project:
+
+```sh
+npm install @hashgraph/hedera-wallet-connect @hiero-ledger/sdk @walletconnect/modal
+```
+
+2. Initialize dApp Connector
+
+```typescript
+import {
+  HederaSessionEvent,
+  HederaJsonRpcMethod,
+  DAppConnector,
+  HederaChainId,
+} from '@hashgraph/hedera-wallet-connect'
+import { LedgerId } from '@hiero-ledger/sdk'
+
+const metadata = {
+  name: 'Hedera Integration using Hedera DAppConnector - v1 approach',
+  description: 'Hedera dAppConnector Example',
+  url: 'https://example.com', // origin must match your domain & subdomain
+  icons: ['https://avatars.githubusercontent.com/u/31002956'],
+}
+
+const dAppConnector = new DAppConnector(
+  metadata,
+  LedgerId.Mainnet,
+  projectId,
+  Object.values(HederaJsonRpcMethod),
+  [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
+  [HederaChainId.Mainnet, HederaChainId.Testnet],
+)
+
+await dAppConnector.init({ logger: 'error' })
+```
+
+3. Connect to a wallet
+
+```typescript
+await dAppConnector.openModal()
+```
+
+4. Handle sessions, events, and payloads.
+
+- See: [DAppConnector](./src/lib/dapp/index.ts)
+
+### Examples, demos, and tools
+
+- [Hashgraph React Wallets by Buidler Labs](https://github.com/buidler-labs/hashgraph-react-wallets)
+- [Hashgraph Online's WalletConnect SDK](https://github.com/hashgraph-online/hashinal-wc)
+- <em>[Add an example, demo, or tool here](https://github.com/hashgraph/hedera-wallet-connect/pulls)</em>
+
+## Multi-Signature Transactions
 
 Multi-signature (multi-sig) workflows allow multiple parties to sign a single transaction before it's executed on the Hedera network. This is commonly used for:
 
@@ -220,15 +228,15 @@ Multi-signature (multi-sig) workflows allow multiple parties to sign a single tr
 - Joint accounts
 - Backend co-signing for additional security
 
-## Using `hedera_signTransaction` for Multi-Sig Workflows
+### Using `hedera_signTransaction` for Multi-Sig Workflows
 
 The `hedera_signTransaction` method allows you to collect a signature from a wallet without immediately executing the transaction. This signature can then be combined with additional signatures (such as from a backend service) before final execution.
 
-### Example: Frontend Wallet Signature + Backend Co-Signature
+#### Example: Frontend Wallet Signature + Backend Co-Signature
 
 This example demonstrates a common pattern where a user signs a transaction in their wallet, and then a backend service adds its signature before executing the transaction.
 
-#### Step 1: Create and Sign Transaction on Frontend
+##### Step 1: Create and Sign Transaction on Frontend
 
 ```typescript
 import { DAppConnector, HederaJsonRpcMethod } from '@hashgraph/hedera-wallet-connect'
@@ -263,7 +271,7 @@ const result = await response.json()
 console.log('Transaction executed:', result.transactionId)
 ```
 
-#### Step 2: Add Backend Signature and Execute
+##### Step 2: Add Backend Signature and Execute
 
 On your backend, use the `addSignatureToTransaction` utility to add your server's signature:
 
@@ -346,13 +354,7 @@ const result = await dAppConnector.signAndExecuteTransaction({
 
 Use `hedera_signTransaction` when you need to collect multiple signatures. Use `hedera_signAndExecuteTransaction` when the wallet's signature alone is sufficient to execute the transaction.
 
-# Hedera Wallets
-
-- [Hashpack](https://hashpack.app/)
-- [Kabila](https://wallet.kabila.app/)
-- [Dropp](https://dropp.cc/)
-
-# Upgrading from v1 to v2
+## Upgrading from v1 to v2
 
 Upgrading from v1 to v2 should be fairly straightforward. We have maintained compatibility with
 the v1 structure, while deprecating a few methods marked as deprecated. The v1 library did not
