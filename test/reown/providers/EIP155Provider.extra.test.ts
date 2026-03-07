@@ -37,7 +37,26 @@ describe('EIP155Provider extra branches', () => {
   it('createHttpProvider handles invalid input', () => {
     const provider = createProvider()
     expect(provider['createHttpProvider'](0)).toBeUndefined()
-    expect(() => provider['createHttpProvider'](999)).toThrow('No RPC url provided')
+    // Unknown chainId with no RPC url now returns undefined (warn only) instead of throwing
+    expect(provider['createHttpProvider'](999)).toBeUndefined()
+  })
+
+  it('skips non-Hedera chains without crashing', () => {
+    // MetaMask v11+ may include Ethereum mainnet (1), Polygon (137), etc. alongside Hedera
+    const namespace = {
+      chains: ['eip155:1', 'eip155:137', 'eip155:296'],
+      accounts: ['eip155:296:0xabc'],
+      events: [],
+      methods: [],
+      rpcMap: {},
+    }
+    const events = new EventEmitter()
+    // Should not throw even though chains 1 and 137 have no RPC url
+    const provider = new EIP155Provider({ client: mockClient, events, namespace })
+    // Only Hedera chain (296) should have an http provider
+    expect(provider['httpProviders'][296]).toBeDefined()
+    expect(provider['httpProviders'][1]).toBeUndefined()
+    expect(provider['httpProviders'][137]).toBeUndefined()
   })
 
   it('getDefaultChain falls back to namespace', () => {
