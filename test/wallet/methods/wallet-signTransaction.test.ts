@@ -19,6 +19,7 @@
  */
 
 import { TransferTransaction, Hbar, AccountId } from '@hiero-ledger/sdk'
+import { proto } from '@hiero-ledger/proto'
 import {
   HederaChainId,
   SignTransactionResponse,
@@ -54,14 +55,15 @@ describe(Wallet.name, () => {
           AccountId.fromString('0.0.3'),
         )
         if (!transactionBody) throw new Error('Failed to create transaction body')
+        const transactionBodyBytes = proto.TransactionBody.encode(transactionBody).finish()
         const respondSessionRequestSpy = jest
           .spyOn(wallet, 'respondSessionRequest')
-          .mockReturnValue(undefined)
+          .mockResolvedValue(undefined)
 
         await wallet.hedera_signTransaction(
           requestId,
           requestTopic,
-          transactionBody,
+          transactionBodyBytes,
           hederaWallet,
         )
 
