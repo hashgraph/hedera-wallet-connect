@@ -99,7 +99,8 @@ class EIP155Provider implements IProvider {
     const caipNetwork = [Mainnet, Testnet].find((network) => network.id == chainId)
     const rpc = caipNetwork?.rpcUrls.default.http[0] || rpcUrl
     if (!rpc) {
-      throw new Error(`No RPC url provided for chainId: ${chainId}`)
+      this.logger.warn(`No RPC url provided for chainId: ${chainId}, skipping`)
+      return undefined
     }
     const http = new JsonRpcProvider(new HttpConnection(rpc, false))
     return http
@@ -116,7 +117,10 @@ class EIP155Provider implements IProvider {
     const http: Record<number, JsonRpcProvider> = {}
     this.namespace.chains.forEach((chain) => {
       const parsedChain = parseInt(getChainId(chain))
-      http[parsedChain] = this.createHttpProvider(parsedChain, this.namespace.rpcMap?.[chain])!
+      const provider = this.createHttpProvider(parsedChain, this.namespace.rpcMap?.[chain])
+      if (provider) {
+        http[parsedChain] = provider
+      }
     })
     return http
   }
