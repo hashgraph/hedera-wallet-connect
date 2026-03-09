@@ -61,6 +61,11 @@ reviewing the [Reown docs](https://docs.reown.com/overview).
 
 ## Using Reown's AppKit (Recommended)
 
+> **For EVM developers:** If you're coming from Ethereum or other EVM chains, the `eip155` adapter
+> lets you use standard Ethereum methods (`personal_sign`, `eth_sendTransaction`, etc.) on Hedera's
+> EVM-compatible layer - no Hedera-specific RPC knowledge required. The native `hedera` adapter is
+> optional and only needed for Hedera-native operations (HTS tokens, HBAR transfers via SDK, etc.).
+
 1. Follow one of the quickstart instructions at
    https://docs.reown.com/appkit/overview#quickstart
 
