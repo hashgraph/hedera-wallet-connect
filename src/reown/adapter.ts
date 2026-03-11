@@ -77,6 +77,15 @@ export class HederaAdapter extends AdapterBlueprint {
     })
 
     this.getCaipNetworks = (namespace?: ChainNamespace): CaipNetwork[] => {
+      // If the caller explicitly provided networks, respect them instead of
+      // returning all Hedera networks regardless of configuration.
+      if (params.networks?.length) {
+        const targetNamespace = namespace || this.namespace
+        return params.networks.filter(
+          (n) => !targetNamespace || n.chainNamespace === targetNamespace,
+        )
+      }
+
       const targetNamespace = namespace || this.namespace
 
       if (targetNamespace === 'eip155') {
