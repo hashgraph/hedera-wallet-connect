@@ -59,61 +59,12 @@ first submitting transactions directly to the Hedera network without requiring i
 a [Wallet](#hedera-wallets) when integrating Hedera for the first time. We also recommend
 reviewing the [Reown docs](https://docs.reown.com/overview).
 
-## Using this library and underlying WalletConnect libraries directly
+## Using Reown's AppKit (Recommended)
 
-1. Add Hedera dependencies to your project:
-
-```sh
-npm install @hashgraph/hedera-wallet-connect @hiero-ledger/sdk @walletconnect/modal
-```
-
-2. Initialize dApp Connector
-
-```typescript
-import {
-  HederaSessionEvent,
-  HederaJsonRpcMethod,
-  DAppConnector,
-  HederaChainId,
-} from '@hashgraph/hedera-wallet-connect'
-import { LedgerId } from '@hiero-ledger/sdk'
-
-const metadata = {
-  name: 'Hedera Integration using Hedera DAppConnector - v1 approach',
-  description: 'Hedera dAppConnector Example',
-  url: 'https://example.com', // origin must match your domain & subdomain
-  icons: ['https://avatars.githubusercontent.com/u/31002956'],
-}
-
-const dAppConnector = new DAppConnector(
-  metadata,
-  LedgerId.Mainnet,
-  projectId,
-  Object.values(HederaJsonRpcMethod),
-  [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
-  [HederaChainId.Mainnet, HederaChainId.Testnet],
-)
-
-await dAppConnector.init({ logger: 'error' })
-```
-
-3. Connect to a wallet
-
-```typescript
-await dAppConnector.openModal()
-```
-
-4. Handle sessions, events, and payloads.
-
-- See: [DAppConnector](./src/lib/dapp/index.ts)
-
-### Examples, demos, and tools
-
-- [Hashgraph React Wallets by Buidler Labs](https://github.com/buidler-labs/hashgraph-react-wallets)
-- [Hashgraph Online's WalletConnect SDK](https://github.com/hashgraph-online/hashinal-wc)
-- <em>[Add an example, demo, or tool here](https://github.com/hashgraph/hedera-wallet-connect/pulls)</em>
-
-## Using Reown's AppKit
+> **For EVM developers:** If you're coming from Ethereum or other EVM chains, the `eip155` adapter
+> lets you use standard Ethereum methods (`personal_sign`, `eth_sendTransaction`, etc.) on Hedera's
+> EVM-compatible layer - no Hedera-specific RPC knowledge required. The native `hedera` adapter is
+> optional and only needed for Hedera-native operations (HTS tokens, HBAR transfers via SDK, etc.).
 
 1. Follow one of the quickstart instructions at
    https://docs.reown.com/appkit/overview#quickstart
@@ -124,84 +75,140 @@ await dAppConnector.openModal()
 npm install @hashgraph/hedera-wallet-connect @hiero-ledger/sdk @walletconnect/universal-provider
 ```
 
-3. Update `createAppKit` with adapters and a universal provider for Hedera. Note the
-   HederaAdapter will need to come before the WagmiAdapter in the adapters array.
+3. Initialize adapters and create AppKit:
 
 ```typescript
 import type UniversalProvider from '@walletconnect/universal-provider'
-
 import {
   HederaProvider,
   HederaAdapter,
   HederaChainDefinition,
   hederaNamespace,
 } from '@hashgraph/hedera-wallet-connect'
+import { createAppKit } from '@reown/appkit'
+
+const projectId = 'YOUR_PROJECT_ID'
 
 const metadata = {
   name: 'AppKit w/ Hedera',
   description: 'Hedera AppKit Example',
   url: 'https://example.com', // origin must match your domain & subdomain
-  icons: ['https://avatars.githubusercontent.com/u/179229932']
+  icons: ['https://avatars.githubusercontent.com/u/179229932'],
 }
 
+// EVM adapter (eip155)
 const hederaEVMAdapter = new HederaAdapter({
   projectId,
-  networks: [
-    HederaChainDefinition.EVM.Mainnet,
-    HederaChainDefinition.EVM.Testnet,
-],
+  networks: [HederaChainDefinition.EVM.Mainnet, HederaChainDefinition.EVM.Testnet],
   namespace: 'eip155',
 })
 
-const universalProvider = (await HederaProvider.init({
-  projectId: "YOUR_PROJECT_ID",
-  metadata,
-})) as unknown as UniversalProvider, // avoid type mismatch error due to missing of private properties in HederaProvider
+// Native adapter (hedera namespace)
+const hederaNativeAdapter = new HederaAdapter({
+  projectId,
+  networks: [HederaChainDefinition.Native.Mainnet, HederaChainDefinition.Native.Testnet],
+  namespace: hederaNamespace,
+})
 
-// ...
-createAppKit({
-  adapters: [ hederaEVMAdapter ],
-  //@ts-expect-error expected type error
+const universalProvider = (await HederaProvider.init({
+  projectId,
+  metadata,
+})) as unknown as UniversalProvider
+
+const appKit = createAppKit({
+  adapters: [hederaEVMAdapter, hederaNativeAdapter],
+  // @ts-expect-error expected type mismatch
   universalProvider,
   projectId,
   metadata,
   networks: [
-    // EVM
     HederaChainDefinition.EVM.Mainnet,
     HederaChainDefinition.EVM.Testnet,
-  ],
-})
-
-// ...
-```
-
-4. Recommended: Add Hedera Native WalletConnect Adapter
-
-```typescript
-import { HederaChainDefinition, hederaNamespace } from '@hashgraph/hedera-wallet-connect'
-
-// ...
-
-const hederaNativeAdapter = new HederaAdapter({
-  projectId,
-  networks: [HederaChainDefinition.Native.Mainnet, HederaChainDefinition.Native.Testnet],
-  namespace: hederaNamespace, // 'hedera' as CaipNamespace,
-})
-
-// ...
-
-createAppKit({
-  adapters: [hederaEVMAdapter, hederaNativeAdapter],
-  projectId,
-  metadata,
-  networks: [
-    // EVM
-    HederaChainDefinition.EVM.Mainnet,
-    HederaChainDefinition.EVM.Testnet,
-    // Native
     HederaChainDefinition.Native.Mainnet,
     HederaChainDefinition.Native.Testnet,
   ],
+})
+```
+
+4. Open the modal to connect a wallet:
+
+```typescript
+appKit.open()
+```
+
+5. Subscribe to account and network changes:
+
+```typescript
+appKit.subscribeAccount((account) => {
+  if (account?.address) {
+    console.log('Connected:', account.address, 'Type:', account.type)
+  } else {
+    console.log('Disconnected')
+  }
+})
+
+appKit.subscribeCaipNetworkChange((network) => {
+  console.log('Network changed:', network?.caipNetworkId)
+})
+```
+
+6. Sign a message (EVM):
+
+```typescript
+const address = appKit.getAddress()
+const provider = hederaEVMAdapter.getWalletConnectProvider()
+
+const signature = await hederaEVMAdapter.signMessage({
+  message: 'Hello from my Hedera dApp!',
+  address,
+  provider,
+})
+```
+
+7. Get balance:
+
+```typescript
+const address = appKit.getAddress()
+const network = appKit.getCaipNetwork()
+
+const { balance, symbol } = await hederaEVMAdapter.getBalance({
+  address,
+  caipNetwork: network,
+})
+```
+
+8. Sign and execute a Hedera native transaction:
+
+```typescript
+import { TransferTransaction, Hbar } from '@hiero-ledger/sdk'
+import { transactionToBase64String } from '@hashgraph/hedera-wallet-connect'
+
+const transaction = new TransferTransaction()
+  .addHbarTransfer(senderAccountId, new Hbar(-1))
+  .addHbarTransfer(recipientAccountId, new Hbar(1))
+
+// Get the HederaProvider instance used during initialization
+const result = await universalProvider.hedera_signAndExecuteTransaction({
+  signerAccountId: `hedera:testnet:${senderAccountId}`,
+  transactionList: transactionToBase64String(transaction),
+})
+
+console.log('Transaction ID:', result.transactionId)
+```
+
+9. Sign a transaction without executing (for multi-sig workflows):
+
+```typescript
+import { TransferTransaction, Hbar } from '@hiero-ledger/sdk'
+
+const transaction = new TransferTransaction()
+  .addHbarTransfer(senderAccountId, new Hbar(-10))
+  .addHbarTransfer(recipientAccountId, new Hbar(10))
+
+// Returns a signature map without executing
+const result = await universalProvider.hedera_signTransaction({
+  signerAccountId: `hedera:testnet:${senderAccountId}`,
+  transactionBody: transaction,
 })
 ```
 
@@ -231,11 +238,10 @@ This example demonstrates a common pattern where a user signs a transaction in t
 #### Step 1: Create and Sign Transaction on Frontend
 
 ```typescript
-import { DAppConnector, HederaJsonRpcMethod } from '@hashgraph/hedera-wallet-connect'
-import { TransferTransaction, Hbar, AccountId } from '@hiero-ledger/sdk'
+import { TransferTransaction, Hbar } from '@hiero-ledger/sdk'
+import { transactionToBase64String } from '@hashgraph/hedera-wallet-connect'
 
-// Initialize your DAppConnector (see Getting Started section)
-const dAppConnector = new DAppConnector(/* ... */)
+// Using the HederaProvider (universalProvider) initialized with AppKit (see Getting Started)
 
 // Create a transaction
 const transaction = new TransferTransaction()
@@ -244,11 +250,13 @@ const transaction = new TransferTransaction()
   .setTransactionMemo('Multi-sig transfer')
 
 // Request signature from wallet (does NOT execute)
-const signer = dAppConnector.getSigner(userAccountId)
-const signedTransaction = await signer.signTransaction(transaction)
+const signResult = await universalProvider.hedera_signTransaction({
+  signerAccountId: `hedera:testnet:${userAccountId}`,
+  transactionBody: transaction,
+})
 
 // Convert signed transaction to bytes for transmission to backend
-const signedTransactionBytes = signedTransaction.toBytes()
+const signedTransactionBytes = transaction.toBytes()
 
 // Send to backend
 const response = await fetch('/api/execute-transaction', {
@@ -337,8 +345,10 @@ await signedTx.execute(client)
 If you don't need backend co-signing and want the wallet to execute the transaction immediately:
 
 ```typescript
+import { transactionToBase64String } from '@hashgraph/hedera-wallet-connect'
+
 // This signs AND executes in one call
-const result = await dAppConnector.signAndExecuteTransaction({
+const result = await universalProvider.hedera_signAndExecuteTransaction({
   signerAccountId: `hedera:testnet:${userAccountId}`,
   transactionList: transactionToBase64String(transaction),
 })
@@ -352,7 +362,66 @@ Use `hedera_signTransaction` when you need to collect multiple signatures. Use `
 - [Kabila](https://wallet.kabila.app/)
 - [Dropp](https://dropp.cc/)
 
-# Upgrading from v1 to v2
+# Legacy
+
+## Using this library and underlying WalletConnect libraries directly
+
+> **Note**: This approach uses `DAppConnector` directly and is maintained for backwards
+> compatibility. For new projects, use [Reown's AppKit](#using-reowns-appkit-recommended) instead.
+
+1. Add Hedera dependencies to your project:
+
+```sh
+npm install @hashgraph/hedera-wallet-connect @hiero-ledger/sdk @walletconnect/modal
+```
+
+2. Initialize dApp Connector
+
+```typescript
+import {
+  HederaSessionEvent,
+  HederaJsonRpcMethod,
+  DAppConnector,
+  HederaChainId,
+} from '@hashgraph/hedera-wallet-connect'
+import { LedgerId } from '@hiero-ledger/sdk'
+
+const metadata = {
+  name: 'Hedera Integration using Hedera DAppConnector',
+  description: 'Hedera dAppConnector Example',
+  url: 'https://example.com', // origin must match your domain & subdomain
+  icons: ['https://avatars.githubusercontent.com/u/31002956'],
+}
+
+const dAppConnector = new DAppConnector(
+  metadata,
+  LedgerId.Mainnet,
+  projectId,
+  Object.values(HederaJsonRpcMethod),
+  [HederaSessionEvent.ChainChanged, HederaSessionEvent.AccountsChanged],
+  [HederaChainId.Mainnet, HederaChainId.Testnet],
+)
+
+await dAppConnector.init({ logger: 'error' })
+```
+
+3. Connect to a wallet
+
+```typescript
+await dAppConnector.openModal()
+```
+
+4. Handle sessions, events, and payloads.
+
+- See: [DAppConnector](./src/lib/dapp/index.ts)
+
+### Examples, demos, and tools
+
+- [Hashgraph React Wallets by Buidler Labs](https://github.com/buidler-labs/hashgraph-react-wallets)
+- [Hashgraph Online's WalletConnect SDK](https://github.com/hashgraph-online/hashinal-wc)
+- <em>[Add an example, demo, or tool here](https://github.com/hashgraph/hedera-wallet-connect/pulls)</em>
+
+## Upgrading from v1 to v2
 
 Upgrading from v1 to v2 should be fairly straightforward. We have maintained compatibility with
 the v1 structure, while deprecating a few methods marked as deprecated. The v1 library did not
