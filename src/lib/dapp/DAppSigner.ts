@@ -49,6 +49,7 @@ import {
   SignAndExecuteQueryResult,
   SignAndExecuteTransactionResult,
   SignTransactionResult,
+  SignTransactionsResult,
   base64StringToSignatureMap,
   base64StringToUint8Array,
   ledgerIdToCAIPChainId,
@@ -294,6 +295,135 @@ export class DAppSigner implements Signer {
     }).finish()
 
     return Transaction.fromBytes(signedBytes) as T
+  }
+
+  /**
+   * Signs a transaction for multiple nodes (HIP-1190 compliant)
+   *
+   * This method implements the HIP-1190 specification for multi-node transaction signing:
+   * 1. Freezes transaction if not already frozen
+   * 2. Extracts transaction body WITHOUT node IDs (wallet assigns nodes)
+   * 3. Sends to wallet via hedera_signTransactions RPC
+   * 4. Receives array of signature maps (one per node)
+   * 5. Reconstructs signed transactions locally by combining:
+   *    - Original transaction body (kept by DApp)
+   *    - Each node's signature map (from wallet)
+   *    - Node account IDs (assigned by wallet)
+   *
+   * @param transaction - Transaction object (node IDs will be assigned by wallet)
+   * @param nodeCount - Optional number of nodes (default: determined by wallet)
+   * @returns Promise<Transaction[]> Array of signed Transaction objects, one per node
+   *
+   * @throws {Error} If transaction body serialization fails
+   * @throws {Error} If response validation fails
+   * @throws {Error} If transaction reconstruction fails
+   *
+   * @example
+   * ```typescript
+   * const transaction = new TransferTransaction()
+   *   .addHbarTransfer('0.0.123', new Hbar(-10))
+   *   .addHbarTransfer('0.0.456', new Hbar(10))
+   *
+   * // Sign for 5 nodes (provides redundancy)
+   * const signedTxs = await signer.signTransactions(transaction, 5)
+   *
+   * // Try each signed transaction until one succeeds
+   * for (const signedTx of signedTxs) {
+   *   try {
+   *     const response = await signedTx.execute(client)
+   *     break // Success!
+   *   } catch (error) {
+   *     continue // Try next node
+   *   }
+   * }
+   * ```
+   *
+   * @see {@link https://github.com/hashgraph/hedera-improvement-proposal/blob/main/HIP/hip-1190.md | HIP-1190}
+   */
+  async signTransactions<T extends Transaction>(
+    transaction: T,
+    nodeCount?: number,
+  ): Promise<T[]> {
+    // Ensure transaction is frozen (reuse PR #608 pattern)
+    if (!transaction.isFrozen()) {
+      transaction.freezeWith(this._getHederaClient())
+    }
+
+    // Extract transaction body WITHOUT node IDs (HIP-1190 requirement)
+    // Passing null ensures no node account ID is included
+    const transactionBody = transactionToTransactionBody(transaction, null)
+
+    if (!transactionBody) {
+      throw new Error('Failed to serialize transaction body.')
+    }
+
+    const transactionBodyBase64 = transactionBodyToBase64String(transactionBody)
+
+    // Call hedera_signTransactions RPC method
+    const { signatureMaps, nodeAccountIds } = await this.request<
+      SignTransactionsResult['result']
+    >({
+      method: HederaJsonRpcMethod.SignTransactions,
+      params: {
+        signerAccountId: this._signerAccountId,
+        transactionBody: transactionBodyBase64,
+        nodeCount,
+      },
+    })
+
+    // Validate response structure
+    if (!Array.isArray(signatureMaps) || !Array.isArray(nodeAccountIds)) {
+      throw new Error('Invalid response: signatureMaps and nodeAccountIds must be arrays')
+    }
+
+    if (signatureMaps.length !== nodeAccountIds.length) {
+      throw new Error(
+        `Mismatched response lengths: ${signatureMaps.length} signature maps but ${nodeAccountIds.length} node IDs`,
+      )
+    }
+
+    // Reconstruct signed transactions locally (SECURITY CRITICAL)
+    // DApp maintains control of original transaction body
+    const signedTransactions: T[] = []
+
+    for (let i = 0; i < signatureMaps.length; i++) {
+      try {
+        const signatureMapBase64 = signatureMaps[i]
+        const nodeAccountIdStr = nodeAccountIds[i]
+
+        // Parse node account ID assigned by wallet
+        const nodeAccountId = AccountId.fromString(nodeAccountIdStr)
+
+        // Create transaction body WITH the specific node ID
+        const txBodyWithNode: proto.ITransactionBody = {
+          ...transactionBody,
+          nodeAccountID: {
+            shardNum: nodeAccountId.shard,
+            realmNum: nodeAccountId.realm,
+            accountNum: nodeAccountId.num,
+          },
+        }
+
+        // Encode body and decode signature map
+        const bodyBytes = proto.TransactionBody.encode(txBodyWithNode).finish()
+        const sigMap = base64StringToSignatureMap(signatureMapBase64)
+
+        // Combine body + signature to create signed transaction
+        const bytes = proto.Transaction.encode({
+          bodyBytes,
+          sigMap,
+        }).finish()
+
+        const signedTransaction = Transaction.fromBytes(bytes) as T
+        signedTransactions.push(signedTransaction)
+      } catch (error: any) {
+        throw new Error(
+          `Failed to reconstruct signed transaction at index ${i}: ${error.message}`,
+        )
+      }
+    }
+
+    return signedTransactions
   }
 
   private async _tryExecuteTransactionRequest<RequestT, ResponseT, OutputT>(
