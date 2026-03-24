@@ -2,12 +2,45 @@ import { CoreHelperUtil, CaipNetwork } from '@reown/appkit'
 import { type ChainNamespace, isReownName } from '@reown/appkit-common'
 import { AdapterBlueprint, WcHelpersUtil } from '@reown/appkit-controllers'
 import { LedgerId } from '@hiero-ledger/sdk'
-import { BrowserProvider, Contract, formatUnits, JsonRpcSigner, parseUnits } from 'ethers'
+import {
+  BrowserProvider,
+  Contract,
+  formatUnits,
+  hexlify,
+  isHexString,
+  JsonRpcSigner,
+  parseUnits,
+  toUtf8Bytes,
+} from 'ethers'
 
 import { HederaProvider } from './providers'
 import { HederaConnector } from './connectors'
 import { hederaNamespace, getAccountBalance, HederaChainDefinition } from './utils'
 import { createLogger } from '../lib/shared/logger'
+
+interface EIP6963ProviderInfo {
+  uuid: string
+  name: string
+  icon: string
+  rdns: string
+}
+
+interface EIP6963ProviderDetail {
+  info: EIP6963ProviderInfo
+  provider: EIP1193Provider
+}
+
+interface EIP6963AnnounceProviderEvent extends CustomEvent {
+  detail: EIP6963ProviderDetail
+}
+
+interface EIP1193Provider {
+  request(args: { method: string; params?: unknown[] | object }): Promise<unknown>
+  on?(event: string, listener: (...args: unknown[]) => void): void
+  removeListener?(event: string, listener: (...args: unknown[]) => void): void
+  /** Set to true by Hedera-native wallets that announce via EIP-6963 but delegate connection to WalletConnect */
+  isWalletConnectOnly?: boolean
+}
 
 type UniversalProvider = Parameters<AdapterBlueprint['setUniversalProvider']>[0]
 type AdapterSendTransactionParams = AdapterBlueprint.SendTransactionParams & {
@@ -21,7 +54,10 @@ type GetEnsAddressResult = { address: string | false }
 type GetProfileResult = { profileImage: string; profileName: string }
 
 export class HederaAdapter extends AdapterBlueprint {
+  private static INJECTED_DISCONNECT_KEY = '@hwc/injected-disconnected'
   private logger = createLogger('HederaAdapter')
+  private injectedProviders = new Map<string, EIP1193Provider>()
+  private activeInjectedProvider: EIP1193Provider | null = null
 
   constructor(params: HederaAdapter.Params) {
     if (params.namespace !== hederaNamespace && params.namespace !== 'eip155') {
@@ -41,16 +77,15 @@ export class HederaAdapter extends AdapterBlueprint {
     })
 
     this.getCaipNetworks = (namespace?: ChainNamespace): CaipNetwork[] => {
+      const targetNamespace = namespace || this.namespace
+
       // If the caller explicitly provided networks, respect them instead of
       // returning all Hedera networks regardless of configuration.
       if (params.networks?.length) {
-        const targetNamespace = namespace || this.namespace
         return params.networks.filter(
           (n) => !targetNamespace || n.chainNamespace === targetNamespace,
         )
       }
-
-      const targetNamespace = namespace || this.namespace
 
       if (targetNamespace === 'eip155') {
         return [HederaChainDefinition.EVM.Mainnet, HederaChainDefinition.EVM.Testnet]
@@ -84,7 +119,18 @@ export class HederaAdapter extends AdapterBlueprint {
   ): Promise<AdapterBlueprint.ConnectResult> {
     this.logger.debug('connect called with params:', params)
 
-    // Get the WalletConnect connector and ensure it connects with proper namespaces
+    const type = (params as any).type as string | undefined
+
+    if (type === 'ANNOUNCED' || type === 'INJECTED') {
+      return this.connectInjected(params)
+    }
+
+    return this.connectViaWalletConnect(params)
+  }
+
+  private async connectViaWalletConnect(
+    params: AdapterBlueprint.ConnectParams,
+  ): Promise<AdapterBlueprint.ConnectResult> {
     const connector = this.getWalletConnectConnector()
     if (connector && 'connectWalletConnect' in connector) {
       this.logger.debug('Calling HederaConnector.connectWalletConnect')
@@ -93,18 +139,187 @@ export class HederaAdapter extends AdapterBlueprint {
       this.logger.warn('HederaConnector not found or connectWalletConnect method missing')
     }
 
-    return Promise.resolve({
+    this.activeInjectedProvider = null
+
+    return {
       id: 'WALLET_CONNECT',
       type: 'WALLET_CONNECT' as const,
       chainId: Number(params.chainId),
       provider: this.provider as UniversalProvider,
       address: '',
+    }
+  }
+
+  private async connectInjected(
+    params: AdapterBlueprint.ConnectParams,
+  ): Promise<AdapterBlueprint.ConnectResult> {
+    const id = (params as any).id as string
+    const type = (params as any).type as 'ANNOUNCED' | 'INJECTED'
+
+    const injectedProvider =
+      this.injectedProviders.get(id) ||
+      ((params as any).provider as EIP1193Provider | undefined)
+    if (!injectedProvider) {
+      throw new Error(`Injected provider not found for id: ${id}`)
+    }
+
+    // Hedera-native wallets (e.g. Kabila) announce via EIP-6963 for discovery but
+    // cannot fulfill EIP-1193 RPC calls — they require WalletConnect + HIP-820.
+    if (injectedProvider.isWalletConnectOnly) {
+      this.logger.debug(`connectInjected: "${id}" is WalletConnect-only, falling back to WC`)
+      return this.connectViaWalletConnect(params)
+    }
+
+    this.logger.debug(`connectInjected: requesting accounts from "${id}"`)
+
+    let accounts: string[]
+    try {
+      accounts = (await injectedProvider.request({
+        method: 'eth_requestAccounts',
+      })) as string[]
+    } catch (error: any) {
+      if (error?.message?.includes('already pending')) {
+        // User has a pending MetaMask request — surface this so they can action it.
+        this.logger.warn(
+          'A wallet_requestPermissions request is already pending. ' +
+            'Open the wallet extension and approve or reject the pending request.',
+        )
+        throw error
+      }
+      // Any other rejection (e.g. wallet announced via EIP-6963 but doesn't support
+      // EIP-1193) — fall back to WalletConnect pairing instead of surfacing an error.
+      this.logger.warn(
+        `connectInjected: "${id}" rejected eth_requestAccounts (${error?.message}), falling back to WC`,
+      )
+      return this.connectViaWalletConnect(params)
+    }
+
+    if (!accounts || accounts.length === 0) {
+      throw new Error('No accounts returned from injected provider')
+    }
+
+    let chainIdHex = (await injectedProvider.request({
+      method: 'eth_chainId',
+    })) as string
+    let chainId = parseInt(chainIdHex, 16)
+
+    const configuredNetworks = this.getCaipNetworks()
+    const isChainSupported = configuredNetworks.some((n) => Number(n.id) === chainId)
+
+    if (!isChainSupported && configuredNetworks.length > 0) {
+      const targetNetwork = configuredNetworks[0]
+      const targetChainIdHex = `0x${Number(targetNetwork.id).toString(16)}`
+
+      this.logger.debug(
+        `connectInjected: wallet is on chain ${chainId}, switching to ${targetNetwork.name} (${targetNetwork.id})`,
+      )
+
+      try {
+        await injectedProvider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: targetChainIdHex }],
+        })
+      } catch (switchError: any) {
+        // 4902: chain not added to wallet yet
+        if (switchError?.code === 4902 || switchError?.data?.originalError?.code === 4902) {
+          await injectedProvider.request({
+            method: 'wallet_addEthereumChain',
+            params: [
+              {
+                chainId: targetChainIdHex,
+                chainName: targetNetwork.name,
+                nativeCurrency: targetNetwork.nativeCurrency,
+                rpcUrls: [targetNetwork.rpcUrls.default.http[0]],
+                blockExplorerUrls: targetNetwork.blockExplorers?.default?.url
+                  ? [targetNetwork.blockExplorers.default.url]
+                  : undefined,
+              },
+            ],
+          })
+        } else {
+          throw switchError
+        }
+      }
+
+      chainIdHex = (await injectedProvider.request({
+        method: 'eth_chainId',
+      })) as string
+      chainId = parseInt(chainIdHex, 16)
+    }
+
+    this.activeInjectedProvider = injectedProvider
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(HederaAdapter.INJECTED_DISCONNECT_KEY)
+    }
+    this.logger.debug(`connectInjected: connected to ${accounts[0]} on chain ${chainId}`)
+
+    const connector = this.connectors.find((c) => c.id === id)
+
+    this.emit('accountChanged', {
+      address: accounts[0],
+      chainId,
+      connector: connector as any,
     })
+
+    this.setupInjectedListeners(injectedProvider, id)
+
+    return {
+      id,
+      type: type as any,
+      provider: injectedProvider as any,
+      address: accounts[0],
+      chainId,
+    }
+  }
+
+  private injectedListenersSet = false
+
+  private setupInjectedListeners(provider: EIP1193Provider, connectorId: string) {
+    if (this.injectedListenersSet) {
+      return
+    }
+    this.injectedListenersSet = true
+
+    const connector = this.connectors.find((c) => c.id === connectorId)
+
+    const onAccountsChanged = (accounts: unknown) => {
+      const addrs = accounts as string[]
+      if (addrs.length === 0) {
+        this.activeInjectedProvider = null
+        this.emit('disconnect')
+      } else {
+        this.emit('accountChanged', {
+          address: addrs[0],
+          connector: connector as any,
+        })
+      }
+    }
+
+    const onChainChanged = (chainId: unknown) => {
+      const newChainId =
+        typeof chainId === 'string' ? parseInt(chainId, 16) : (chainId as number)
+      this.emit('switchNetwork', {
+        address: (this.connectors.find((c) => c.id === connectorId) as any)?.address || '',
+        chainId: newChainId,
+      })
+    }
+
+    provider.on?.('accountsChanged', onAccountsChanged)
+    provider.on?.('chainChanged', onChainChanged)
   }
 
   public async disconnect(
     _params?: AdapterBlueprint.DisconnectParams,
   ): Promise<AdapterBlueprint.DisconnectResult> {
+    if (this.activeInjectedProvider) {
+      this.activeInjectedProvider = null
+      this.injectedListenersSet = false
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(HederaAdapter.INJECTED_DISCONNECT_KEY, 'true')
+      }
+      return { connections: [] }
+    }
+
     try {
       const connector = this.getWalletConnectConnector()
       await connector.disconnect()
@@ -119,6 +334,18 @@ export class HederaAdapter extends AdapterBlueprint {
   }: AdapterBlueprint.GetAccountsParams & {
     namespace: ChainNamespace
   }): Promise<AdapterBlueprint.GetAccountsResult> {
+    if (this.activeInjectedProvider) {
+      const accounts = (await this.activeInjectedProvider.request({
+        method: 'eth_accounts',
+      })) as string[]
+
+      return {
+        accounts: accounts.map((address) =>
+          CoreHelperUtil.createAccount('eip155' as ChainNamespace, address, 'eoa'),
+        ),
+      }
+    }
+
     const provider = this.provider as UniversalProvider
     const addresses = (provider?.session?.namespaces?.[namespace]?.accounts
       ?.map((account) => {
@@ -127,15 +354,43 @@ export class HederaAdapter extends AdapterBlueprint {
       })
       .filter((address, index, self) => self.indexOf(address) === index) || []) as string[]
 
-    return Promise.resolve({
+    return {
       accounts: addresses.map((address) =>
         CoreHelperUtil.createAccount(namespace, address, 'eoa'),
       ),
-    })
+    }
   }
 
   public async syncConnectors() {
-    return Promise.resolve()
+    if (this.namespace !== 'eip155' || typeof window === 'undefined') {
+      return
+    }
+
+    const handleAnnouncement = (event: Event) => {
+      const e = event as EIP6963AnnounceProviderEvent
+      const { info, provider } = e.detail
+
+      if (!info?.rdns || this.injectedProviders.has(info.rdns)) {
+        return
+      }
+
+      this.injectedProviders.set(info.rdns, provider)
+
+      this.addConnector({
+        id: info.rdns,
+        type: 'ANNOUNCED' as const,
+        name: info.name,
+        info: { uuid: info.uuid, name: info.name, icon: info.icon, rdns: info.rdns },
+        provider,
+        chain: 'eip155' as ChainNamespace,
+        chains: this.getCaipNetworks(),
+      } as any)
+
+      this.logger.debug(`EIP-6963: Discovered wallet "${info.name}" (${info.rdns})`)
+    }
+
+    window.addEventListener('eip6963:announceProvider', handleAnnouncement)
+    window.dispatchEvent(new Event('eip6963:requestProvider'))
   }
 
   public async syncConnections(_params: AdapterBlueprint.SyncConnectionsParams): Promise<void> {
@@ -173,6 +428,17 @@ export class HederaAdapter extends AdapterBlueprint {
     params: AdapterBlueprint.SignMessageParams,
   ): Promise<AdapterBlueprint.SignMessageResult> {
     const { provider, message, address } = params
+
+    if (this.activeInjectedProvider) {
+      const hexMessage = isHexString(message) ? message : hexlify(toUtf8Bytes(message))
+      const signature = (await this.activeInjectedProvider.request({
+        method: 'personal_sign',
+        params: [hexMessage, address],
+      })) as string
+
+      return { signature }
+    }
+
     if (!provider) {
       throw new Error('Provider is undefined')
     }
@@ -197,10 +463,27 @@ export class HederaAdapter extends AdapterBlueprint {
   public override async estimateGas(
     params: AdapterBlueprint.EstimateGasTransactionArgs,
   ): Promise<AdapterBlueprint.EstimateGasTransactionResult> {
-    const { provider, caipNetwork, address } = params
+    const { caipNetwork, address } = params
     if (this.namespace !== 'eip155') {
       throw new Error('Namespace is not eip155')
     }
+
+    if (this.activeInjectedProvider) {
+      const browserProvider = new BrowserProvider(
+        this.activeInjectedProvider as any,
+        Number(caipNetwork?.id),
+      )
+      const signer = new JsonRpcSigner(browserProvider, address as string)
+      const gas = await signer.estimateGas({
+        from: address,
+        to: params.to,
+        data: params.data,
+        type: 0,
+      })
+      return { gas }
+    }
+
+    const { provider } = params
     if (!provider) {
       throw new Error('Provider is undefined')
     }
@@ -222,43 +505,70 @@ export class HederaAdapter extends AdapterBlueprint {
   public async sendTransaction(
     params: AdapterSendTransactionParams,
   ): Promise<AdapterBlueprint.SendTransactionResult> {
+    if (this.namespace !== 'eip155') {
+      throw new Error('Namespace is not eip155')
+    }
+
+    if (this.activeInjectedProvider) {
+      const browserProvider = new BrowserProvider(
+        this.activeInjectedProvider as any,
+        Number(params.caipNetwork?.id),
+      )
+      const signer = new JsonRpcSigner(browserProvider, params.address)
+      const txResponse = await signer.sendTransaction({
+        to: params.to,
+        value: params.value as bigint,
+        data: params.data as string,
+        gasLimit: params.gas as bigint,
+        gasPrice: params.gasPrice as bigint,
+        type: 0,
+      })
+      const txReceipt = await txResponse.wait()
+      return { hash: (txReceipt?.hash as `0x${string}`) || null }
+    }
+
     if (!params.provider) {
       throw new Error('Provider is undefined')
     }
     const hederaProvider = params.provider as unknown as HederaProvider
 
-    if (this.namespace == 'eip155') {
-      const tx = await hederaProvider.eth_sendTransaction(
-        {
-          value: params.value as bigint,
-          to: params.to as `0x${string}`,
-          data: params.data as `0x${string}`,
-          gas: params.gas as bigint,
-          gasPrice: params.gasPrice as bigint,
-          address: params.address as `0x${string}`,
-        },
-        params.address as `0x${string}`,
-        Number(params.caipNetwork?.id),
-      )
+    const tx = await hederaProvider.eth_sendTransaction(
+      {
+        value: params.value as bigint,
+        to: params.to as `0x${string}`,
+        data: params.data as `0x${string}`,
+        gas: params.gas as bigint,
+        gasPrice: params.gasPrice as bigint,
+        address: params.address as `0x${string}`,
+      },
+      params.address as `0x${string}`,
+      Number(params.caipNetwork?.id),
+    )
 
-      return { hash: tx }
-    } else {
-      throw new Error('Namespace is not eip155')
-    }
+    return { hash: tx }
   }
 
   public async writeContract(
     params: AdapterBlueprint.WriteContractParams,
   ): Promise<AdapterBlueprint.WriteContractResult> {
-    if (!params.provider) {
-      throw new Error('Provider is undefined')
-    }
     if (this.namespace !== 'eip155') {
       throw new Error('Namespace is not eip155')
     }
-    const { provider, caipNetwork, caipAddress, abi, tokenAddress, method, args } = params
+    const { caipNetwork, caipAddress, abi, tokenAddress, method, args } = params
 
-    const browserProvider = new BrowserProvider(provider, Number(caipNetwork?.id))
+    let browserProvider: BrowserProvider
+    if (this.activeInjectedProvider) {
+      browserProvider = new BrowserProvider(
+        this.activeInjectedProvider as any,
+        Number(caipNetwork?.id),
+      )
+    } else {
+      if (!params.provider) {
+        throw new Error('Provider is undefined')
+      }
+      browserProvider = new BrowserProvider(params.provider, Number(caipNetwork?.id))
+    }
+
     const signer = new JsonRpcSigner(browserProvider, caipAddress)
     const contract = new Contract(tokenAddress, abi, signer)
 
@@ -332,34 +642,72 @@ export class HederaAdapter extends AdapterBlueprint {
     })
   }
 
-  // Not supported
   public async getProfile(): Promise<GetProfileResult> {
-    return Promise.resolve({
-      profileImage: '',
-      profileName: '',
-    })
+    return Promise.resolve({ profileImage: '', profileName: '' })
   }
-  // Not supported
+
   public async grantPermissions(): Promise<unknown> {
     return Promise.resolve({})
   }
-  // Not supported
+
   public async revokePermissions(): Promise<`0x${string}`> {
     return Promise.resolve('0x')
   }
 
   public async syncConnection(params: AdapterBlueprint.SyncConnectionParams) {
-    return Promise.resolve({
+    const wasDisconnected =
+      typeof window !== 'undefined' &&
+      window.localStorage.getItem(HederaAdapter.INJECTED_DISCONNECT_KEY) === 'true'
+
+    const injectedProvider =
+      !wasDisconnected && (this.activeInjectedProvider || this.injectedProviders.get(params.id))
+
+    if (injectedProvider) {
+      // eth_accounts (not eth_requestAccounts) to avoid triggering a popup
+      const accounts = (await injectedProvider.request({
+        method: 'eth_accounts',
+      })) as string[]
+
+      if (accounts && accounts.length > 0) {
+        const chainIdHex = (await injectedProvider.request({
+          method: 'eth_chainId',
+        })) as string
+        const chainId = parseInt(chainIdHex, 16)
+
+        this.activeInjectedProvider = injectedProvider
+        this.setupInjectedListeners(injectedProvider, params.id)
+
+        return {
+          id: params.id,
+          type: 'ANNOUNCED' as any,
+          provider: injectedProvider as any,
+          address: accounts[0],
+          chainId,
+        }
+      }
+    }
+
+    return {
       id: 'WALLET_CONNECT',
       type: 'WALLET_CONNECT' as const,
       chainId: params.chainId!,
       provider: this.provider as UniversalProvider,
       address: '',
-    })
+    }
   }
 
   public override async switchNetwork(params: AdapterBlueprint.SwitchNetworkParams) {
     const { caipNetwork } = params
+
+    if (this.activeInjectedProvider) {
+      const chainIdHex = `0x${Number(caipNetwork.id).toString(16)}`
+      await this.activeInjectedProvider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: chainIdHex }],
+      })
+      return
+    }
+
     const connector = this.getWalletConnectConnector()
     connector.provider.setDefaultChain(caipNetwork.caipNetworkId)
   }
