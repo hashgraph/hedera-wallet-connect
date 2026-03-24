@@ -124,5 +124,16 @@ describe('HederaAdapter getCaipNetworks', () => {
       expect(networks).toContainEqual(HederaChainDefinition.EVM.Mainnet)
       expect(networks).toContainEqual(HederaChainDefinition.EVM.Testnet)
     })
+
+    it('returns only the user-provided hedera networks when configured with hedera namespace', () => {
+      const adapter = new HederaAdapter({
+        namespace: hederaNamespace,
+        networks: [HederaChainDefinition.Native.Testnet],
+      })
+      const networks = adapter.getCaipNetworks()
+
+      expect(networks).toHaveLength(1)
+      expect(networks).toContainEqual(HederaChainDefinition.Native.Testnet)
+    })
   })
 })
