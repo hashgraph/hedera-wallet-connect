@@ -141,6 +141,11 @@ export function createNamespaces(caipNetworks: CaipNetwork[]): NamespaceConfig {
   }, {})
 }
 
+export const SUPPORTED_EIP155_CHAIN_IDS = new Set([
+  HederaChainDefinition.EVM.Mainnet.id, // 295
+  HederaChainDefinition.EVM.Testnet.id, // 296
+])
+
 export function getChainsFromApprovedSession(accounts: string[]): string[] {
   return accounts.map((address) => `${address.split(':')[0]}:${address.split(':')[1]}`)
 }
