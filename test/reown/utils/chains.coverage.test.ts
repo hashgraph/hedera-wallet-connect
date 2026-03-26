@@ -11,10 +11,6 @@ const customNetwork = {
   },
 } as any
 
-// Previously this file mutated the global coverage object to artificially bump
-// branch counts. The tests below now execute the relevant code paths
-// directly so no manual manipulation is required.
-
 describe('Chain Utilities additional coverage', () => {
   test('createNamespaces handles multiple networks', () => {
     const result = createNamespaces([
@@ -37,14 +33,14 @@ describe('Chain Utilities additional coverage', () => {
 
   test('mergeRequiredOptionalNamespaces adds new namespace', () => {
     const optional = {
-      eip155: {
-        methods: ['eth_sendTransaction'],
-        chains: ['eip155:1'],
+      hedera: {
+        methods: ['hedera_signMessage'],
+        chains: ['hedera:testnet'],
         events: [],
       },
     }
     const result = mergeRequiredOptionalNamespaces({}, optional)
-    expect(result.eip155).toEqual(optional.eip155)
+    expect(result.hedera).toEqual(optional.hedera)
   })
 
   test('mergeRequiredOptionalNamespaces handles undefined params', () => {
@@ -52,11 +48,11 @@ describe('Chain Utilities additional coverage', () => {
     expect(mergeRequiredOptionalNamespaces()).toEqual({})
 
     // optional methods undefined triggers default branch in merge
-    const required = { eip155: { chains: ['eip155:1'] } }
-    const optional = { eip155: { events: ['evt'] } }
+    const required = { hedera: { chains: ['hedera:testnet'] } }
+    const optional = { hedera: { events: ['evt'] } }
     const result = mergeRequiredOptionalNamespaces(required, optional)
-    expect(result.eip155).toEqual({
-      chains: ['eip155:1'],
+    expect(result.hedera).toEqual({
+      chains: ['hedera:testnet'],
       events: ['evt'],
       methods: [],
     })
@@ -64,33 +60,33 @@ describe('Chain Utilities additional coverage', () => {
 
   test('mergeRequiredOptionalNamespaces merges with existing methods/events', () => {
     const required = {
-      eip155: {
+      hedera: {
         methods: ['meth1'],
         events: ['e1'],
-        chains: ['eip155:1'],
+        chains: ['hedera:mainnet'],
       },
     }
     const optional = {
-      eip155: {
-        chains: ['eip155:2'],
+      hedera: {
+        chains: ['hedera:testnet'],
       },
     }
     const result = mergeRequiredOptionalNamespaces(required, optional)
-    expect(result.eip155).toEqual({
+    expect(result.hedera).toEqual({
       methods: ['meth1'],
       events: ['e1'],
-      chains: ['eip155:2', 'eip155:1'],
+      chains: ['hedera:testnet', 'hedera:mainnet'],
     })
   })
 
   test('merge handles falsy optional methods', () => {
     const required = {
-      eip155: { methods: ['a'], chains: ['eip155:1'], events: [] },
+      hedera: { methods: ['a'], chains: ['hedera:mainnet'], events: [] },
     }
     const optional = {
-      eip155: { methods: null as any },
+      hedera: { methods: null as any },
     }
     const result = mergeRequiredOptionalNamespaces(required, optional as any)
-    expect(result.eip155.methods).toEqual(['a'])
+    expect(result.hedera.methods).toEqual(['a'])
   })
 })

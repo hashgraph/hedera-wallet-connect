@@ -3,10 +3,8 @@ import { HederaProvider, HederaJsonRpcMethod, createNamespaces, HederaChainDefin
 import { requestTopic, testUserAccountId, prepareTestTransaction } from '../../_helpers'
 import { TopicCreateTransaction } from '@hiero-ledger/sdk'
 
-jest.mock('ethers')
 jest.mock('@walletconnect/universal-provider')
 jest.mock('../../../src/reown/providers/HIP820Provider')
-jest.mock('../../../src/reown/providers/EIP155Provider')
 
 describe('HederaProvider additional branch coverage 2', () => {
   beforeEach(() => {
@@ -18,7 +16,6 @@ describe('HederaProvider additional branch coverage 2', () => {
       .spyOn(UniversalProvider.prototype as any, 'initialize')
       .mockImplementation(function () {
         this.namespaces = {
-          eip155: { chains: ['eip155:1'] },
           hedera: { chains: ['hedera:testnet'] },
         }
         this.optionalNamespaces = undefined
@@ -45,28 +42,17 @@ describe('HederaProvider additional branch coverage 2', () => {
       topic: requestTopic,
       namespaces: {
         hedera: { accounts: [`hedera:testnet:${testUserAccountId.toString()}`] },
-        eip155: { accounts: ['eip155:1:0xabc'] },
       },
     } as any
     provider.namespaces = createNamespaces([
       HederaChainDefinition.Native.Testnet,
-      HederaChainDefinition.EVM.Testnet,
     ])
     provider.nativeProvider = { request: jest.fn().mockResolvedValue('h') } as any
-    provider.eip155Provider = { request: jest.fn().mockResolvedValue('e') } as any
 
     await provider.request({ method: HederaJsonRpcMethod.SignMessage }, 'hedera:previewnet')
     expect(provider.nativeProvider?.request).toHaveBeenCalledWith({
       request: { method: HederaJsonRpcMethod.SignMessage },
       chainId: 'hedera:previewnet',
-      topic: requestTopic,
-      expiry: undefined,
-    })
-
-    await provider.request({ method: 'eth_chainId' }, 'eip155:1')
-    expect(provider.eip155Provider?.request).toHaveBeenCalledWith({
-      request: { method: 'eth_chainId' },
-      chainId: 'eip155:1',
       topic: requestTopic,
       expiry: undefined,
     })
@@ -97,7 +83,7 @@ describe('HederaProvider additional branch coverage 2', () => {
 
   test('request handles missing provider request method', async () => {
     const provider = await HederaProvider.init({ projectId: 'pid', logger: 'error' })
-    provider.session = { topic: requestTopic, namespaces: { hedera: { accounts: [] }, eip155: { accounts: [] } } } as any
+    provider.session = { topic: requestTopic, namespaces: { hedera: { accounts: [] } } } as any
     provider.namespaces = {}
     let first = true
     Object.defineProperty(provider, 'nativeProvider', {
@@ -110,22 +96,10 @@ describe('HederaProvider additional branch coverage 2', () => {
         return undefined
       },
     })
-    let firstEip = true
-    Object.defineProperty(provider, 'eip155Provider', {
-      configurable: true,
-      get() {
-        if (firstEip) {
-          firstEip = false
-          return {}
-        }
-        return undefined
-      },
-    })
 
     await expect(
       provider.request({ method: HederaJsonRpcMethod.SignMessage })
     ).resolves.toBeUndefined()
-    await expect(provider.request({ method: 'eth_chainId' })).resolves.toBeUndefined()
   })
 
   test('hedera_signTransaction handles missing requestAccounts method', async () => {
@@ -165,41 +139,11 @@ describe('HederaProvider additional branch coverage 2', () => {
     ;(UniversalProvider.prototype.initialize as jest.Mock).mockRestore()
   })
 
-  test('init with only eip155 namespace', async () => {
-    jest
-      .spyOn(UniversalProvider.prototype as any, 'initialize')
-      .mockImplementation(function () {
-        this.namespaces = { eip155: { chains: ['eip155:1'] } }
-        this.providerOpts = { optionalNamespaces: { eip155: { rpcMap: { 'eip155:1': 'rpc' } } } }
-        this.session = { topic: requestTopic, namespaces: {} }
-        return Promise.resolve()
-      })
-    const initSpy = jest.spyOn(HederaProvider.prototype as any, 'initProviders').mockReturnValue({})
-    const provider = await HederaProvider.init({ projectId: 'pid', logger: 'error', session: { topic: requestTopic, namespaces: {} } as any })
-    expect(provider.namespaces).toEqual({ eip155: { rpcMap: { 'eip155:1': 'rpc' } } })
-    initSpy.mockRestore()
-    ;(UniversalProvider.prototype.initialize as jest.Mock).mockRestore()
-  })
-
   test('hedera_signTransaction throws when params undefined', async () => {
     const provider = await HederaProvider.init({ projectId: 'pid', logger: 'error' })
     provider.session = { topic: requestTopic, namespaces: { hedera: { accounts: [`hedera:testnet:${testUserAccountId}`] } } } as any
     provider.namespaces = { hedera: { chains: ['hedera:testnet'] } } as any
     provider.nativeProvider = { requestAccounts: () => [testUserAccountId.toString()], signTransaction: jest.fn() } as any
     await expect(provider.hedera_signTransaction(undefined as any)).rejects.toThrow('Transaction sent in incorrect format')
-  })
-
-  test('eth_sendTransaction handles undefined receipt', async () => {
-    const provider = await HederaProvider.init({ projectId: 'pid', logger: 'error', session: { topic: requestTopic, namespaces: {} } as any })
-    const mockWait = jest.fn().mockResolvedValue(undefined)
-    const mockSend = jest.fn().mockResolvedValue({ wait: mockWait })
-    const mockSigner = { sendTransaction: mockSend }
-    const mockGetSigner = jest.fn().mockReturnValue(mockSigner)
-    const { JsonRpcSigner, BrowserProvider } = require('ethers')
-    jest.spyOn(JsonRpcSigner.prototype, 'sendTransaction').mockImplementation(mockSend)
-    jest.spyOn(BrowserProvider.prototype, 'getSigner').mockImplementation(mockGetSigner)
-    const data = { to: '0x0', value: BigInt(1), gas: BigInt(1), gasPrice: BigInt(1), data: '0x', chainNamespace: 'eip155' } as any
-    const res = await provider.eth_sendTransaction(data, '0x1', 1)
-    expect(res).toBeNull()
   })
 })

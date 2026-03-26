@@ -61,10 +61,10 @@ reviewing the [Reown docs](https://docs.reown.com/overview).
 
 ## Using Reown's AppKit (Recommended)
 
-> **For EVM developers:** If you're coming from Ethereum or other EVM chains, the `eip155` adapter
-> lets you use standard Ethereum methods (`personal_sign`, `eth_sendTransaction`, etc.) on Hedera's
-> EVM-compatible layer - no Hedera-specific RPC knowledge required. The native `hedera` adapter is
-> optional and only needed for Hedera-native operations (HTS tokens, HBAR transfers via SDK, etc.).
+> **For EVM developers:** If you're coming from Ethereum or other EVM chains, use Reown's
+> `WagmiAdapter` (from `@reown/appkit-adapter-wagmi`) for standard Ethereum methods
+> (`personal_sign`, `eth_sendTransaction`, etc.) on Hedera's EVM-compatible layer. This library's
+> `HederaAdapter` is for Hedera-native operations (HTS tokens, HBAR transfers via SDK, etc.).
 
 1. Follow one of the quickstart instructions at
    https://docs.reown.com/appkit/overview#quickstart
@@ -72,7 +72,7 @@ reviewing the [Reown docs](https://docs.reown.com/overview).
 2. Add Hedera dependencies to your project:
 
 ```sh
-npm install @hashgraph/hedera-wallet-connect @hiero-ledger/sdk @walletconnect/universal-provider
+npm install @hashgraph/hedera-wallet-connect @hiero-ledger/sdk @walletconnect/universal-provider @reown/appkit-adapter-wagmi
 ```
 
 3. Initialize adapters and create AppKit:
@@ -85,6 +85,7 @@ import {
   HederaChainDefinition,
   hederaNamespace,
 } from '@hashgraph/hedera-wallet-connect'
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { createAppKit } from '@reown/appkit'
 
 const projectId = 'YOUR_PROJECT_ID'
@@ -96,15 +97,14 @@ const metadata = {
   icons: ['https://avatars.githubusercontent.com/u/179229932'],
 }
 
-// EVM adapter (eip155)
-const hederaEVMAdapter = new HederaAdapter({
+// EVM adapter (uses Reown's WagmiAdapter for standard Ethereum methods)
+const wagmiAdapter = new WagmiAdapter({
   projectId,
   networks: [HederaChainDefinition.EVM.Mainnet, HederaChainDefinition.EVM.Testnet],
-  namespace: 'eip155',
 })
 
-// Native adapter (hedera namespace)
-const hederaNativeAdapter = new HederaAdapter({
+// Native Hedera adapter (for Hedera-native operations)
+const hederaAdapter = new HederaAdapter({
   projectId,
   networks: [HederaChainDefinition.Native.Mainnet, HederaChainDefinition.Native.Testnet],
   namespace: hederaNamespace,
@@ -116,7 +116,7 @@ const universalProvider = (await HederaProvider.init({
 })) as unknown as UniversalProvider
 
 const appKit = createAppKit({
-  adapters: [hederaEVMAdapter, hederaNativeAdapter],
+  adapters: [wagmiAdapter, hederaAdapter],
   // @ts-expect-error expected type mismatch
   universalProvider,
   projectId,
@@ -152,32 +152,19 @@ appKit.subscribeCaipNetworkChange((network) => {
 })
 ```
 
-6. Sign a message (EVM):
-
-```typescript
-const address = appKit.getAddress()
-const provider = hederaEVMAdapter.getWalletConnectProvider()
-
-const signature = await hederaEVMAdapter.signMessage({
-  message: 'Hello from my Hedera dApp!',
-  address,
-  provider,
-})
-```
-
-7. Get balance:
+6. Get balance:
 
 ```typescript
 const address = appKit.getAddress()
 const network = appKit.getCaipNetwork()
 
-const { balance, symbol } = await hederaEVMAdapter.getBalance({
+const { balance, symbol } = await hederaAdapter.getBalance({
   address,
   caipNetwork: network,
 })
 ```
 
-8. Sign and execute a Hedera native transaction:
+7. Sign and execute a Hedera native transaction:
 
 ```typescript
 import { TransferTransaction, Hbar } from '@hiero-ledger/sdk'

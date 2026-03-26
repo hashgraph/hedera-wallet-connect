@@ -1,10 +1,8 @@
 import { HederaProvider, HederaJsonRpcMethod, createNamespaces, HederaChainDefinition } from '../../../src'
 import { requestTopic, testUserAccountId } from '../../_helpers'
 
-jest.mock('ethers')
 jest.mock('@walletconnect/universal-provider')
 jest.mock('../../../src/reown/providers/HIP820Provider')
-jest.mock('../../../src/reown/providers/EIP155Provider')
 
 describe('HederaProvider remaining lines', () => {
   let provider: HederaProvider
@@ -15,17 +13,14 @@ describe('HederaProvider remaining lines', () => {
       topic: requestTopic,
       namespaces: {
         hedera: { accounts: [`hedera:testnet:${testUserAccountId.toString()}`] },
-        eip155: { accounts: ['eip155:296:0xabc'] },
       },
     } as any
     provider.namespaces = createNamespaces([
       HederaChainDefinition.Native.Testnet,
-      HederaChainDefinition.EVM.Testnet,
     ])
     provider.client = {} as any
     provider.events = { emit: jest.fn() } as any
     provider.nativeProvider = { request: jest.fn().mockResolvedValue('native') } as any
-    provider.eip155Provider = { request: jest.fn().mockResolvedValue('eip') } as any
   })
 
   test('emit forwards events', () => {
@@ -33,7 +28,7 @@ describe('HederaProvider remaining lines', () => {
     expect((provider.events.emit as jest.Mock).mock.calls[0]).toEqual(['evt', { a: 1 }])
   })
 
-  test('request routes to native and eip155 providers', async () => {
+  test('request routes to native provider for hedera methods', async () => {
     await expect(
       provider.request({ method: HederaJsonRpcMethod.SignMessage })
     ).resolves.toBe('native')
@@ -43,32 +38,6 @@ describe('HederaProvider remaining lines', () => {
       topic: requestTopic,
       expiry: undefined,
     })
-
-    await expect(provider.request({ method: 'eth_chainId' })).resolves.toBe('eip')
-    expect(provider.eip155Provider?.request).toHaveBeenCalledWith({
-      request: { method: 'eth_chainId' },
-      chainId: 'eip155:296',
-      topic: requestTopic,
-      expiry: undefined,
-    })
-  })
-
-  test('error branches for transaction helpers', async () => {
-    await expect(
-      provider.eth_estimateGas({ chainNamespace: 'eip155' } as any, undefined as any, 296)
-    ).rejects.toThrow('address is undefined')
-
-    await expect(
-      provider.eth_sendTransaction({ chainNamespace: 'hedera' } as any, '0x1', 1)
-    ).rejects.toThrow('chainNamespace is not eip155')
-
-    await expect(
-      provider.eth_writeContract({ tokenAddress: '0x1', abi: [], args: [], method: 'm' } as any, undefined as any, 1)
-    ).rejects.toThrow('writeContract - address is undefined')
-
-    await expect(
-      provider.eth_writeContract({ tokenAddress: '0x1', abi: [], args: [], method: undefined as any } as any, '0x2', 1)
-    ).rejects.toThrow('Contract method is undefined')
   })
 
   test('all rpc wrapper methods call request', async () => {
@@ -114,12 +83,12 @@ describe('HederaProvider remaining lines', () => {
 
   test('rpcProviders returns existing providers', () => {
     const res = provider.rpcProviders
-    expect(res).toEqual({ hedera: provider.nativeProvider, eip155: provider.eip155Provider })
+    expect(res).toEqual({ hedera: provider.nativeProvider })
   })
 
   test('rpcProviders setter is callable', () => {
-    provider.rpcProviders = { hedera: {} as any, eip155: {} as any }
+    provider.rpcProviders = { hedera: {} as any }
     // getter should still return the original providers since setter is a no-op
-    expect(provider.rpcProviders).toEqual({ hedera: provider.nativeProvider, eip155: provider.eip155Provider })
+    expect(provider.rpcProviders).toEqual({ hedera: provider.nativeProvider })
   })
 })

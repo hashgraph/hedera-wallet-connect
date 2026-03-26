@@ -19,7 +19,6 @@
  */
 
 import { UniversalProvider } from '@walletconnect/universal-provider'
-import { BrowserProvider, JsonRpcSigner, Contract } from 'ethers'
 import {
   createNamespaces,
   ExecuteTransactionParams,
@@ -37,36 +36,21 @@ import {
   prepareTestTransaction,
   requestTopic,
 } from '../../_helpers'
-import { CaipNetwork, SendTransactionArgs, WriteContractArgs } from '@reown/appkit'
+import { CaipNetwork } from '@reown/appkit'
 import { TopicCreateTransaction } from '@hiero-ledger/sdk'
 
-jest.mock('ethers')
 jest.mock('@walletconnect/universal-provider')
 jest.mock('../../../src/reown/providers/HIP820Provider')
-jest.mock('../../../src/reown/providers/EIP155Provider')
 
 describe('HederaProvider', () => {
   let provider: HederaProvider
   const mockRequest = jest.fn()
-  const mockAddress = '0x9De4Efe3636E5578406f4a81d91A6Bb5EBa8828c'
-  const mockTx = '0x1937a387400d5e3873fe6beb76969efe5166a9e2d5d5d1c8e4a8f59c8034d67b'
-  const mockContractData = {
-    fromAddress: '0x321',
-    chainNamespace: 'eip155',
-    tokenAddress: '0x1234',
-    abi: ['function transfer()'],
-    method: 'transfer',
-    args: ['0x1', '100'],
-  } as WriteContractArgs
   const mockInitProviders = jest.fn()
   const mockSession = {
     topic: requestTopic,
     namespaces: {
       hedera: {
         accounts: [`hedera:testnet:${testUserAccountId.toString()}`],
-      },
-      eip155: {
-        accounts: [`eip155:296:${mockAddress}`],
       },
     },
   } as any
@@ -80,7 +64,6 @@ describe('HederaProvider', () => {
     })
     provider.namespaces = createNamespaces([
       HederaChainDefinition.Native.Testnet,
-      HederaChainDefinition.EVM.Testnet,
     ] as CaipNetwork[])
 
     provider['initProviders'] = mockInitProviders
@@ -170,49 +153,6 @@ describe('HederaProvider', () => {
     })
   })
 
-  describe('EVM Methods', () => {
-    const mockTxHash = '0xc168ac969428eb39611aedb9d180963444ed196524509fc1c2c6f34e81480461'
-    const mockSignature = '0xtestsig'
-    const message = 'test'
-    const mockData = {
-      to: '0x...',
-      value: BigInt(1),
-      chainNamespace: 'eip155',
-      address: mockAddress,
-      data: '0x...',
-    } as SendTransactionArgs
-
-    it('should sign EVM messages', async () => {
-      mockRequest.mockResolvedValue(mockSignature)
-
-      const result = await provider.eth_signMessage(message, mockAddress)
-      expect(result).toBe(mockSignature)
-    })
-
-    it('should send transactions', async () => {
-      const mockWait = jest.fn().mockResolvedValue({ hash: mockTxHash })
-      const mockSendTransaction = jest.fn().mockResolvedValue({ wait: mockWait })
-      const mockSigner = { sendTransaction: mockSendTransaction }
-      const mockGetSigner = jest.fn().mockReturnValue(mockSigner)
-
-      jest.spyOn(BrowserProvider.prototype, 'getSigner').mockImplementation(mockGetSigner)
-      jest
-        .spyOn(JsonRpcSigner.prototype, 'sendTransaction')
-        .mockImplementation(mockSendTransaction)
-
-      const result = await provider.eth_sendTransaction(mockData, mockAddress, 296)
-      expect(result).toBe(mockTxHash)
-    })
-
-    it('should estimate gas', async () => {
-      const mockEstimate = BigInt(1000)
-      jest.spyOn(JsonRpcSigner.prototype, 'estimateGas').mockResolvedValue(mockEstimate)
-
-      const result = await provider.eth_estimateGas(mockData, mockAddress, 296)
-      expect(result.toString()).toBe(mockEstimate.toString())
-    })
-  })
-
   describe('Session Management', () => {
     it('should pair correctly', async () => {
       const pairingTopic = 'test-topic'
@@ -222,15 +162,7 @@ describe('HederaProvider', () => {
 
     it('should get account addresses', () => {
       const addresses = provider.getAccountAddresses()
-      expect(addresses).toEqual([testUserAccountId.toString(), mockAddress])
-    })
-  })
-
-  describe('Error Handling', () => {
-    it('should handle invalid chain namespace', async () => {
-      await expect(provider.eth_estimateGas({} as any, '0x...', 123)).rejects.toThrow(
-        'chainNamespace is not eip155',
-      )
+      expect(addresses).toEqual([testUserAccountId.toString()])
     })
   })
 
@@ -252,26 +184,6 @@ describe('HederaProvider', () => {
 
       const result = await provider.eth_getTransactionReceipt('0x...')
       expect(result).toEqual(mockReceipt)
-    })
-  })
-
-  describe('Contract Interactions', () => {
-    it('should write to contracts', async () => {
-      ;(Contract as unknown as jest.Mock).mockImplementation(() => ({
-        [mockContractData.method]: jest.fn().mockResolvedValue(mockTx),
-      }))
-      const result = await provider.eth_writeContract(mockContractData, '0x...', 296)
-      expect(result).toBe(mockTx)
-    })
-
-    it('should handle missing methods', async () => {
-      await expect(
-        provider.eth_writeContract(
-          { ...mockContractData, method: 'invalid' as any },
-          '0x9De4Efe3636E5578406f4a81d91A6Bb5EBa8828c',
-          296,
-        ),
-      ).rejects.toThrow('Contract method is undefined')
     })
   })
 })

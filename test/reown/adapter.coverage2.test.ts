@@ -12,13 +12,13 @@ describe('HederaAdapter additional coverage', () => {
   test('connect returns wallet connect result', async () => {
     const adapter = new HederaAdapter({ namespace: hederaNamespace })
     ;(adapter as any).provider = {}
-    const mockConnector = { 
-      type: 'WALLET_CONNECT', 
+    const mockConnector = {
+      type: 'WALLET_CONNECT',
       connectWalletConnect: jest.fn().mockResolvedValue({}),
       disconnect: jest.fn().mockResolvedValue({})
     }
     jest.spyOn(adapter as any, 'getWalletConnectConnector').mockReturnValue(mockConnector)
-    
+
     const res = await adapter.connect({ chainId: '5' } as any)
     expect(res).toEqual({
       id: 'WALLET_CONNECT',
@@ -55,7 +55,7 @@ describe('HederaAdapter additional coverage', () => {
   test('getBalance returns formatted balance', async () => {
     const adapter = new HederaAdapter({ namespace: hederaNamespace })
     const empty = await adapter.getBalance({ address: '0x1' } as any)
-    expect(empty).toEqual({ balance: '0', decimals: 0, symbol: '' })
+    expect(empty).toEqual({ balance: '0', symbol: '' })
 
     mockedGetBalance.mockResolvedValue({
       hbars: { toTinybars: () => ({ toString: () => '100000000' }) },
@@ -67,7 +67,7 @@ describe('HederaAdapter additional coverage', () => {
     }
     const res = await adapter.getBalance({ address: '0x1', caipNetwork } as any)
     expect(mockedGetBalance).toHaveBeenCalled()
-    expect(res).toEqual({ balance: '1.0', decimals: 8, symbol: 'HBAR' })
+    expect(res).toEqual({ balance: '1', symbol: 'HBAR' })
   })
 
   test('signMessage uses hedera provider path', async () => {
@@ -78,20 +78,10 @@ describe('HederaAdapter additional coverage', () => {
     expect(result.signature).toBe('sig')
   })
 
-  test('sendTransaction executes for eip155 namespace', async () => {
-    const adapter = new HederaAdapter({ namespace: 'eip155' })
-    const provider = { eth_sendTransaction: jest.fn().mockResolvedValue('0xabc') }
-    const res = await adapter.sendTransaction({
-      provider: provider as any,
-      value: 0n,
-      to: '0x2',
-      data: '0x',
-      gas: 1n,
-      gasPrice: 1n,
-      address: '0x1',
-      caipNetwork: HederaChainDefinition.EVM.Mainnet,
-    } as any)
-    expect(provider.eth_sendTransaction).toHaveBeenCalled()
-    expect(res.hash).toBe('0xabc')
+  test('signMessage throws when provider is missing', async () => {
+    const adapter = new HederaAdapter({ namespace: hederaNamespace })
+    await expect(
+      adapter.signMessage({ provider: undefined } as any),
+    ).rejects.toThrow('Provider is undefined')
   })
 })

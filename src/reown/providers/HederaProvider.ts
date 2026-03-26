@@ -1,19 +1,4 @@
-import {
-  BrowserProvider,
-  Contract,
-  JsonRpcSigner,
-  TransactionRequest,
-  hexlify,
-  isHexString,
-  toQuantity,
-  toUtf8Bytes,
-} from 'ethers'
-import { CaipNetwork, RequestArguments } from '@reown/appkit'
-import type {
-  EstimateGasTransactionArgs,
-  SendTransactionArgs,
-  WriteContractArgs,
-} from '@reown/appkit'
+import { RequestArguments } from '@reown/appkit'
 import UniversalProvider, {
   IProvider,
   RpcProviderMap,
@@ -42,18 +27,11 @@ import {
   SUPPORTED_EIP155_CHAIN_IDS,
 } from '../utils'
 import HIP820Provider from './HIP820Provider'
-import EIP155Provider from './EIP155Provider'
 import { createLogger } from '../../lib/shared/logger'
 
-export type HederaWalletConnectProviderConfig = {
-  chains: CaipNetwork[]
-} & UniversalProviderOpts
-
-// Reown AppKit UniversalProvider for HIP-820 & EIP-155 version implementation of the @hashgraph/hedera-wallet-connect DAppConnector
 export class HederaProvider extends UniversalProvider {
   private hederaLogger = createLogger('HederaProvider')
   public nativeProvider?: HIP820Provider
-  public eip155Provider?: EIP155Provider
 
   constructor(opts: UniversalProviderOpts) {
     super(opts)
@@ -110,21 +88,10 @@ export class HederaProvider extends UniversalProvider {
         topic: this.session.topic,
         expiry,
       })
-    } else {
-      if (!this.eip155Provider) {
-        throw new Error('eip155Provider not initialized')
-      }
-      chainId = chainId ?? this.namespaces?.eip155?.chains[0]
-
-      return this.eip155Provider?.request({
-        request: {
-          ...args,
-        },
-        chainId: chainId!,
-        topic: this.session.topic,
-        expiry,
-      })
     }
+
+    // For non-Hedera methods, route through the base UniversalProvider
+    return super.request(args, chain, expiry)
   }
 
   /**
@@ -281,84 +248,13 @@ export class HederaProvider extends UniversalProvider {
     ))!
   }
 
-  async eth_signMessage(message: string, address: string) {
-    const hexMessage = isHexString(message) ? message : hexlify(toUtf8Bytes(message))
-    const signature = await this.request({
-      method: 'personal_sign',
-      params: [hexMessage, address],
-    })
-
-    return signature as `0x${string}`
-  }
-
-  async eth_estimateGas(data: EstimateGasTransactionArgs, address: string, networkId: number) {
-    if (!address) {
-      throw new Error('estimateGas - address is undefined')
-    }
-    if (data.chainNamespace !== 'eip155') {
-      throw new Error('estimateGas - chainNamespace is not eip155')
-    }
-
-    const txParams = {
-      from: data.address,
-      to: data.to,
-      data: data.data,
-      type: 0,
-    }
-    const browserProvider = new BrowserProvider(this, networkId)
-    const signer = new JsonRpcSigner(browserProvider, address)
-
-    return await signer.estimateGas(txParams)
-  }
-
-  async eth_sendTransaction(data: SendTransactionArgs, address: string, networkId: number) {
-    if (!address) {
-      throw new Error('sendTransaction - address is undefined')
-    }
-    if (data.chainNamespace !== 'eip155') {
-      throw new Error('sendTransaction - chainNamespace is not eip155')
-    }
-
-    const txParams = {
-      to: data.to,
-      value: data.value,
-      gasLimit: data.gas,
-      gasPrice: data.gasPrice,
-      data: data.data,
-      type: 0,
-    }
-    const browserProvider = new BrowserProvider(this, networkId)
-    const signer = new JsonRpcSigner(browserProvider, address)
-    const txResponse = await signer.sendTransaction(txParams)
-    const txReceipt = await txResponse.wait()
-
-    return (txReceipt?.hash as `0x${string}`) || null
-  }
-
-  async eth_writeContract(data: WriteContractArgs, address: string, chainId: number) {
-    if (!address) {
-      throw new Error('writeContract - address is undefined')
-    }
-    const browserProvider = new BrowserProvider(this, chainId)
-    const signer = new JsonRpcSigner(browserProvider, address)
-    const contract = new Contract(data.tokenAddress, data.abi, signer)
-    if (!contract || !data.method) {
-      throw new Error('Contract method is undefined')
-    }
-    const method = contract[data.method]
-    if (method) {
-      return (await method(...data.args)) as string
-    }
-    throw new Error('Contract method is undefined')
-  }
-
   // Returns the latest block number
   async eth_blockNumber() {
     return this.request<string>({ method: 'eth_blockNumber', params: [] })
   }
 
-  // Executes a call with the given transaction request and block identifier
-  async eth_call(tx: TransactionRequest, block: string = 'latest') {
+  // Executes a call with the given transaction request
+  async eth_call(tx: Record<string, unknown>, block: string = 'latest') {
     return this.request<string>({ method: 'eth_call', params: [tx, block] })
   }
 
@@ -366,7 +262,7 @@ export class HederaProvider extends UniversalProvider {
   async eth_feeHistory(blockCount: number, newestBlock: string, rewardPercentiles: number[]) {
     return this.request<string>({
       method: 'eth_feeHistory',
-      params: [toQuantity(blockCount), newestBlock, rewardPercentiles],
+      params: [blockCount, newestBlock, rewardPercentiles],
     })
   }
 
@@ -523,48 +419,21 @@ export class HederaProvider extends UniversalProvider {
   }
 
   public async connect(params?: any): Promise<any> {
-    this.hederaLogger.debug('connect called with params:', params)
-    // Update the internal namespace properties before connecting
     if (params) {
-      if (params.requiredNamespaces) {
-        this.hederaLogger.debug('Setting requiredNamespaces:', params.requiredNamespaces)
-        // @ts-ignore - accessing private property
-        this.requiredNamespaces = params.requiredNamespaces
-      }
-      if (params.optionalNamespaces) {
-        this.hederaLogger.debug('Setting optionalNamespaces:', params.requiredNamespaces)
-        // @ts-ignore - accessing private property
-        this.optionalNamespaces = params.optionalNamespaces
-      }
-      if (params.namespaces) {
-        this.hederaLogger.debug('Setting namespaces:', params.namespaces)
-        // @ts-ignore - accessing private property
-        this.namespaces = params.namespaces
-      }
+      // @ts-ignore - accessing private property
+      if (params.requiredNamespaces) this.requiredNamespaces = params.requiredNamespaces
+      // @ts-ignore - accessing private property
+      if (params.optionalNamespaces) this.optionalNamespaces = params.optionalNamespaces
+      // @ts-ignore - accessing private property
+      if (params.namespaces) this.namespaces = params.namespaces
     }
 
-    this.hederaLogger.debug('Calling super.connect with params')
-
-    // Try to directly pass the namespaces to the parent connect
-    let result
-    try {
-      result = await super.connect(params)
-    } catch (error) {
-      this.hederaLogger.error('Error in super.connect:', error)
-      throw error
-    }
-
-    this.hederaLogger.info('super.connect completed successfully')
-    this.hederaLogger.debug('Result from super.connect:', result)
-
+    const result = await super.connect(params)
     this.initProviders()
     return result
   }
 
   public async pair(pairingTopic: string | undefined): ReturnType<UniversalProvider['pair']> {
-    console.log(pairingTopic)
-    //@ts-expect-error
-    console.log(this.requiredNamespaces)
     const session = await super.pair(pairingTopic)
     this.initProviders()
     return session
@@ -623,18 +492,8 @@ export class HederaProvider extends UniversalProvider {
           providers[namespace] = provider
           break
         }
-        case 'eip155': {
-          const provider = new EIP155Provider({
-            namespace: combinedNamespace,
-            events: this.events,
-            client: this.client,
-          })
-          this.eip155Provider = provider
-          providers[namespace] = provider
-          break
-        }
         default:
-          throw new Error(`Unsupported namespace: ${namespace}`)
+          this.hederaLogger.warn(`Skipping unsupported namespace: ${namespace}`)
       }
     })
 
@@ -643,12 +502,11 @@ export class HederaProvider extends UniversalProvider {
 
   // @ts-expect-error - override base rpcProviders logic
   get rpcProviders(): RpcProviderMap {
-    if (!this.nativeProvider && !this.eip155Provider) {
+    if (!this.nativeProvider) {
       return this.initProviders()
     }
     return {
       hedera: this.nativeProvider!,
-      eip155: this.eip155Provider!,
     }
   }
 
