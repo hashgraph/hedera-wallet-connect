@@ -54,6 +54,6 @@ export namespace HederaConnector {
   export type Options = {
     provider: UniversalProvider
     caipNetworks: CaipNetwork[]
-    namespace: 'hedera' | 'eip155'
+    namespace: 'hedera'
   }
 }

@@ -6,11 +6,11 @@ describe('chains utilities extra coverage', () => {
       hedera: { methods: [], chains: ['hedera:mainnet'], events: [] },
     }
     const optional = {
-      eip155: { methods: ['foo'], chains: ['eip155:296'], events: [] },
+      hedera: { methods: ['foo'], chains: ['hedera:testnet'], events: [] },
     }
     const result = mergeRequiredOptionalNamespaces(required, optional)
     expect(result.hedera.chains).toContain('hedera:mainnet')
-    expect(result.eip155.chains).toEqual(['eip155:296'])
-    expect(result.eip155.methods).toEqual(['foo'])
+    expect(result.hedera.chains).toContain('hedera:testnet')
+    expect(result.hedera.methods).toEqual(['foo'])
   })
 })

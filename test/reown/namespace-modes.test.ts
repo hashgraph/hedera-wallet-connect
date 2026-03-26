@@ -23,15 +23,15 @@ import { CaipNetwork } from '@reown/appkit-common'
 import { ProposalTypes } from '@walletconnect/types'
 
 // V1 imports
-import { 
-  networkNamespaces, 
-  HederaJsonRpcMethod 
+import {
+  networkNamespaces,
+  HederaJsonRpcMethod
 } from '../../src'
 
 // V2 imports
-import { 
-  createNamespaces, 
-  HederaChainDefinition, 
+import {
+  createNamespaces,
+  HederaChainDefinition,
   HederaProvider
 } from '../../src'
 import { HederaConnector } from '../../src/reown/connectors/HederaConnector'
@@ -74,7 +74,7 @@ describe('Namespace Modes: Required vs Optional', () => {
         connect: mockConnectURI,
         session: { getAll: () => [] },
         on: jest.fn(),
-        core: { 
+        core: {
           events: { on: jest.fn() },
           pairing: { events: { on: jest.fn() } }
         }
@@ -119,12 +119,10 @@ describe('Namespace Modes: Required vs Optional', () => {
     it('should create optionalNamespaces structure for HederaConnector', () => {
       const namespaces = createNamespaces([
         HederaChainDefinition.Native.Testnet,
-        HederaChainDefinition.EVM.Testnet
       ] as CaipNetwork[])
 
       // V2 creates namespace config that can be used as optional namespaces
       expect(namespaces).toHaveProperty('hedera')
-      expect(namespaces).toHaveProperty('eip155')
 
       // Verify hedera namespace structure
       const hedera = namespaces.hedera
@@ -132,13 +130,6 @@ describe('Namespace Modes: Required vs Optional', () => {
       expect(hedera).toHaveProperty('methods')
       expect(hedera).toHaveProperty('events')
       expect(hedera).toHaveProperty('rpcMap')
-
-      // Verify eip155 namespace structure
-      const eip155 = namespaces.eip155
-      expect(eip155).toHaveProperty('chains')
-      expect(eip155).toHaveProperty('methods')
-      expect(eip155).toHaveProperty('events')
-      expect(eip155).toHaveProperty('rpcMap')
     })
 
     it('should use optionalNamespaces in HederaConnector.connectWalletConnect', async () => {
@@ -150,7 +141,6 @@ describe('Namespace Modes: Required vs Optional', () => {
 
       const caipNetworks = [
         HederaChainDefinition.Native.Testnet,
-        HederaChainDefinition.EVM.Testnet
       ] as CaipNetwork[]
 
       const connector = new HederaConnector({
@@ -173,19 +163,13 @@ describe('Namespace Modes: Required vs Optional', () => {
             events: testEvents,
             rpcMap: expect.any(Object)
           }),
-          eip155: expect.objectContaining({
-            chains: ['eip155:296'],
-            methods: expect.any(Array),
-            events: testEvents,
-            rpcMap: expect.any(Object)
-          })
         })
       })
     })
 
     it('should create default requiredNamespaces in HederaProvider when none provided', async () => {
       const mockConnect = jest.fn().mockResolvedValue({})
-      
+
       // Create a mock that extends the actual HederaProvider structure
       const provider = new HederaProvider({
         projectId: 'test',
@@ -214,12 +198,11 @@ describe('Namespace Modes: Required vs Optional', () => {
     it('should be able to convert V2 optionalNamespaces to V1 requiredNamespaces format', () => {
       const v2Namespaces = createNamespaces([
         HederaChainDefinition.Native.Testnet,
-        HederaChainDefinition.EVM.Testnet
       ] as CaipNetwork[])
 
       // Convert V2 namespace config to ProposalTypes.RequiredNamespaces format
       const convertedToRequired: ProposalTypes.RequiredNamespaces = {}
-      
+
       Object.entries(v2Namespaces).forEach(([namespace, config]) => {
         convertedToRequired[namespace] = {
           chains: config.chains || [],
@@ -234,12 +217,6 @@ describe('Namespace Modes: Required vs Optional', () => {
         methods: testMethods,
         events: testEvents
       })
-
-      expect(convertedToRequired.eip155).toEqual({
-        chains: ['eip155:296'],
-        methods: expect.any(Array),
-        events: testEvents
-      })
     })
 
     it('should be able to convert V1 requiredNamespaces to V2 optionalNamespaces format', () => {
@@ -251,7 +228,7 @@ describe('Namespace Modes: Required vs Optional', () => {
 
       // Convert V1 required namespaces to V2 namespace config format
       const convertedToOptional: any = {}
-      
+
       Object.entries(v1RequiredNamespaces).forEach(([namespace, config]) => {
         convertedToOptional[namespace] = {
           chains: config.chains,
@@ -312,7 +289,6 @@ describe('Namespace Modes: Required vs Optional', () => {
       const optionalNamespaces = createNamespaces([
         HederaChainDefinition.Native.Testnet,
         HederaChainDefinition.Native.Mainnet,
-        HederaChainDefinition.EVM.Testnet
       ] as CaipNetwork[])
 
       const mixedConnectionParams = {
@@ -324,7 +300,6 @@ describe('Namespace Modes: Required vs Optional', () => {
       expect(mixedConnectionParams.requiredNamespaces.hedera.methods).toHaveLength(3)
       expect(mixedConnectionParams.optionalNamespaces.hedera?.methods).toEqual(testMethods)
       expect(mixedConnectionParams.optionalNamespaces.hedera?.chains).toEqual(['hedera:testnet', 'hedera:mainnet'])
-      expect(mixedConnectionParams.optionalNamespaces.eip155?.chains).toEqual(['eip155:296'])
     })
   })
 
@@ -344,7 +319,7 @@ describe('Namespace Modes: Required vs Optional', () => {
 
       // Extract and compare the hedera namespace content
       const v1HederaSerialized = JSON.stringify(v1Params.requiredNamespaces.hedera)
-      
+
       const v2HederaAsRequired = {
         chains: v2Params.optionalNamespaces.hedera?.chains || [],
         methods: v2Params.optionalNamespaces.hedera?.methods || [],

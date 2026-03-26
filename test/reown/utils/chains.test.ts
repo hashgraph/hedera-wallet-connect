@@ -42,24 +42,13 @@ describe('Chain Utilities', () => {
         rpcMap: { mainnet: 'https://mainnet.hashio.io/api' },
       })
     })
-
-    it('should create EVM namespace config', () => {
-      const networks = [HederaChainDefinition.EVM.Testnet]
-      const result = createNamespaces(networks as CaipNetwork[])
-
-      expect(result.eip155).toMatchObject({
-        methods: expect.arrayContaining(['eth_sendTransaction']),
-        chains: ['eip155:296'],
-        rpcMap: { '296': 'https://testnet.hashio.io/api' },
-      })
-    })
   })
 
   describe('getChainsFromApprovedSession', () => {
     it('should extract chains from accounts', () => {
-      const accounts = [testAccount, 'eip155:1:0x...']
+      const accounts = [testAccount]
       const result = getChainsFromApprovedSession(accounts)
-      expect(result).toEqual(['hedera:mainnet', 'eip155:1'])
+      expect(result).toEqual(['hedera:mainnet'])
     })
   })
 

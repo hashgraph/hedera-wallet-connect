@@ -2,10 +2,8 @@ import { UniversalProvider } from '@walletconnect/universal-provider'
 import { HederaProvider, HederaJsonRpcMethod, createNamespaces, HederaChainDefinition } from '../../../src'
 import { requestTopic, testUserAccountId } from '../../_helpers'
 
-jest.mock('ethers')
 jest.mock('@walletconnect/universal-provider')
 jest.mock('../../../src/reown/providers/HIP820Provider')
-jest.mock('../../../src/reown/providers/EIP155Provider')
 
 describe('HederaProvider additional branches', () => {
   let provider: HederaProvider
@@ -13,7 +11,6 @@ describe('HederaProvider additional branches', () => {
     topic: requestTopic,
     namespaces: {
       hedera: { accounts: [`hedera:testnet:${testUserAccountId.toString()}`] },
-      eip155: { accounts: ['eip155:296:0xabc'] },
     },
   } as any
 
@@ -26,29 +23,31 @@ describe('HederaProvider additional branches', () => {
     expect((provider as any).initProviders()).toEqual({})
   })
 
-  test('initProviders throws on unsupported namespace', () => {
+  test('initProviders warns on unsupported namespace', () => {
     provider.session = { topic: 't', namespaces: { foo: { accounts: [] } } } as any
     provider.namespaces = provider.session.namespaces
-    expect(() => (provider as any).initProviders()).toThrow('Unsupported namespace: foo')
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    const result = (provider as any).initProviders()
+    // The unsupported namespace is skipped with a warning, not thrown
+    expect(Object.keys(result)).not.toContain('foo')
+    warnSpy.mockRestore()
   })
 
   test('initProviders sets providers', () => {
     provider.session = sessionBase
     provider.namespaces = createNamespaces([
       HederaChainDefinition.Native.Testnet,
-      HederaChainDefinition.EVM.Testnet,
     ])
     const result = (provider as any).initProviders()
-    expect('hedera' in result && 'eip155' in result).toBe(true)
+    expect('hedera' in result).toBe(true)
   })
 
-  test('initProviders filters non-Hedera EIP155 chains from session', () => {
-    // Simulate MetaMask v11+ including Ethereum mainnet and Polygon alongside Hedera
+  test('initProviders skips eip155 namespace', () => {
     provider.session = {
       topic: requestTopic,
       namespaces: {
         hedera: { accounts: [`hedera:testnet:${testUserAccountId.toString()}`] },
-        eip155: { accounts: ['eip155:1:0xabc', 'eip155:137:0xabc', 'eip155:296:0xabc'] },
+        eip155: { accounts: ['eip155:296:0xabc'] },
       },
     } as any
     provider.namespaces = createNamespaces([
@@ -56,19 +55,15 @@ describe('HederaProvider additional branches', () => {
       HederaChainDefinition.EVM.Testnet,
     ])
     const result = (provider as any).initProviders()
-    expect('eip155' in result).toBe(true)
-    // EIP155Provider should only receive Hedera chain (296), not 1 or 137
-    const EIP155Provider = require('../../../src/reown/providers/EIP155Provider').default
-    const constructorCalls = EIP155Provider.mock.instances
-    const lastCall = EIP155Provider.mock.calls[EIP155Provider.mock.calls.length - 1][0]
-    expect(lastCall.namespace.chains).toEqual(['eip155:296'])
+    expect('hedera' in result).toBe(true)
+    expect('eip155' in result).toBe(false)
   })
 
   test('rpcProviders calls init when missing', () => {
-    const spy = jest.spyOn(provider as any, 'initProviders').mockReturnValue({ hedera: 1, eip155: 2 } as any)
+    const spy = jest.spyOn(provider as any, 'initProviders').mockReturnValue({ hedera: 1 } as any)
     const res = provider.rpcProviders
     expect(spy).toHaveBeenCalled()
-    expect(res).toEqual({ hedera: 1, eip155: 2 })
+    expect(res).toEqual({ hedera: 1 })
   })
 
   test('getAccountAddresses errors without session', () => {
@@ -79,17 +74,13 @@ describe('HederaProvider additional branches', () => {
     await expect(provider.request({ method: 'eth_chainId' })).rejects.toThrow('connect() before request')
   })
 
-  test('request handles missing providers', async () => {
+  test('request handles missing nativeProvider', async () => {
     provider.session = sessionBase
     provider.namespaces = createNamespaces([
       HederaChainDefinition.Native.Testnet,
-      HederaChainDefinition.EVM.Testnet,
     ])
     await expect(
       provider.request({ method: HederaJsonRpcMethod.SignMessage })
     ).rejects.toThrow('nativeProvider not initialized')
-
-    provider.nativeProvider = {} as any
-    await expect(provider.request({ method: 'eth_chainId' })).rejects.toThrow('eip155Provider not initialized')
   })
 })

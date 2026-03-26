@@ -20,18 +20,17 @@
 
 import { LedgerId } from '@hiero-ledger/sdk'
 import { CaipNetwork } from '@reown/appkit-common'
-import { ProposalTypes } from '@walletconnect/types'
 
 // V1 imports
-import { 
-  networkNamespaces, 
-  HederaJsonRpcMethod, 
-  DAppConnector 
+import {
+  networkNamespaces,
+  HederaJsonRpcMethod,
+  DAppConnector
 } from '../../src'
 
 // V2 imports
-import { 
-  createNamespaces, 
+import {
+  createNamespaces,
   HederaChainDefinition
 } from '../../src'
 import { HederaConnector } from '../../src/reown/connectors/HederaConnector'
@@ -57,18 +56,17 @@ describe('Namespace URI Parameter Encoding', () => {
 
       // Should serialize without throwing
       expect(() => JSON.stringify(connectionParams)).not.toThrow()
-      
+
       // Verify serialized structure
       const serialized = JSON.stringify(connectionParams)
       const parsed = JSON.parse(serialized)
-      
+
       expect(parsed.requiredNamespaces.hedera).toEqual(v1Namespaces.hedera)
     })
 
     it('should serialize V2 optionalNamespaces without errors', () => {
       const v2Namespaces = createNamespaces([
         HederaChainDefinition.Native.Testnet,
-        HederaChainDefinition.EVM.Testnet
       ] as CaipNetwork[])
 
       const connectionParams = {
@@ -78,13 +76,12 @@ describe('Namespace URI Parameter Encoding', () => {
 
       // Should serialize without throwing
       expect(() => JSON.stringify(connectionParams)).not.toThrow()
-      
+
       // Verify serialized structure
       const serialized = JSON.stringify(connectionParams)
       const parsed = JSON.parse(serialized)
-      
+
       expect(parsed.optionalNamespaces.hedera).toEqual(v2Namespaces.hedera)
-      expect(parsed.optionalNamespaces.eip155).toEqual(v2Namespaces.eip155)
     })
 
     it('should handle special characters in namespace data', () => {
@@ -92,7 +89,7 @@ describe('Namespace URI Parameter Encoding', () => {
         HederaJsonRpcMethod.SignMessage,
         'custom:method_with_special:characters'
       ]
-      
+
       const customEvents = [
         'accountsChanged',
         'custom:event_with_special:characters'
@@ -106,10 +103,10 @@ describe('Namespace URI Parameter Encoding', () => {
 
       // Should handle special characters in serialization
       expect(() => JSON.stringify(v1Namespaces)).not.toThrow()
-      
+
       const serialized = JSON.stringify(v1Namespaces)
       const parsed = JSON.parse(serialized)
-      
+
       expect(parsed.hedera.methods).toEqual(customMethods)
       expect(parsed.hedera.events).toEqual(customEvents)
     })
@@ -126,10 +123,10 @@ describe('Namespace URI Parameter Encoding', () => {
       // Simulate WalletConnect URI parameter creation
       const uriParams = new URLSearchParams()
       uriParams.set('requiredNamespaces', JSON.stringify(v1Namespaces))
-      
+
       // Should create valid URI parameters
       expect(uriParams.get('requiredNamespaces')).toBeTruthy()
-      
+
       // Should be able to parse back the namespace data
       const decodedNamespaces = JSON.parse(uriParams.get('requiredNamespaces')!)
       expect(decodedNamespaces.hedera).toEqual(v1Namespaces.hedera)
@@ -143,10 +140,10 @@ describe('Namespace URI Parameter Encoding', () => {
       // Simulate WalletConnect URI parameter creation
       const uriParams = new URLSearchParams()
       uriParams.set('optionalNamespaces', JSON.stringify(v2Namespaces))
-      
+
       // Should create valid URI parameters
       expect(uriParams.get('optionalNamespaces')).toBeTruthy()
-      
+
       // Should be able to parse back the namespace data
       const decodedNamespaces = JSON.parse(uriParams.get('optionalNamespaces')!)
       expect(decodedNamespaces.hedera).toEqual(v2Namespaces.hedera)
@@ -176,7 +173,7 @@ describe('Namespace URI Parameter Encoding', () => {
         testMethods,
         testEvents
       )
-      
+
       // V2 approach
       const v2Namespaces = createNamespaces([
         HederaChainDefinition.Native.Testnet
@@ -216,7 +213,6 @@ describe('Namespace URI Parameter Encoding', () => {
       const optionalNamespaces = createNamespaces([
         HederaChainDefinition.Native.Testnet,
         HederaChainDefinition.Native.Mainnet,
-        HederaChainDefinition.EVM.Testnet
       ] as CaipNetwork[])
 
       const mixedParams = {
@@ -226,7 +222,7 @@ describe('Namespace URI Parameter Encoding', () => {
 
       // Should serialize mixed parameters
       expect(() => JSON.stringify(mixedParams)).not.toThrow()
-      
+
       const encoded = encodeURIComponent(JSON.stringify(mixedParams))
       const decoded = JSON.parse(decodeURIComponent(encoded))
 
@@ -305,11 +301,9 @@ describe('Namespace URI Parameter Encoding', () => {
     })
 
     it('should create URIs that are wallet-compatible', () => {
-      // Test that namespace structures conform to WalletConnect standards
-      
       // V1 structure
       const v1Structure = networkNamespaces(LedgerId.TESTNET, testMethods, testEvents)
-      
+
       // Verify V1 follows ProposalTypes.RequiredNamespaces format
       const validateRequiredNamespace = (ns: any) => {
         expect(ns).toHaveProperty('chains')
@@ -324,7 +318,7 @@ describe('Namespace URI Parameter Encoding', () => {
 
       // V2 structure
       const v2Structure = createNamespaces([HederaChainDefinition.Native.Testnet] as CaipNetwork[])
-      
+
       // Verify V2 follows NamespaceConfig format
       const validateNamespaceConfig = (ns: any) => {
         expect(ns).toHaveProperty('chains')
@@ -353,11 +347,11 @@ describe('Namespace URI Parameter Encoding', () => {
 
       // Should not throw during serialization
       expect(() => JSON.stringify(malformedNamespaces)).not.toThrow()
-      
+
       // But should be detectable after parsing
       const serialized = JSON.stringify(malformedNamespaces)
       const parsed = JSON.parse(serialized)
-      
+
       expect(parsed.hedera.chains).toBeNull()
       expect(Array.isArray(parsed.hedera.chains)).toBe(false)
     })
@@ -369,7 +363,7 @@ describe('Namespace URI Parameter Encoding', () => {
       // Should serialize empty structures
       expect(() => JSON.stringify(emptyV1)).not.toThrow()
       expect(() => JSON.stringify(emptyV2)).not.toThrow()
-      
+
       expect(emptyV1.hedera.methods).toEqual([])
       expect(emptyV1.hedera.events).toEqual([])
       expect(Object.keys(emptyV2)).toEqual([])
@@ -379,7 +373,6 @@ describe('Namespace URI Parameter Encoding', () => {
       const originalV1 = networkNamespaces(LedgerId.MAINNET, testMethods, testEvents)
       const originalV2 = createNamespaces([
         HederaChainDefinition.Native.Mainnet,
-        HederaChainDefinition.EVM.Mainnet
       ] as CaipNetwork[])
 
       // Multiple encode/decode cycles
