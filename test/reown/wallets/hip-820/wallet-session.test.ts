@@ -32,9 +32,12 @@ describe('HIP820Wallet Session Handling', () => {
   const dummyWallet: any = {
     getNetwork: jest.fn().mockReturnValue({ '0.0.3': AccountId.fromString('0.0.3') }),
   }
+  const dummyClient: any = {
+    network: { '0.0.3': AccountId.fromString('0.0.3') },
+  }
 
   beforeEach(() => {
-    wallet820 = new HIP820Wallet(dummyWallet)
+    wallet820 = new HIP820Wallet(dummyWallet, dummyClient)
   })
 
   describe('validateParam', () => {
