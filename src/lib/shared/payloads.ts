@@ -138,8 +138,7 @@ export interface SignAndExecuteTransactionRequest extends EngineTypes.RequestPar
 }
 
 // result
-export interface SignAndExecuteTransactionResult
-  extends JsonRpcResult<TransactionResponseJSON> {}
+export interface SignAndExecuteTransactionResult extends JsonRpcResult<TransactionResponseJSON> {}
 
 // response
 export interface SignAndExecuteTransactionResponse extends EngineTypes.RespondParams {
