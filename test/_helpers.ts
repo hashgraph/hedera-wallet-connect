@@ -20,7 +20,7 @@
 
 import fs from 'fs'
 import path from 'path'
-import { AccountId, Query, Transaction, TransactionId } from '@hashgraph/sdk'
+import { AccountId, Query, Transaction, TransactionId } from '@hiero-ledger/sdk'
 
 export const projectId = 'ce06497abf4102004138a10edd29c921'
 export const walletMetadata = {

@@ -18,7 +18,7 @@
  *
  */
 
-import { TransferTransaction, Hbar, AccountId } from '@hashgraph/sdk'
+import { TransferTransaction, Hbar, AccountId } from '@hiero-ledger/sdk'
 import {
   HederaChainId,
   SignTransactionResponse,

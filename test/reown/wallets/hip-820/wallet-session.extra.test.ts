@@ -1,4 +1,4 @@
-import { PrivateKey, TopicCreateTransaction, TransferTransaction, AccountInfoQuery } from '@hashgraph/sdk'
+import { PrivateKey, TopicCreateTransaction, TransferTransaction, AccountInfoQuery } from '@hiero-ledger/sdk'
 import {
   HIP820Wallet,
   HederaChainId,

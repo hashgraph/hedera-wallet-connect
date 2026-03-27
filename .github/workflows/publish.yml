@@ -6,7 +6,6 @@ on:
     branches:
       - main
       - canary
-      - introduce-v2
   # TRIGGER 2: Stable Releases
   release:
     types:
@@ -26,12 +25,12 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
         with:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup NodeJS Environment
         uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
@@ -44,6 +43,9 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Build
+        run: npm run build
 
       - name: Set Canary Version
         if: ${{ github.event_name == 'push' }}
@@ -73,7 +75,7 @@ jobs:
           echo "PACK_FILENAME=$EXPECTED_FILENAME" >> $GITHUB_OUTPUT
 
       - name: Upload Package Artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: package-artifact
           path: ${{ steps.pack.outputs.PACK_FILENAME }}
@@ -89,7 +91,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
         with:
           egress-policy: audit
 
@@ -103,7 +105,7 @@ jobs:
         run: npm install -g npm@11.6.4
 
       - name: Download Package Artifact
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: package-artifact
 
@@ -112,14 +114,14 @@ jobs:
         run: |
           # Default flags
           FLAGS="--access public"
-          
+
           # If it is a Push event, add the canary tag
           if [[ "${{ github.event_name }}" == "push" ]]; then
             FLAGS="$FLAGS --tag canary"
           fi
-          
+
           # If it is a Release, we assume 'latest' (which is default), so no extra flag needed.
-          
+
           echo "args=$FLAGS" >> $GITHUB_OUTPUT
 
       - name: Publish
@@ -131,7 +133,7 @@ jobs:
             ls -la *.tgz 2>/dev/null || echo "No .tgz files found"
             exit 1
           fi
-          
+
           PACKAGE_FILE=$(ls *.tgz)
           echo "Publishing package: $PACKAGE_FILE"
           npm publish "$PACKAGE_FILE" ${{ steps.flags.outputs.args }}

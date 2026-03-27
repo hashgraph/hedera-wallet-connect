@@ -38,7 +38,7 @@ import {
   requestTopic,
 } from '../../_helpers'
 import { CaipNetwork, SendTransactionArgs, WriteContractArgs } from '@reown/appkit'
-import { TopicCreateTransaction } from '@hashgraph/sdk'
+import { TopicCreateTransaction } from '@hiero-ledger/sdk'
 
 jest.mock('ethers')
 jest.mock('@walletconnect/universal-provider')

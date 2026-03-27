@@ -18,7 +18,7 @@
  *
  */
 
-import { AccountId } from '@hashgraph/sdk'
+import { AccountId } from '@hiero-ledger/sdk'
 import { formatJsonRpcResult } from '@walletconnect/jsonrpc-utils'
 import {
   HIP820Wallet,
