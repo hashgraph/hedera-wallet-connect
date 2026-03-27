@@ -25,7 +25,6 @@ import {
   stringToSignerMessage,
   signerSignaturesToSignatureMap,
   getHederaError,
-  getRandomNodes,
   GetNodeAddressesResult,
   ExecuteTransactionResult,
   SignAndExecuteQueryResult,
@@ -74,11 +73,13 @@ export interface HIP820WalletInterface {
 
 export class HIP820Wallet implements HIP820WalletInterface {
   wallet: HederaWallet
+  private client: Client
   /*
    * Set default values for chains, methods, events
    */
-  constructor(wallet: HederaWallet) {
+  constructor(wallet: HederaWallet, client: Client) {
     this.wallet = wallet
+    this.client = client
   }
 
   /*
@@ -93,7 +94,7 @@ export class HIP820Wallet implements HIP820WalletInterface {
     const client = Client.forName(network)
     const provider = _provider ?? new Provider(client)
     const wallet = new HederaWallet(accountId, privateKey, provider)
-    return new HIP820Wallet(wallet)
+    return new HIP820Wallet(wallet, client)
   }
 
   /*
@@ -120,6 +121,7 @@ export class HIP820Wallet implements HIP820WalletInterface {
     topic: string // session topic
     body?: Transaction | Query<any> | string | Uint8Array | undefined
     accountId?: AccountId
+    nodeCount?: number
   } {
     const { id, topic } = event
     const {
@@ -131,6 +133,7 @@ export class HIP820Wallet implements HIP820WalletInterface {
     // get account id from optional second param for transactions and queries or from transaction id
     // this allows for the case where the requested signer is not the payer, but defaults to the payer if a second param is not provided
     let signerAccountId: AccountId | undefined
+    let parsedNodeCount: number | undefined
     // First test for valid params for each method
     // then convert params to a body that the respective function expects
     try {
@@ -200,9 +203,7 @@ export class HIP820Wallet implements HIP820WalletInterface {
 
           signerAccountId = AccountId.fromString(_accountId.replace(chainId + ':', ''))
           body = Buffer.from(transactionBody, 'base64')
-
-          // Store nodeCount for handler method
-          ;(body as any).__nodeCount = nodeCount ?? 5
+          parsedNodeCount = nodeCount ?? 5
 
           break
         }
@@ -221,18 +222,15 @@ export class HIP820Wallet implements HIP820WalletInterface {
       topic,
       body,
       accountId: signerAccountId,
+      nodeCount: parsedNodeCount,
     }
   }
 
   public async approveSessionRequest(
     event: WalletRequestEventArgs,
   ): Promise<JsonRpcResult<any> | JsonRpcError> {
-    const { method, id, body } = this.parseSessionRequest(event)
+    const { method, id, body, nodeCount } = this.parseSessionRequest(event)
 
-    // Extract nodeCount if it exists (for HIP-1190)
-    const nodeCount = (body as any)?.__nodeCount
-
-    // Call the method with appropriate parameters
     const response =
       nodeCount !== undefined
         ? await this[method](id, body, nodeCount)
@@ -399,17 +397,23 @@ export class HIP820Wallet implements HIP820WalletInterface {
         })
       }
 
-      const network = this.wallet.getNetwork()
-
-      let selectedNodes: AccountId[]
-      try {
-        selectedNodes = getRandomNodes(network, nodeCount)
-      } catch (error: any) {
+      // Use SDK Client for node selection (health-aware via ManagedNetwork)
+      const networkMap = this.client.network
+      const allNodes = Object.values(networkMap).map((node) =>
+        typeof node === 'string' ? AccountId.fromString(node) : node,
+      )
+      if (allNodes.length < nodeCount) {
         return formatJsonRpcError(id, {
           code: -32603,
-          message: `Node selection failed: ${error.message}`,
+          message: `Insufficient nodes available. Requested ${nodeCount}, but only ${allNodes.length} nodes in network.`,
         })
       }
+      // Shuffle using Fisher-Yates (mirrors SDK's util.shuffle)
+      for (let i = allNodes.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[allNodes[i], allNodes[j]] = [allNodes[j], allNodes[i]]
+      }
+      const selectedNodes = allNodes.slice(0, nodeCount)
 
       const signatureMaps: string[] = []
       const nodeAccountIds: string[] = []

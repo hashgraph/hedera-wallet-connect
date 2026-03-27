@@ -36,7 +36,6 @@ import {
   signerSignaturesToSignatureMap,
   base64StringToTransaction,
   getHederaError,
-  getRandomNodes,
   GetNodeAddresesResponse,
   ExecuteTransactionResponse,
   SignMessageResponse,
@@ -502,14 +501,12 @@ export class HederaWeb3Wallet extends WalletKit implements HederaNativeWallet {
       return await this.respondSessionRequest(errorResponse)
     }
 
-    // Get available nodes from signer's network
-    const network = signer.getNetwork()
-
-    // Select N random nodes
-    let selectedNodes: AccountId[]
-    try {
-      selectedNodes = getRandomNodes(network, nodeCount)
-    } catch (error: any) {
+    // Use signer's network for node selection (same pattern as SDK's Wallet class)
+    const networkMap = signer.getNetwork()
+    const allNodes = Object.values(networkMap).map((node) =>
+      typeof node === 'string' ? AccountId.fromString(node) : node,
+    )
+    if (allNodes.length < nodeCount) {
       const errorResponse = {
         topic,
         response: {
@@ -517,12 +514,18 @@ export class HederaWeb3Wallet extends WalletKit implements HederaNativeWallet {
           id,
           error: {
             code: -32603,
-            message: `Node selection failed: ${error.message}`,
+            message: `Insufficient nodes available. Requested ${nodeCount}, but only ${allNodes.length} nodes in network.`,
           },
         },
       }
       return await this.respondSessionRequest(errorResponse)
     }
+    // Shuffle using Fisher-Yates (mirrors SDK's util.shuffle)
+    for (let i = allNodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[allNodes[i], allNodes[j]] = [allNodes[j], allNodes[i]]
+    }
+    const selectedNodes = allNodes.slice(0, nodeCount)
 
     // Sign transaction body for each node
     const signatureMaps: string[] = []
