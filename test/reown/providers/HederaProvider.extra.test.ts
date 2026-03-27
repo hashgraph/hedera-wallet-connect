@@ -42,6 +42,28 @@ describe('HederaProvider additional branches', () => {
     expect('hedera' in result && 'eip155' in result).toBe(true)
   })
 
+  test('initProviders filters non-Hedera EIP155 chains from session', () => {
+    // Simulate MetaMask v11+ including Ethereum mainnet and Polygon alongside Hedera
+    provider.session = {
+      topic: requestTopic,
+      namespaces: {
+        hedera: { accounts: [`hedera:testnet:${testUserAccountId.toString()}`] },
+        eip155: { accounts: ['eip155:1:0xabc', 'eip155:137:0xabc', 'eip155:296:0xabc'] },
+      },
+    } as any
+    provider.namespaces = createNamespaces([
+      HederaChainDefinition.Native.Testnet,
+      HederaChainDefinition.EVM.Testnet,
+    ])
+    const result = (provider as any).initProviders()
+    expect('eip155' in result).toBe(true)
+    // EIP155Provider should only receive Hedera chain (296), not 1 or 137
+    const EIP155Provider = require('../../../src/reown/providers/EIP155Provider').default
+    const constructorCalls = EIP155Provider.mock.instances
+    const lastCall = EIP155Provider.mock.calls[EIP155Provider.mock.calls.length - 1][0]
+    expect(lastCall.namespace.chains).toEqual(['eip155:296'])
+  })
+
   test('rpcProviders calls init when missing', () => {
     const spy = jest.spyOn(provider as any, 'initProviders').mockReturnValue({ hedera: 1, eip155: 2 } as any)
     const res = provider.rpcProviders
