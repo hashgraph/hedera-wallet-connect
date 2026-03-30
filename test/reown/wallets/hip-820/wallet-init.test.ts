@@ -18,7 +18,7 @@
  *
  */
 
-import { Client, Wallet as HederaWallet, AccountId, PrivateKey } from '@hashgraph/sdk'
+import { Client, Wallet as HederaWallet, AccountId, PrivateKey } from '@hiero-ledger/sdk'
 import { HIP820Wallet, HederaChainId } from '../../../../src'
 import Provider from '../../../../src/lib/wallet/provider'
 import { testPrivateKeyECDSA, testUserAccountId } from '../../../_helpers'

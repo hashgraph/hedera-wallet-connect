@@ -19,7 +19,7 @@ import UniversalProvider, {
   RpcProviderMap,
   UniversalProviderOpts,
 } from '@walletconnect/universal-provider'
-import { Transaction } from '@hashgraph/sdk'
+import { Transaction } from '@hiero-ledger/sdk'
 import {
   GetNodeAddressesResult,
   ExecuteTransactionParams,
@@ -37,7 +37,9 @@ import {
 import {
   EthFilter,
   getChainsFromApprovedSession,
+  getChainId,
   mergeRequiredOptionalNamespaces,
+  SUPPORTED_EIP155_CHAIN_IDS,
 } from '../utils'
 import HIP820Provider from './HIP820Provider'
 import EIP155Provider from './EIP155Provider'
@@ -584,6 +586,18 @@ export class HederaProvider extends UniversalProvider {
     namespaces.forEach((namespace) => {
       const accounts = this.session?.namespaces[namespace]?.accounts || []
       const approvedChains = getChainsFromApprovedSession(accounts)
+      // Filter out non-Hedera EIP155 chains that wallets like MetaMask v11+ include in the session
+      const filteredChains =
+        namespace === 'eip155'
+          ? approvedChains.filter((chain) => {
+              const chainId = parseInt(getChainId(chain))
+              const supported = SUPPORTED_EIP155_CHAIN_IDS.has(chainId)
+              if (!supported) {
+                this.hederaLogger.warn(`Skipping unsupported EIP155 chain: ${chain}`)
+              }
+              return supported
+            })
+          : approvedChains
       const mergedNamespaces = mergeRequiredOptionalNamespaces(
         this.namespaces,
         this.optionalNamespaces,
@@ -591,7 +605,7 @@ export class HederaProvider extends UniversalProvider {
       const combinedNamespace = {
         ...mergedNamespaces[namespace],
         accounts,
-        chains: approvedChains,
+        chains: filteredChains,
         // Include rpcMap from optionalNamespaces if it exists
         ...(this.optionalNamespaces?.[namespace]?.rpcMap && {
           rpcMap: this.optionalNamespaces[namespace].rpcMap,

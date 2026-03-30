@@ -26,7 +26,7 @@ import {
   PrivateKey,
   Client,
   Transaction,
-} from '@hashgraph/sdk'
+} from '@hiero-ledger/sdk'
 import {
   DAppConnector,
   ExecuteTransactionParams,
@@ -60,7 +60,7 @@ import {
   transactionToTransactionBody,
 } from '../../src/lib/shared'
 import * as nacl from 'tweetnacl'
-import { proto } from '@hashgraph/proto'
+import { proto } from '@hiero-ledger/proto'
 
 describe('DAppConnector', () => {
   let connector: DAppConnector

@@ -18,7 +18,7 @@
  *
  */
 
-import { LedgerId } from '@hashgraph/sdk'
+import { LedgerId } from '@hiero-ledger/sdk'
 import { CaipNetwork } from '@reown/appkit-common'
 import { WcHelpersUtil } from '@reown/appkit-controllers'
 

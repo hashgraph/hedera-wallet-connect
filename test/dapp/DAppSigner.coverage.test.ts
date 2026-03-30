@@ -18,8 +18,8 @@
  *
  */
 
-import { LedgerId, PrivateKey, TopicCreateTransaction, TransactionReceiptQuery } from '@hashgraph/sdk'
-import { proto } from '@hashgraph/proto'
+import { LedgerId, PrivateKey, TopicCreateTransaction, TransactionReceiptQuery } from '@hiero-ledger/sdk'
+import { proto } from '@hiero-ledger/proto'
 import { DAppSigner, HederaJsonRpcMethod, Uint8ArrayToBase64String } from '../../src'
 import { prepareTestTransaction, testUserAccountId } from '../_helpers'
 import { SignClient } from '@walletconnect/sign-client'

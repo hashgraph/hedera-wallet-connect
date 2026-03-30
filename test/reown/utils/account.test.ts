@@ -1,4 +1,4 @@
-jest.mock('@hashgraph/sdk', () => {
+jest.mock('@hiero-ledger/sdk', () => {
   const populateAccountNumMock = jest.fn()
   const executeMock = jest.fn()
   const fromStringMock = jest.fn()
@@ -46,7 +46,7 @@ jest.mock('@hashgraph/sdk', () => {
 })
 
 import { getAccountBalance } from '../../../src/reown/utils'
-import { LedgerId, __mocks } from '@hashgraph/sdk'
+import { LedgerId, __mocks } from '@hiero-ledger/sdk'
 
 const { populateAccountNumMock, executeMock, fromStringMock, fromEvmAddressMock, forTestnet, forMainnet } = __mocks
 

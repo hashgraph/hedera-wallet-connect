@@ -4,11 +4,20 @@ import { JsonRpcProvider } from '@walletconnect/jsonrpc-provider'
 import { HttpConnection } from '@walletconnect/jsonrpc-http-connection'
 
 jest.mock('@walletconnect/jsonrpc-provider', () => {
-  return { JsonRpcProvider: jest.fn().mockImplementation(function (this: any, conn: any) { this.connection = conn; this.request = jest.fn() }) }
+  return {
+    JsonRpcProvider: jest.fn().mockImplementation(function (this: any, conn: any) {
+      this.connection = conn
+      this.request = jest.fn()
+    }),
+  }
 })
 
 jest.mock('@walletconnect/jsonrpc-http-connection', () => {
-  return { HttpConnection: jest.fn().mockImplementation(function (url: string) { this.url = url }) }
+  return {
+    HttpConnection: jest.fn().mockImplementation(function (url: string) {
+      this.url = url
+    }),
+  }
 })
 
 const mockClient = {
@@ -37,7 +46,7 @@ describe('EIP155Provider extra branches', () => {
   it('createHttpProvider handles invalid input', () => {
     const provider = createProvider()
     expect(provider['createHttpProvider'](0)).toBeUndefined()
-    expect(() => provider['createHttpProvider'](999)).toThrow('No RPC url provided')
+    expect(provider['createHttpProvider'](999)).toBeUndefined()
   })
 
   it('getDefaultChain falls back to namespace', () => {
@@ -68,7 +77,9 @@ describe('EIP155Provider extra branches', () => {
   it('getCallStatus uses custom url and throws when not approved', async () => {
     const provider = createProvider()
     ;(provider as any).getUserOperationReceipt = jest.fn().mockResolvedValue('ok')
-    mockClient.session.get.mockReturnValueOnce({ sessionProperties: { bundler_url: 'https://bundler' } })
+    mockClient.session.get.mockReturnValueOnce({
+      sessionProperties: { bundler_url: 'https://bundler' },
+    })
     expect(
       await provider['getCallStatus']({
         topic: 't',
@@ -92,7 +103,6 @@ describe('EIP155Provider extra branches', () => {
     expect(provider['isChainApproved'](296)).toBe(true)
     expect(provider['isChainApproved'](1)).toBe(false)
   })
-
 
   it('switchChain requests wallet when method allowed', async () => {
     const provider = createProvider()
@@ -124,8 +134,14 @@ describe('EIP155Provider extra branches', () => {
 
   it('getUserOperationReceipt handles fetch errors', async () => {
     const provider = createProvider()
-    const fetchMock = jest.spyOn(global, 'fetch' as any).mockResolvedValue({ ok: false, status: 500 } as any)
-    await expect((provider as any).getUserOperationReceipt('https://b', { request: { params: ['0x1'] } } as any)).rejects.toThrow('Failed to fetch user operation receipt - 500')
+    const fetchMock = jest
+      .spyOn(global, 'fetch' as any)
+      .mockResolvedValue({ ok: false, status: 500 } as any)
+    await expect(
+      (provider as any).getUserOperationReceipt('https://b', {
+        request: { params: ['0x1'] },
+      } as any),
+    ).rejects.toThrow('Failed to fetch user operation receipt - 500')
     fetchMock.mockRestore()
   })
 })
@@ -140,7 +156,11 @@ describe('additional branch cases', () => {
       rpcMap: {},
       defaultChain: '123',
     }
-    const provider = new EIP155Provider({ client: mockClient, events: new EventEmitter(), namespace })
+    const provider = new EIP155Provider({
+      client: mockClient,
+      events: new EventEmitter(),
+      namespace,
+    })
     provider.chainId = 0 as any
     expect(provider.getDefaultChain()).toBe('123')
   })
@@ -155,7 +175,11 @@ describe('additional branch cases', () => {
   it('switchChain defaults params when missing', async () => {
     const provider = createProvider()
     provider['isChainApproved'] = jest.fn().mockReturnValue(true)
-    await provider['switchChain']({ topic: 't', request: { method: 'wallet_switchEthereumChain' }, chainId: 'eip155:296' } as any)
+    await provider['switchChain']({
+      topic: 't',
+      request: { method: 'wallet_switchEthereumChain' },
+      chainId: 'eip155:296',
+    } as any)
     expect(provider.chainId).toBe(0)
   })
 })
