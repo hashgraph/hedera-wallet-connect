@@ -51,10 +51,4 @@ describe('HederaProvider signTransaction errors', () => {
       }),
     ).rejects.toThrow('Signer not found')
   })
-
-  it('eth_sendTransaction fails without address', async () => {
-    await expect(
-      provider.eth_sendTransaction({ chainNamespace: 'eip155' } as any, undefined as any, 296),
-    ).rejects.toThrow('sendTransaction - address is undefined')
-  })
 })

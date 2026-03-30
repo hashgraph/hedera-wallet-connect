@@ -10,7 +10,7 @@ import {
 import { HederaChainId } from '../../../src'
 
 describe('chains full branch coverage', () => {
-  test('createNamespaces handles all known and unknown chains', () => {
+  test('createNamespaces handles hedera and unknown chains', () => {
     const unknownNetwork = {
       id: 'foo',
       chainNamespace: 'unknown',
@@ -28,8 +28,6 @@ describe('chains full branch coverage', () => {
     const result = createNamespaces([
       HederaChainDefinition.Native.Mainnet,
       HederaChainDefinition.Native.Testnet,
-      HederaChainDefinition.EVM.Mainnet,
-      HederaChainDefinition.EVM.Testnet,
       noRpcNetwork,
       unknownNetwork,
     ] as CaipNetwork[])
@@ -42,12 +40,6 @@ describe('chains full branch coverage', () => {
     expect(result.hedera.rpcMap).toEqual({
       mainnet: 'https://mainnet.hashio.io/api',
       testnet: 'https://testnet.hashio.io/api',
-    })
-
-    expect(result.eip155.chains).toEqual(['eip155:295', 'eip155:296'])
-    expect(result.eip155.rpcMap).toEqual({
-      '295': 'https://mainnet.hashio.io/api',
-      '296': 'https://testnet.hashio.io/api',
     })
 
     expect(result.unknown.methods).toEqual([])
@@ -91,14 +83,12 @@ describe('chains full branch coverage', () => {
       `${HederaChainId.Testnet}:0.0.2`,
       `${HederaChainId.Previewnet}:0.0.3`,
       `${HederaChainId.Devnet}:0.0.4`,
-      'foo:bar:0x123',
     ]
     expect(getChainsFromApprovedSession(accounts)).toEqual([
       'hedera:mainnet',
       'hedera:testnet',
       'hedera:previewnet',
       'hedera:devnet',
-      'foo:bar',
     ])
   })
 })

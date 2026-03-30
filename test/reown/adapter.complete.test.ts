@@ -1,15 +1,4 @@
-import { HederaAdapter, hederaNamespace, HederaChainDefinition } from '../../src'
-import { formatUnits, parseUnits, Contract } from 'ethers'
-
-jest.mock('ethers', () => {
-  const actual = jest.requireActual('ethers')
-  return {
-    ...actual,
-    BrowserProvider: jest.fn().mockImplementation(() => ({})),
-    JsonRpcSigner: jest.fn().mockImplementation(() => ({})),
-    Contract: jest.fn(),
-  }
-})
+import { HederaAdapter, hederaNamespace } from '../../src'
 
 describe('HederaAdapter complete coverage', () => {
   test('constructor validates hedera networks', () => {
@@ -35,12 +24,12 @@ describe('HederaAdapter complete coverage', () => {
     await expect(adapter.syncConnectors()).resolves.toBeUndefined()
   })
 
-  test('utility and unsupported methods', async () => {
+  test('utility methods', async () => {
     const adapter = new HederaAdapter({ namespace: hederaNamespace })
     const parsed = adapter.parseUnits({ value: '2', decimals: 8 })
-    expect(parsed.toString()).toBe(parseUnits('2', 8).toString())
+    expect(parsed.toString()).toBe('200000000')
     const formatted = adapter.formatUnits({ value: parsed, decimals: 8 })
-    expect(formatted).toBe(formatUnits(parsed, 8))
+    expect(formatted).toBe('2')
     await expect(adapter.getProfile()).resolves.toEqual({ profileImage: '', profileName: '' })
     await expect(adapter.grantPermissions()).resolves.toEqual({})
     await expect(adapter.revokePermissions()).resolves.toBe('0x')
@@ -62,68 +51,32 @@ describe('HederaAdapter complete coverage', () => {
     await expect(adapter.walletGetAssets({} as any)).resolves.toEqual({})
   })
 
-  test('getEnsAddress default path', async () => {
-    const adapter = new HederaAdapter({ namespace: 'eip155' })
-    const res = await adapter.getEnsAddress({ name: 'foo' } as any)
-    expect(res.address).toBe(false)
-  })
-
-  test('writeContract executes method', async () => {
-    const adapter = new HederaAdapter({
-      namespace: 'eip155',
-      networks: [HederaChainDefinition.EVM.Testnet],
-    })
-    const mockMethod = jest.fn().mockResolvedValue('0xabc')
-    ;(Contract as unknown as jest.Mock).mockImplementation(() => ({
-      transfer: mockMethod,
-    }))
-    const result = await adapter.writeContract({
-      provider: {} as any,
-      caipNetwork: HederaChainDefinition.EVM.Testnet,
-      caipAddress: '0x1',
-      abi: [],
-      tokenAddress: '0x2',
-      method: 'transfer',
-      args: [1],
-    } as any)
-    expect(mockMethod).toHaveBeenCalled()
-    expect(result.hash).toBe('0xabc')
-  })
-
-  test('getCapabilities branches', async () => {
+  test('estimateGas throws for hedera namespace', async () => {
     const adapter = new HederaAdapter({ namespace: hederaNamespace })
-    await expect(adapter.getCapabilities('0x1' as any)).rejects.toThrow('Namespace is not eip155')
-
-    const evmAdapter = new HederaAdapter({ namespace: 'eip155' })
-    const req = jest.fn().mockResolvedValue('cap')
-    // Set provider directly on adapter
-    ;(evmAdapter as any).provider = { session: { sessionProperties: {} }, request: req }
-    const res = await evmAdapter.getCapabilities('0x1' as any)
-    expect(req).toHaveBeenCalled()
-    expect(res).toBe('cap')
+    await expect(adapter.estimateGas({} as any)).rejects.toThrow(
+      'estimateGas is not supported for the hedera namespace',
+    )
   })
 
-  test('writeContract error when method missing', async () => {
-    const adapter = new HederaAdapter({ namespace: 'eip155' })
-    await expect(
-      adapter.writeContract({ provider: {} as any, method: undefined } as any),
-    ).rejects.toThrow('Contract method is undefined')
+  test('sendTransaction throws for hedera namespace', async () => {
+    const adapter = new HederaAdapter({ namespace: hederaNamespace })
+    await expect(adapter.sendTransaction({} as any)).rejects.toThrow(
+      'sendTransaction is not supported for the hedera namespace',
+    )
   })
 
-  test('writeContract error when contract lacks method', async () => {
-    const adapter = new HederaAdapter({ namespace: 'eip155' })
-    ;(Contract as unknown as jest.Mock).mockImplementation(() => ({}))
-    await expect(
-      adapter.writeContract({
-        provider: {} as any,
-        caipNetwork: HederaChainDefinition.EVM.Testnet,
-        caipAddress: '0x',
-        abi: [],
-        tokenAddress: '0x2',
-        method: 'transfer',
-        args: [],
-      } as any),
-    ).rejects.toThrow('Contract method is undefined')
+  test('writeContract throws for hedera namespace', async () => {
+    const adapter = new HederaAdapter({ namespace: hederaNamespace })
+    await expect(adapter.writeContract({} as any)).rejects.toThrow(
+      'writeContract is not supported for the hedera namespace',
+    )
+  })
+
+  test('getCapabilities throws for hedera namespace', async () => {
+    const adapter = new HederaAdapter({ namespace: hederaNamespace })
+    await expect(adapter.getCapabilities('0x1' as any)).rejects.toThrow(
+      'getCapabilities is not supported for the hedera namespace',
+    )
   })
 
   test('disconnect handles errors', async () => {
@@ -135,5 +88,11 @@ describe('HederaAdapter complete coverage', () => {
     await adapter.disconnect()
     expect(warn).toHaveBeenCalledWith('[WARN - HederaAdapter] disconnect - error', error)
     warn.mockRestore()
+  })
+
+  test('constructor rejects non-hedera namespace', () => {
+    expect(() => new HederaAdapter({ namespace: 'eip155' as any })).toThrow(
+      'Namespace must be "hedera"',
+    )
   })
 })
