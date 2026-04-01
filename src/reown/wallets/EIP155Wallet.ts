@@ -57,12 +57,17 @@ export interface EIP155WalletInterface {
 }
 
 /**
- * Library
+ * @deprecated EIP155Wallet is deprecated and will be removed in the next major version.
+ * Use `WagmiAdapter` from `@reown/appkit-adapter-wagmi` for EVM wallet connectivity instead.
  */
 export class EIP155Wallet implements EIP155WalletInterface {
   wallet: BaseEvmWallet
 
   constructor(wallet: BaseEvmWallet) {
+    console.warn(
+      'EIP155Wallet is deprecated and will be removed in the next major version. ' +
+        'Use WagmiAdapter from @reown/appkit-adapter-wagmi for EVM wallet connectivity instead.',
+    )
     this.wallet = wallet
   }
   connect(provider: JsonRpcProvider): BaseEvmWallet {
