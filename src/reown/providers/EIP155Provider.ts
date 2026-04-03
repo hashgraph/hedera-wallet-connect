@@ -14,6 +14,11 @@ import { formatJsonRpcRequest } from '@walletconnect/jsonrpc-utils'
 import { BUNDLER_URL, getChainId, HederaChainDefinition } from '../utils'
 import { createLogger } from '../../lib/shared/logger'
 
+/**
+ * @deprecated EIP155Provider is deprecated and will be removed in the next major version.
+ * Use `WagmiAdapter` from `@reown/appkit-adapter-wagmi` for EVM wallet connectivity instead.
+ * Hedera's JSON-RPC relay makes it a standard EVM chain, so no custom EVM adapter is needed.
+ */
 class EIP155Provider implements IProvider {
   public name = 'eip155'
   public client: IProvider['client']
@@ -33,6 +38,10 @@ class EIP155Provider implements IProvider {
     events: EventEmitter
     namespace: Namespace
   }) {
+    this.logger.warn(
+      'EIP155Provider is deprecated and will be removed in the next major version. ' +
+        'Use WagmiAdapter from @reown/appkit-adapter-wagmi for EVM wallet connectivity instead.',
+    )
     this.namespace = namespace
     this.events = events
     this.client = client

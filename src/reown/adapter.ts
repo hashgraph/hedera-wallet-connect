@@ -64,6 +64,10 @@ export class HederaAdapter extends AdapterBlueprint {
       throw new Error('Namespace must be "hedera" or "eip155"')
     }
     if (params.namespace == 'eip155') {
+      console.warn(
+        'HederaAdapter with namespace "eip155" is deprecated and will be removed in the next major version. ' +
+          'Use WagmiAdapter from @reown/appkit-adapter-wagmi for EVM wallet connectivity instead.',
+      )
       if (params.networks?.some((n) => n.chainNamespace != 'eip155')) {
         throw new Error('Invalid networks for eip155 namespace')
       }
@@ -460,6 +464,10 @@ export class HederaAdapter extends AdapterBlueprint {
     return { signature }
   }
 
+  /**
+   * @deprecated This method is only used with the eip155 namespace, which is deprecated.
+   * Use `WagmiAdapter` from `@reown/appkit-adapter-wagmi` for EVM operations instead.
+   */
   public override async estimateGas(
     params: AdapterBlueprint.EstimateGasTransactionArgs,
   ): Promise<AdapterBlueprint.EstimateGasTransactionResult> {
@@ -502,6 +510,10 @@ export class HederaAdapter extends AdapterBlueprint {
     return { gas: result }
   }
 
+  /**
+   * @deprecated This method is only used with the eip155 namespace, which is deprecated.
+   * Use `WagmiAdapter` from `@reown/appkit-adapter-wagmi` for EVM operations instead.
+   */
   public async sendTransaction(
     params: AdapterSendTransactionParams,
   ): Promise<AdapterBlueprint.SendTransactionResult> {
@@ -548,6 +560,10 @@ export class HederaAdapter extends AdapterBlueprint {
     return { hash: tx }
   }
 
+  /**
+   * @deprecated This method is only used with the eip155 namespace, which is deprecated.
+   * Use `WagmiAdapter` from `@reown/appkit-adapter-wagmi` for EVM operations instead.
+   */
   public async writeContract(
     params: AdapterBlueprint.WriteContractParams,
   ): Promise<AdapterBlueprint.WriteContractResult> {
@@ -582,6 +598,10 @@ export class HederaAdapter extends AdapterBlueprint {
     } else throw new Error('Contract method is undefined')
   }
 
+  /**
+   * @deprecated This method is only used with the eip155 namespace, which is deprecated.
+   * Use `WagmiAdapter` from `@reown/appkit-adapter-wagmi` for EVM operations instead.
+   */
   public async getEnsAddress(params: GetEnsAddressParams): Promise<GetEnsAddressResult> {
     if (this.namespace !== 'eip155') {
       throw new Error('Namespace is not eip155')
@@ -610,6 +630,10 @@ export class HederaAdapter extends AdapterBlueprint {
     return formatUnits(params.value, params.decimals)
   }
 
+  /**
+   * @deprecated This method is only used with the eip155 namespace, which is deprecated.
+   * Use `WagmiAdapter` from `@reown/appkit-adapter-wagmi` for EVM operations instead.
+   */
   public async getCapabilities(
     params: AdapterBlueprint.GetCapabilitiesParams,
   ): Promise<unknown> {
