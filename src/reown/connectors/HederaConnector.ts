@@ -2,7 +2,7 @@ import type { SessionTypes } from '@walletconnect/types'
 import { CaipNetwork, ChainNamespace, ConstantsUtil } from '@reown/appkit-common'
 import { AdapterBlueprint, type ChainAdapterConnector } from '@reown/appkit-controllers'
 import { PresetsUtil } from '@reown/appkit-utils'
-import { createNamespaces } from '../utils'
+import { createNamespaces, HederaChainDefinition } from '../utils'
 
 type UniversalProvider = Parameters<AdapterBlueprint['setUniversalProvider']>[0]
 
@@ -31,6 +31,23 @@ export class HederaConnector implements ChainAdapterConnector {
 
   async connectWalletConnect() {
     const namespaces = createNamespaces(this.caipNetworks)
+
+    // Include corresponding EVM chains so EVM-based wallets (e.g. Safe multisig)
+    // can match their network in the session proposal
+    if (this.chain === ('hedera' as ChainNamespace)) {
+      const nativeToEvm: Record<string, CaipNetwork> = {
+        mainnet: HederaChainDefinition.EVM.Mainnet,
+        testnet: HederaChainDefinition.EVM.Testnet,
+      }
+      const evmChains = this.caipNetworks
+        .map((n) => nativeToEvm[n.id as string])
+        .filter(Boolean)
+      if (evmChains.length > 0) {
+        const evmNamespaces = createNamespaces(evmChains)
+        Object.assign(namespaces, evmNamespaces)
+      }
+    }
+
     const connectParams = { optionalNamespaces: namespaces }
 
     await this.provider.connect(connectParams)
