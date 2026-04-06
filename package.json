@@ -28,6 +28,7 @@
     "prettier:fix": "prettier --write ./src/"
   },
   "peerDependencies": {
+    "@hiero-ledger/proto": "^2.25.0",
     "@hiero-ledger/sdk": "2.79.0",
     "@reown/appkit": "^1.8.10",
     "@reown/appkit-controllers": "^1.8.10",
@@ -36,7 +37,6 @@
     "ethers": "^6.13.5"
   },
   "devDependencies": {
-    "@hiero-ledger/proto": "^2.25.0",
     "@swc/jest": "^0.2.37",
     "@types/jest": "^30.0.0",
     "jest": "^30.0.3",
