@@ -8,6 +8,10 @@ export const PROVIDER_EVENTS = {
   DEFAULT_CHAIN_CHANGED: 'default_chain_changed',
 }
 
+/**
+ * @deprecated Eip155JsonRpcMethod is deprecated and will be removed in the next major version.
+ * Use `WagmiAdapter` from `@reown/appkit-adapter-wagmi` for EVM wallet connectivity instead.
+ */
 // EIP-155 Wallet Methods
 export enum Eip155JsonRpcMethod {
   PersonalSign = 'personal_sign',

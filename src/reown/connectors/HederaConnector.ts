@@ -71,6 +71,11 @@ export namespace HederaConnector {
   export type Options = {
     provider: UniversalProvider
     caipNetworks: CaipNetwork[]
+    /**
+     * The chain namespace for the connector.
+     * @remarks The `'eip155'` option is deprecated and will be removed in the next major version.
+     * Use `WagmiAdapter` from `@reown/appkit-adapter-wagmi` for EVM wallet connectivity instead.
+     */
     namespace: 'hedera' | 'eip155'
   }
 }
