@@ -190,8 +190,10 @@ export interface SignTransactionsRequest extends EngineTypes.RequestParams {
 }
 
 // result
-export interface SignTransactionsResult
-  extends JsonRpcResult<{ signatureMaps: string[]; nodeAccountIds: string[] }> {}
+export interface SignTransactionsResult extends JsonRpcResult<{
+  signatureMaps: string[]
+  nodeAccountIds: string[]
+}> {}
 
 // response
 export interface SignTransactionsResponse extends EngineTypes.RespondParams {
