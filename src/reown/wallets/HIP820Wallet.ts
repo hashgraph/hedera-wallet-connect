@@ -73,11 +73,13 @@ export interface HIP820WalletInterface {
 
 export class HIP820Wallet implements HIP820WalletInterface {
   wallet: HederaWallet
+  private client: Client
   /*
    * Set default values for chains, methods, events
    */
-  constructor(wallet: HederaWallet) {
+  constructor(wallet: HederaWallet, client: Client) {
     this.wallet = wallet
+    this.client = client
   }
 
   /*
@@ -92,7 +94,7 @@ export class HIP820Wallet implements HIP820WalletInterface {
     const client = Client.forName(network)
     const provider = _provider ?? new Provider(client)
     const wallet = new HederaWallet(accountId, privateKey, provider)
-    return new HIP820Wallet(wallet)
+    return new HIP820Wallet(wallet, client)
   }
 
   /*
@@ -119,6 +121,7 @@ export class HIP820Wallet implements HIP820WalletInterface {
     topic: string // session topic
     body?: Transaction | Query<any> | string | Uint8Array | undefined
     accountId?: AccountId
+    nodeCount?: number
   } {
     const { id, topic } = event
     const {
@@ -130,6 +133,7 @@ export class HIP820Wallet implements HIP820WalletInterface {
     // get account id from optional second param for transactions and queries or from transaction id
     // this allows for the case where the requested signer is not the payer, but defaults to the payer if a second param is not provided
     let signerAccountId: AccountId | undefined
+    let parsedNodeCount: number | undefined
     // First test for valid params for each method
     // then convert params to a body that the respective function expects
     try {
@@ -183,6 +187,26 @@ export class HIP820Wallet implements HIP820WalletInterface {
           body = Buffer.from(transactionBody, 'base64')
           break
         }
+        case HederaJsonRpcMethod.SignTransactions: {
+          // 7 - HIP-1190
+          const { signerAccountId: _accountId, transactionBody, nodeCount } = params
+          this.validateParam('signerAccountId', _accountId, 'string')
+          this.validateParam('transactionBody', transactionBody, 'string')
+
+          if (nodeCount !== undefined) {
+            this.validateParam('nodeCount', nodeCount, 'number')
+
+            if (nodeCount <= 0) {
+              throw getHederaError('INVALID_PARAMS', 'nodeCount must be a positive number')
+            }
+          }
+
+          signerAccountId = AccountId.fromString(_accountId.replace(chainId + ':', ''))
+          body = Buffer.from(transactionBody, 'base64')
+          parsedNodeCount = nodeCount ?? 5
+
+          break
+        }
         default:
           throw getSdkError('INVALID_METHOD')
       }
@@ -198,14 +222,20 @@ export class HIP820Wallet implements HIP820WalletInterface {
       topic,
       body,
       accountId: signerAccountId,
+      nodeCount: parsedNodeCount,
     }
   }
 
   public async approveSessionRequest(
     event: WalletRequestEventArgs,
   ): Promise<JsonRpcResult<any> | JsonRpcError> {
-    const { method, id, body } = this.parseSessionRequest(event)
-    const response = await this[method](id, body)
+    const { method, id, body, nodeCount } = this.parseSessionRequest(event)
+
+    const response =
+      nodeCount !== undefined
+        ? await this[method](id, body, nodeCount)
+        : await this[method](id, body)
+
     return response
   }
 
@@ -341,6 +371,80 @@ export class HIP820Wallet implements HIP820WalletInterface {
     return formatJsonRpcResult(id, {
       signatureMap,
     })
+  }
+
+  /**
+   * 7. hedera_signTransactions (HIP-1190)
+   */
+  public async hedera_signTransactions(id: number, body: Uint8Array, nodeCount: number = 5) {
+    try {
+      let transactionBody: proto.ITransactionBody
+      try {
+        transactionBody = proto.TransactionBody.decode(body)
+      } catch (error: any) {
+        return formatJsonRpcError(id, {
+          code: -32602,
+          message: `Failed to decode transaction body: ${error.message}`,
+        })
+      }
+
+      if (transactionBody.nodeAccountID) {
+        return formatJsonRpcError(id, {
+          code: -32602,
+          message:
+            'Transaction body must not have nodeAccountId set. ' +
+            'The wallet assigns multiple random nodes for HIP-1190 multi-node signing.',
+        })
+      }
+
+      // Use SDK Client for node selection (health-aware via ManagedNetwork)
+      const networkMap = this.client.network
+      const allNodes = Object.values(networkMap).map((node) =>
+        typeof node === 'string' ? AccountId.fromString(node) : node,
+      )
+      if (allNodes.length < nodeCount) {
+        return formatJsonRpcError(id, {
+          code: -32603,
+          message: `Insufficient nodes available. Requested ${nodeCount}, but only ${allNodes.length} nodes in network.`,
+        })
+      }
+      // Shuffle using Fisher-Yates (mirrors SDK's util.shuffle)
+      for (let i = allNodes.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[allNodes[i], allNodes[j]] = [allNodes[j], allNodes[i]]
+      }
+      const selectedNodes = allNodes.slice(0, nodeCount)
+
+      const signatureMaps: string[] = []
+      const nodeAccountIds: string[] = []
+
+      for (const nodeAccountId of selectedNodes) {
+        const txBodyWithNode: proto.ITransactionBody = {
+          ...transactionBody,
+          nodeAccountID: {
+            shardNum: nodeAccountId.shard,
+            realmNum: nodeAccountId.realm,
+            accountNum: nodeAccountId.num,
+          },
+        }
+
+        const bodyWithNode = proto.TransactionBody.encode(txBodyWithNode).finish()
+        const signerSignatures = await this.wallet.sign([bodyWithNode])
+        const _signatureMap = proto.SignatureMap.create(
+          signerSignaturesToSignatureMap(signerSignatures),
+        )
+        const signatureMap = signatureMapToBase64String(_signatureMap)
+        signatureMaps.push(signatureMap)
+        nodeAccountIds.push(nodeAccountId.toString())
+      }
+
+      return formatJsonRpcResult(id, { signatureMaps, nodeAccountIds })
+    } catch (error: any) {
+      return formatJsonRpcError(id, {
+        code: -32603,
+        message: `Unexpected error: ${error.message}`,
+      })
+    }
   }
 }
 
