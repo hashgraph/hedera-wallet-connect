@@ -19,7 +19,7 @@
  */
 
 import { CaipNetwork } from '@reown/appkit-common'
-import { createNamespaces, HederaChainDefinition } from '../../../src'
+import { HederaChainDefinition } from '../../../src'
 import { HederaConnector } from '../../../src/reown/connectors'
 
 const mockProvider = {
@@ -53,11 +53,13 @@ describe('HederaConnector', () => {
   })
 
   describe('connectWalletConnect', () => {
-    it('should connect with correct namespaces', async () => {
+    it('should connect with correct namespaces including EVM chains', async () => {
       await connector.connectWalletConnect()
-      expect(mockProvider.connect).toHaveBeenCalledWith({
-        optionalNamespaces: createNamespaces(testNetworks),
-      })
+      const callArgs = mockProvider.connect.mock.calls[0][0]
+      expect(callArgs.optionalNamespaces.hedera).toBeDefined()
+      expect(callArgs.optionalNamespaces.eip155).toBeDefined()
+      expect(callArgs.optionalNamespaces.hedera.chains).toEqual(['hedera:mainnet'])
+      expect(callArgs.optionalNamespaces.eip155.chains).toEqual(['eip155:295'])
     })
 
     it('should always call connect with optionalNamespaces', async () => {
@@ -67,23 +69,22 @@ describe('HederaConnector', () => {
 
       const result = await connector.connectWalletConnect()
 
-      expect(mockProvider.connect).toHaveBeenCalledWith({
-        optionalNamespaces: {
-          hedera: {
-            chains: ['hedera:mainnet'],
-            events: ['accountsChanged', 'chainChanged'],
-            methods: [
-              'hedera_getNodeAddresses',
-              'hedera_executeTransaction',
-              'hedera_signMessage',
-              'hedera_signAndExecuteQuery',
-              'hedera_signAndExecuteTransaction',
-              'hedera_signTransaction',
-            ],
-            rpcMap: { mainnet: 'https://mainnet.hashio.io/api' },
-          },
-        },
+      const callArgs = mockProvider.connect.mock.calls[0][0]
+      expect(callArgs.optionalNamespaces.hedera).toEqual({
+        chains: ['hedera:mainnet'],
+        events: ['accountsChanged', 'chainChanged'],
+        methods: [
+          'hedera_getNodeAddresses',
+          'hedera_executeTransaction',
+          'hedera_signMessage',
+          'hedera_signAndExecuteQuery',
+          'hedera_signAndExecuteTransaction',
+          'hedera_signTransaction',
+        ],
+        rpcMap: { mainnet: 'https://mainnet.hashio.io/api' },
       })
+      expect(callArgs.optionalNamespaces.eip155).toBeDefined()
+      expect(callArgs.optionalNamespaces.eip155.chains).toEqual(['eip155:295'])
       expect(result).toEqual({ clientId: 'id', session: mockProvider.session })
     })
   })
