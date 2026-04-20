@@ -53,6 +53,28 @@ type GetEnsAddressParams = {
 type GetEnsAddressResult = { address: string | false }
 type GetProfileResult = { profileImage: string; profileName: string }
 
+// HashPack's extension announces an EVM-only EIP-1193 provider via EIP-6963.
+// When a dApp pairs HederaAdapter with an EVM adapter, Reown registers that
+// announcement as an "installed" tile, so clicking it connects via
+// eth_requestAccounts and leaves the Hedera WC session undefined. Swallowing
+// the announcement keeps the wallet visible via Reown's explorer listing and
+// forces clicks through the WalletConnect flow.
+// https://github.com/hashgraph/hedera-wallet-connect/issues/670
+let hashpackFilterTarget: EventTarget | null = null
+function installHashpackEip6963Filter(): void {
+  const target: EventTarget | null = typeof window !== 'undefined' ? window : null
+  if (!target || hashpackFilterTarget === target) return
+  target.addEventListener(
+    'eip6963:announceProvider',
+    (event) => {
+      const rdns = (event as CustomEvent<{ info?: { rdns?: string } }>).detail?.info?.rdns
+      if (rdns === 'app.hashpack') event.stopImmediatePropagation()
+    },
+    { capture: true },
+  )
+  hashpackFilterTarget = target
+}
+
 export class HederaAdapter extends AdapterBlueprint {
   private static INJECTED_DISCONNECT_KEY = '@hwc/injected-disconnected'
   private logger = createLogger('HederaAdapter')
@@ -79,6 +101,8 @@ export class HederaAdapter extends AdapterBlueprint {
     super({
       ...params,
     })
+
+    if (params.namespace === hederaNamespace) installHashpackEip6963Filter()
 
     this.getCaipNetworks = (namespace?: ChainNamespace): CaipNetwork[] => {
       const targetNamespace = namespace || this.namespace
