@@ -51,6 +51,12 @@ import {
 } from '../shared'
 import { DAppSigner } from './DAppSigner'
 import { JsonRpcResult } from '@walletconnect/jsonrpc-types'
+import {
+  installWalletConnectMultiTabRouter,
+  resolveWalletConnectMultiTabRouterOptions,
+  WalletConnectMultiTabRouter,
+} from '../shared/WalletConnectMultiTabRouter'
+import type { WalletConnectMultiTabConfig } from '../shared/WalletConnectMultiTabRouter'
 
 export * from './DAppSigner'
 export { SessionNotFoundError } from './SessionNotFoundError'
@@ -73,6 +79,8 @@ export class DAppConnector {
   walletConnectModal: WalletConnectModal
   signers: DAppSigner[] = []
   isInitializing = false
+  private readonly multiTab: WalletConnectMultiTabConfig
+  private multiTabRouter?: WalletConnectMultiTabRouter
 
   /**
    * Initializes the DAppConnector instance.
@@ -83,6 +91,7 @@ export class DAppConnector {
    * @param events - Array of supported events for the DApp (optional).
    * @param chains - Array of supported chains for the DApp (optional).
    * @param logLevel - Logging level for the DAppConnector (optional).
+   * @param multiTab - Experimental WalletConnect multi-tab request routing configuration (optional, default disabled).
    */
   constructor(
     metadata: SignClientTypes.Metadata,
@@ -92,6 +101,7 @@ export class DAppConnector {
     events?: string[],
     chains?: string[],
     logLevel: LogLevel = 'debug',
+    multiTab: WalletConnectMultiTabConfig = false,
   ) {
     this.logger = new DefaultLogger(logLevel)
     this.dAppMetadata = metadata
@@ -101,6 +111,7 @@ export class DAppConnector {
     this.supportedEvents = events ?? []
     this.supportedChains = chains ?? []
     this.extensions = []
+    this.multiTab = multiTab
 
     this.walletConnectModal = new WalletConnectModal({
       projectId: projectId,
@@ -127,6 +138,16 @@ export class DAppConnector {
   }
 
   /**
+   * Releases resources installed by experimental multi-tab routing.
+   * This does not disconnect active WalletConnect sessions.
+   */
+  public destroy(): void {
+    const router = this.multiTabRouter
+    this.multiTabRouter = undefined
+    router?.destroy()
+  }
+
+  /**
    * Initializes the DAppConnector instance.
    * @param logger - `BaseLogger` for logging purposes (optional).
    */
@@ -136,12 +157,22 @@ export class DAppConnector {
       if (!this.projectId) {
         throw new Error('Project ID is not defined')
       }
+      this.destroy()
       this.walletConnectClient = await SignClient.init({
         logger,
         relayUrl: 'wss://relay.walletconnect.com',
         projectId: this.projectId,
         metadata: this.dAppMetadata,
       })
+
+      this.multiTabRouter = installWalletConnectMultiTabRouter(
+        this.walletConnectClient,
+        resolveWalletConnectMultiTabRouterOptions(this.multiTab, {
+          projectId: this.projectId,
+          metadata: this.dAppMetadata,
+          logger: this.logger,
+        }),
+      )
       const existingSessions = this.walletConnectClient.session.getAll()
       if (existingSessions.length > 0)
         this.signers = existingSessions.flatMap((session) => this.createSigners(session))

@@ -135,6 +135,21 @@ describe('DAppConnector', () => {
     })
   })
 
+  describe('destroy', () => {
+    it('releases the multi-tab router without disconnecting the client', () => {
+      const destroyRouter = jest.fn()
+      const disconnect = jest.fn()
+      ;(connector as any).multiTabRouter = { destroy: destroyRouter }
+      connector.walletConnectClient = { disconnect } as any
+
+      connector.destroy()
+      connector.destroy()
+
+      expect(destroyRouter).toHaveBeenCalledTimes(1)
+      expect(disconnect).not.toHaveBeenCalled()
+    })
+  })
+
   describe('init', () => {
     it('should init SignClient correctly', async () => {
       await connector.init({ logger: 'fatal' })
