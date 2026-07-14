@@ -67,6 +67,20 @@ describe('HederaProvider additional branch coverage', () => {
     pairSpy.mockRestore()
   })
 
+  test('destroy releases the multi-tab router without disconnecting the provider', async () => {
+    const provider = await HederaProvider.init({ projectId: 'pid', logger: 'error' })
+    const destroyRouter = jest.fn()
+    const disconnect = jest.spyOn(UniversalProvider.prototype, 'disconnect')
+    ;(provider as any).multiTabRouter = { destroy: destroyRouter }
+
+    provider.destroy()
+    provider.destroy()
+
+    expect(destroyRouter).toHaveBeenCalledTimes(1)
+    expect(disconnect).not.toHaveBeenCalled()
+    disconnect.mockRestore()
+  })
+
   test('getAccountAddresses handles undefined map result', async () => {
     const provider = await HederaProvider.init({ projectId: 'pid', logger: 'error' })
     provider.session = {

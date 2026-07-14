@@ -44,24 +44,45 @@ import {
 import HIP820Provider from './HIP820Provider'
 import EIP155Provider from './EIP155Provider'
 import { createLogger } from '../../lib/shared/logger'
+import {
+  installWalletConnectMultiTabRouter,
+  resolveWalletConnectMultiTabRouterOptions,
+  WalletConnectMultiTabRouter,
+} from '../../lib/shared/WalletConnectMultiTabRouter'
+import type { WalletConnectMultiTabConfig } from '../../lib/shared/WalletConnectMultiTabRouter'
 
 export type HederaWalletConnectProviderConfig = {
   chains: CaipNetwork[]
+  multiTab?: WalletConnectMultiTabConfig
 } & UniversalProviderOpts
+
+type HederaUniversalProviderOpts = UniversalProviderOpts & {
+  multiTab?: WalletConnectMultiTabConfig
+}
 
 // Reown AppKit UniversalProvider for HIP-820 & EIP-155 version implementation of the @hashgraph/hedera-wallet-connect DAppConnector
 export class HederaProvider extends UniversalProvider {
   private hederaLogger = createLogger('HederaProvider')
+  private multiTabRouter?: WalletConnectMultiTabRouter
   public nativeProvider?: HIP820Provider
   public eip155Provider?: EIP155Provider
 
-  constructor(opts: UniversalProviderOpts) {
+  constructor(opts: HederaUniversalProviderOpts) {
     super(opts)
   }
-  static async init(opts: UniversalProviderOpts) {
+  static async init(opts: HederaUniversalProviderOpts) {
     const provider = new HederaProvider(opts)
     //@ts-expect-error
     await provider.initialize()
+
+    provider.multiTabRouter = installWalletConnectMultiTabRouter(
+      provider.client,
+      resolveWalletConnectMultiTabRouterOptions(opts.multiTab, {
+        projectId: opts.projectId,
+        metadata: opts.metadata,
+        logger: provider.hederaLogger,
+      }),
+    )
 
     provider.namespaces = {
       //@ts-ignore
@@ -71,6 +92,16 @@ export class HederaProvider extends UniversalProvider {
     }
     if (provider.session) provider.initProviders()
     return provider
+  }
+
+  /**
+   * Releases resources installed by experimental multi-tab routing.
+   * This does not disconnect the active WalletConnect session.
+   */
+  public destroy(): void {
+    const router = this.multiTabRouter
+    this.multiTabRouter = undefined
+    router?.destroy()
   }
 
   emit(event: string, data?: unknown) {

@@ -211,6 +211,47 @@ const result = await universalProvider.hedera_signTransaction({
 - [Hedera Wallet Example by Hgraph](https://github.com/hgraph-io/hedera-wallet)
 - <em>[Add an example, demo, or tool here](https://github.com/hashgraph/hedera-wallet-connect/pulls)</em>
 
+## Experimental multi-tab response routing
+
+WalletConnect can deliver a session-request response to any same-origin tab subscribed to the
+session topic, even when the request promise belongs to a different tab. This library includes
+an experimental, opt-in router that forwards those responses to the client instance that created
+the request.
+
+Enable it when initializing `HederaProvider`:
+
+```typescript
+const provider = await HederaProvider.init({
+  projectId,
+  metadata,
+  multiTab: true,
+})
+```
+
+For the legacy `DAppConnector`, pass the option after `logLevel`:
+
+```typescript
+const dAppConnector = new DAppConnector(
+  metadata,
+  LedgerId.Mainnet,
+  projectId,
+  methods,
+  events,
+  chains,
+  'debug',
+  true,
+)
+```
+
+Routing requires writable `localStorage`, matching project and metadata configuration, and tabs
+on the same origin. It currently integrates with internal WalletConnect SignClient 2.x engine
+APIs. If the required browser capability or SignClient API is unavailable, installation fails
+open and the unmodified WalletConnect client continues normally.
+
+Call `provider.destroy()` or `dAppConnector.destroy()` when permanently replacing that instance.
+This releases the router's listeners, timer, channel, and pending ownership records; it does not
+disconnect WalletConnect sessions.
+
 # Multi-Signature Transactions
 
 Multi-signature (multi-sig) workflows allow multiple parties to sign a single transaction before it's executed on the Hedera network. This is commonly used for:
