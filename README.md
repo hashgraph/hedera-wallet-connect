@@ -354,6 +354,7 @@ Use `hedera_signTransaction` when you need to collect multiple signatures. Use `
 - [Hashpack](https://hashpack.app/)
 - [Kabila](https://wallet.kabila.app/)
 - [Dropp](https://dropp.cc/)
+- [H10X Wallet](https://h10xindex.xyz/#wallet)
 
 # Legacy
 
